@@ -4011,7 +4011,14 @@ function pmcRewardPlain_(promo, withGiftName) {
     if (rate) return rate + ' 回饋加碼';
   }
   const v = pmcPromoValue_(promo);
-  if (v !== null) return pmcMoney_(v) + (promo.voucher_usage ? ' ' + String(promo.voucher_usage) : ' 刷卡金');
+  // 用途只取括號前那段（「LINE POINTS 點數（限新戶首次綁定…）」→「LINE POINTS 點數」），整句會撐爆標題
+  const usage = String(promo.voucher_usage || '').split(/[（(]/)[0].trim();
+  if (v !== null) return pmcMoney_(v) + ' ' + (usage || '刷卡金');
+  // 沒有金額、沒有回饋率、也沒有贈品：照活動類型寫（抽獎、贈點…），不要一律叫「首刷禮」
+  if (!pmcHasValue_(promo.gift_content)) {
+    const type = (Array.isArray(promo.promo_types) && promo.promo_types[0]) ? String(promo.promo_types[0]) : '';
+    return type || '新戶禮';
+  }
   if (!withGiftName) return '首刷禮';
   const opts = pmcGiftOptions_(promo.gift_content);
   if (opts.length > 1) return '首刷禮 ' + opts.length + ' 選 1';
@@ -4034,19 +4041,52 @@ function pmcCardPageFacts_(g) {
     '    </div>\n';
 }
 
+// 逐檔獎勵（去重）：同樣的獎勵寫一次、後面註明檔數（滙豐兩檔都是「NT$1,000 刷卡金」，
+// 照列會像重複的 bug）。回傳 { text: '甲、乙（2 檔）', more: 還有沒列出的檔 }
+function pmcRewardList_(g, max) {
+  const order = [];
+  const count = {};
+  g.items.forEach(function (p) {
+    const r = pmcRewardPlain_(p.promo, true);
+    if (!count[r]) { count[r] = 0; order.push(r); }
+    count[r]++;
+  });
+  const shown = order.slice(0, max);
+  return {
+    text: shown.map(function (r) { return count[r] > 1 ? r + '（' + count[r] + ' 檔）' : r; }).join('、'),
+    more: order.length > max
+  };
+}
+
+// 引言＝整頁的一句話答案（2026-11-22 站長：AI／搜尋摘要最常直接引用第一段，要有實際數字）。
+// 1 檔：該檔摘要＋截止日；多檔：逐檔列出獎勵（最多 3 檔，其餘「等 N 檔」）＋最快截止。
 function pmcCardPageLede_(g) {
   const n = g.items.length;
   const name = g.cardName;
   const main = g.items[0];
   if (n === 1) {
-    const summary = String(main.promo.new_customer_summary || '').trim().replace(/[。．.\s]+$/, '');
-    return name + '目前有 1 檔新戶活動' + (summary ? '：' + summary : '') +
+    // 摘要沒填就退回獎勵本身，引言才不會只剩「目前有 1 檔新戶活動」
+    const summary = String(main.promo.new_customer_summary || '').trim().replace(/[。．.\s]+$/, '') ||
+      pmcRewardPlain_(main.promo, true);
+    return name + '目前有 1 檔新戶活動：' + summary +
       (main.periodEndIso ? '，活動到 ' + pmcFormatDateDisplay_(main.periodEndIso) : '') + '。';
   }
+  const rewards = pmcRewardList_(g, 3);
   const ends = g.items.map(function (p) { return p.periodEndIso; }).filter(Boolean).sort();
-  return name + '目前有 ' + n + ' 檔新戶活動，每一檔的達成條件不同、要分別達成' +
+  return name + '目前有 ' + n + ' 檔新戶活動：' + rewards.text + (rewards.more ? '等' : '') +
     (ends.length ? '，最快 ' + pmcFormatDateDisplay_(ends[0]) + ' 截止' : '') +
-    '。以下整理每一檔的獎勵、條件與新戶定義。';
+    '。每一檔的達成條件不同、要分別達成，以下逐檔整理條件與新戶定義。';
+}
+
+// <title> 用的主獎勵（≤20 字）：首刷禮單一品名太長只寫「首刷禮」、金額的用途太長只寫「NT$X 回饋」，標題才不會被 Google 截在半路
+function pmcCardPageTitleReward_(g) {
+  const promo = g.items[0].promo;
+  const r = pmcRewardPlain_(promo, true);
+  if (r.length <= 20) return r;
+  const short = pmcRewardPlain_(promo, false);
+  if (short.length <= 20) return short;
+  const v = pmcPromoValue_(promo);
+  return v !== null ? pmcMoney_(v) + ' 回饋' : short.slice(0, 20);
 }
 
 // 「相關卡片」（站長 2026-11-22 從「也可以看看」改名）：同類型（主活動的類型）優先，其餘照清單順序，取 3 張
@@ -4108,10 +4148,16 @@ function pmcCardPageHtml_(g, groups, ctx) {
   const cardId = g.cardId;
   const name = g.cardName;
   const updatedIso = ctx.updatedFor(cardId);
-  const title = name + '新戶活動（' + ctx.yearMonthLabel + '）｜首刷禮・新戶回饋整理 - Pick My Card';
-  const rewards = g.items.slice(0, 3).map(function (p) { return pmcRewardPlain_(p.promo, true); });
-  const description = name + '新戶活動整理：' + rewards.join('、') + (g.items.length > 3 ? '等 ' + g.items.length + ' 檔' : '') +
-    '。附達成條件、新戶定義與截止日，資料持續更新。';
+  // 標題把主獎勵放前面（2026-11-22 站長同意）：搜尋結果一眼看到「拿什麼」；品牌留在尾巴
+  const titleReward = pmcCardPageTitleReward_(g);
+  const title = name + '新戶' + (/^[A-Za-z0-9]/.test(titleReward) ? ' ' : '') + titleReward +
+    (g.items.length > 1 ? (/[A-Za-z0-9]$/.test(titleReward) ? ' 等 ' : '等 ') + g.items.length + ' 檔' : '') +
+    '｜' + ctx.yearMonthLabelFor(updatedIso) + '新戶活動 - Pick My Card';
+  const rewards = pmcRewardList_(g, 3);
+  const ends = g.items.map(function (p) { return p.periodEndIso; }).filter(Boolean).sort();
+  const endText = ends.length ? (g.items.length > 1 ? '，最快 ' : '，活動到 ') + pmcShortDate_(ends[0]) + (g.items.length > 1 ? ' 截止' : '') : '';
+  const description = name + '新戶活動整理：' + rewards.text + (rewards.more ? '等 ' + g.items.length + ' 檔' : '') +
+    endText + '。附達成條件與新戶定義，資料持續更新。';
 
   // 申辦鈕：同清單（有分潤連結→立即申辦＋去向；沒有→銀行活動頁）。data-ga-section 讓 GA 分得出是單卡頁
   const ctaLink = g.cta ? pmcSanitizeUrl_(g.cta.link) : '';
@@ -4132,7 +4178,7 @@ function pmcCardPageHtml_(g, groups, ctx) {
     '  <section class="pmc-cp-hero" data-card-id="' + pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(name) + '">\n' +
     // 月份不放進 h1（站長 2026-11-22：標題太長、手機折成兩行），改成標題下方一行小灰字；<title> 仍帶月份
     '    <h1>' + pmcEscapeHtml_(name) + '新戶活動</h1>\n' +
-    '    <p class="pmc-cp-month">' + pmcEscapeHtml_(ctx.monthLabel) + '整理</p>\n' +
+    '    <p class="pmc-cp-month">' + pmcEscapeHtml_(ctx.monthLabelFor(updatedIso)) + '整理</p>\n' +
     '    <p class="pmc-cp-lede">' + pmcEscapeHtml_(pmcCardPageLede_(g)) + '</p>\n' +
     '    <div class="pmc-cp-top">\n' +
     '      <span class="pmc-cp-img"><img src="/assets/images/cards/' + encodeURIComponent(cardId) + '.png" alt="' +
@@ -4205,9 +4251,11 @@ function generatePromoCardPages(exportData) {
   const pg = pmcPreparePromoGroups_(exportData, todayIso);
   const perCard = (exportData && exportData.promoCardUpdatedIso) || {};
   const fallbackIso = (exportData && exportData.promosUpdatedIso) || todayIso;
+  // 月份跟著「這張卡自己的資料更新日」走，不跟部署日（站長 2026-11-22 選 a）：
+  // 活動沒更新、月份卻每月自動往前跳＝假的新鮮度，而且跟頁面上的「資料更新於」對不起來
   const ctx = {
-    monthLabel: todayIso.slice(0, 4) + ' 年 ' + parseInt(todayIso.slice(5, 7), 10) + ' 月',
-    yearMonthLabel: todayIso.slice(0, 4) + '年' + parseInt(todayIso.slice(5, 7), 10) + '月',
+    monthLabelFor: function (iso) { return iso.slice(0, 4) + ' 年 ' + parseInt(iso.slice(5, 7), 10) + ' 月'; },
+    yearMonthLabelFor: function (iso) { return iso.slice(0, 4) + '年' + parseInt(iso.slice(5, 7), 10) + '月'; },
     versionTag: (exportData && exportData.versionTagOverride) || 'dev',
     updatedFor: function (id) { return perCard[id] || fallbackIso; }
   };
