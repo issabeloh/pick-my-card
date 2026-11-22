@@ -6970,9 +6970,23 @@ mark.cashback-search-hl {
    要找原本的樣式請看 git 記錄（本行前一版）。 */
 
 /* Compare Payments Modal Styles */
+/* 行動支付兩個 modal（單一支付詳情、比較所有行動支付回饋）的外框：一般置中 modal，不是全頁。
+   2026-11-22 以前借用詳情頁的 .card-detail-content；詳情頁改全頁後那個 class 變成「全頁捲動容器」
+   （width/height 100%、灰底、桌機左側白欄背景），兩個 modal 跟著跑版：手機左右貼邊、桌機多一條白欄。
+   ⚠️ 不要再讓這兩個 modal 借用詳情頁的 class。
+   左右各留 16px（全站手機邊距）；比較 modal 要放兩欄，所以比一般 modal 寬 */
+.payment-modal-content {
+    width: calc(100% - 32px);
+}
+#compare-payments-modal .payment-modal-content {
+    max-width: 760px;
+}
+
+/* 放得下才排兩欄：每欄至少 300px，不夠就單欄（以前固定兩欄，500px 寬的 modal 裝不下、出現橫向捲軸）。
+   min(100%, 300px)：極窄螢幕單欄也不會被 300px 撐破 */
 .compare-payments-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
     gap: 20px;
 }
 
@@ -7088,7 +7102,6 @@ mark.cashback-search-hl {
 /* Mobile responsiveness for compare payments */
 @media (max-width: 640px) {
     .compare-payments-grid {
-        grid-template-columns: 1fr;
         gap: 16px;
     }
 }
