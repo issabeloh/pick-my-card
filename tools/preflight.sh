@@ -130,6 +130,15 @@ if command -v node >/dev/null 2>&1 && [ -f tools/check-spotlights.js ]; then
   case "$out" in *"⚠️"*) warn=1;; esac
 fi
 
+# ---- 4d) 教訓記錄區上限（docs/ops/maintenance.md 第 4 節：任一區 > 15 條就該精簡；只警告）----
+# 2026-11-22 加：ui-display.md 長到 46 條才被發現，因為這條門檻原本沒有機械檢查。
+for doc in $(git ls-files 'docs/*.md' | grep -v '^docs/archive/'); do
+  n=$(awk '/^## 教訓記錄/{f=1;next} /^## /{f=0} f && /^- \[/' "$doc" | wc -l)
+  if [ "$n" -gt 15 ]; then
+    echo "⚠️  $doc 的教訓記錄有 $n 條（上限 15）——照 docs/ops/maintenance.md 第 4 節精簡（另開任務，不必擋這次 commit）"; warn=1
+  fi
+done
+
 # ---- 5) 全 repo 安全掃描（規則見 docs/ops/security-monitoring.md）----
 # preflight 第 3 節只掃 diff 新增行；這裡補掃整個 repo 現狀（XSS/密鑰/firestore.rules）。
 if [ -f tools/security-scan.sh ]; then
