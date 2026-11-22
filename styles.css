@@ -4343,6 +4343,22 @@ input[type="number"]:focus {
 }
 #card-detail-modal .cd-st-ta::placeholder { color: #9ca3af; font-size: 14px; }
 
+/* 字級整理（2026-11-23 站長：有些字特別大、看起來亂）。
+   手機的輸入框／下拉被全站規則固定 16px（低於 16px 時 iPhone 聚焦會自動放大畫面，見檔尾「Prevent iOS/Android auto-zoom」），
+   旁邊標籤卻只有 14px，提示字「未設定」也跟著 16px，值和提示字比標籤還大。
+   做法：輸入框本身維持 16px（不能動）；提示字一律 14px 淺灰；值改深灰 #374151 不搶標籤；手機標籤 15px。
+   停用的下拉（訪客的生日月份「需先登入」）聚焦不了、不會觸發放大，可以縮成 14px */
+#card-detail-modal .cd-st-sel,
+#card-detail-modal input[type="text"].cd-st-inp,
+#card-detail-modal .cd-st-ta { color: #374151; }
+#card-detail-modal input.cd-st-inp::placeholder { font-size: 14px; }
+@media (max-width: 768px) {
+    #card-detail-modal .cd-st-l label { font-size: 15px; }
+    #card-detail-modal .cd-st-sel,
+    #card-detail-modal input[type="text"].cd-st-inp { height: 38px; }
+    #card-detail-modal .cd-st-sel:disabled { font-size: 14px !important; }
+}
+
 /* 開關：仍是 input type=checkbox（id 不變；Tab 聚焦、空白鍵切換），只換外觀 */
 #card-detail-modal input[type="checkbox"].cd-sw {
     appearance: none;
@@ -4886,16 +4902,30 @@ input[type="number"]:focus {
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+/* 卡片用途＝引言（2026-11-23 站長選設計 4-B）：拿掉左側色條與半透明框，中文引號「」框住整句，
+   下一行靠右小字署名「— 大師點評」。手機在藍色頁首裡用白字，桌機白色側欄用深灰字＋品牌藍引號 */
 #card-detail-modal .cd-sum .card-use-case {
     margin: 0;
-    padding: 8px 12px;
-    background: rgba(255, 255, 255, 0.13);
-    border-left: 3px solid rgba(255, 255, 255, 0.5);
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
     color: #fff;
-    font-size: 13px;
-    line-height: 1.55;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.65;
 }
-#card-detail-modal .cd-sum .card-use-case[hidden] { display: none; }
+#card-detail-modal .cd-sum .card-use-case::before { content: "「"; font-weight: 800; opacity: 0.6; }
+#card-detail-modal .cd-sum .card-use-case::after { content: "」"; font-weight: 800; opacity: 0.6; }
+#card-detail-modal .cd-sum .card-use-case-cite {
+    margin: -8px 0 0;
+    font-size: 11.5px;
+    line-height: 1.4;
+    text-align: right;
+    color: rgba(255, 255, 255, 0.75);
+}
+#card-detail-modal .cd-sum .card-use-case[hidden],
+#card-detail-modal .cd-sum .card-use-case-cite[hidden] { display: none; }
 
 /* --- 頁籤列（sticky，在頁首下方）：照首頁 .home-view-switch——藍底上的文件夾頁籤，選中的那張是頁面底色 --- */
 .cd-tabsbar {
@@ -5193,24 +5223,36 @@ input[type="number"]:focus {
     .cd-fact dt { color: #6b7280; }
     .cd-fact dd { font-size: 19px; }
     .cd-fact-fee dd.is-raw { font-size: 11.5px; }
-    #card-detail-modal .cd-sum .card-use-case {
-        background: #f8fafc;
-        border-left-color: #1e3a8a;
-        color: #1e3a5f;
-    }
+    #card-detail-modal .cd-sum .card-use-case { color: #374151; }
+    #card-detail-modal .cd-sum .card-use-case::before,
+    #card-detail-modal .cd-sum .card-use-case::after { color: #1e40af; opacity: 1; }
+    #card-detail-modal .cd-sum .card-use-case-cite { color: #6b7280; }
 
     /* 個人設定：桌機常駐左欄，不受頁籤切換影響（.cd-pan-set 的 hidden 在桌機不生效） */
     #card-detail-modal .cd-pan { padding: 0; }
     .cd-pan-set,
     .cd-pan-set[hidden] { display: block; }
     #card-detail-modal .cd-pan-set { order: 0; }
-    /* 設定盒子同理：拿掉白框，列與列、組與組之間用細線分段 */
-    .cd-side .cd-set-box { background: none; border: 0; border-radius: 0; }
-    .cd-side .cd-st-r { padding: 10px 0; }
-    .cd-side .cd-pan-set > .cd-set-box { margin-top: 12px; border-top: 1px solid #e5e7eb; }
-    .cd-side .cd-set-sec { margin-left: 0; margin-right: 0; }
-    .cd-side .cd-set-hd { margin: 14px 0 0; }
-    .cd-side .cd-set-foot { padding-left: 0; padding-right: 0; }
+    /* 個人設定在白色側欄裡收成「一個區塊」（2026-11-23 站長：原本拿掉框、只用細線分段，看起來是零散的好幾項）：
+       整區一塊淺灰底圓角面板（標題列、說明、兩組設定、底部說明都在裡面），兩組設定各是面板裡的白色小盒子，
+       列與列之間細線。控制項在窄欄裡縮成 32px 高、120px 寬，和 14px 的標籤同一個量級 */
+    .cd-side #card-personal-section {
+        margin-top: 16px;
+        padding: 12px 12px 14px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+    }
+    .cd-side .cd-set-hd { margin: 0; }
+    .cd-side .cd-set-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .cd-side .cd-pan-set > .cd-set-box { margin-top: 10px; }
+    .cd-side .cd-st-r { padding: 9px 12px; }
+    .cd-side .cd-set-sec { margin: 6px 2px 8px; }
+    .cd-side .cd-set-foot { padding: 10px 2px 0; }
+    .cd-side .cd-st-l label { font-size: 14px; }
+    #card-detail-modal .cd-side .cd-st-sel,
+    #card-detail-modal .cd-side input[type="text"].cd-st-inp { width: 120px; height: 32px; font-size: 14px; }
+    #card-detail-modal .cd-side .cd-st-ta { min-height: 60px; font-size: 14px; }
 
     /* 近期異動自己一整排（下方細線），展開的清單接在它下面；搜尋框換到下一排、與下方回饋卡同寬。
        2026-11-19 站長：原本兩者同一排，通知被擠窄，搜尋框也像是公告的一部分；搜尋的對象是下面的回饋，

@@ -345,6 +345,8 @@ async function showCardDetail(cardId) {
         const useCase = (card.cardUseCase || '').trim();
         useCaseEl.textContent = useCase;
         useCaseEl.hidden = !useCase;
+        const citeEl = document.getElementById('card-use-case-cite');   // 署名「— 大師點評」跟著句子一起顯示／隱藏
+        if (citeEl) citeEl.hidden = !useCase;
     }
 
     // 申辦：桌機頁首亮黃鈕（#card-detail-apply-header-btn）＋手機浮動膠囊（#card-detail-apply-bar），
