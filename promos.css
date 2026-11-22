@@ -3652,8 +3652,19 @@ mark.promos-search-hl {
   .promo-card-rail--side .promo-rail-id .pmc-fav-btn { position: absolute; top: 0; right: -4px; width: 32px; height: 32px; }
 }
 
-/* 卡名連到單卡頁（2026-11-18）：看起來仍是卡名，滑過才出底線 */
+/* 卡名連到單卡頁（2026-11-18）。2026-11-22 站長：原本只有滑過才出底線，手機沒有滑鼠、看不出能點——
+   卡名後面加一個主站藍的「›」，跟清單其他「點了會去別的地方」的連結同一個記號。 */
 .promo-card-name-link { color: inherit; text-decoration: none; }
+.promo-card-name-link::after {
+  content: "›";
+  display: inline-block;
+  margin-left: 4px;
+  color: var(--pmc-blue-deep);
+  font-weight: 800;
+  font-size: 1.15em;
+  line-height: 1;
+  transform: translateY(1px);
+}
 .promo-card-name-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .promo-card-name-link:focus-visible { outline: 2px solid var(--pmc-blue); outline-offset: 2px; border-radius: 3px; }
 
@@ -3807,3 +3818,13 @@ body.has-fav-bar .promos-back-to-top-btn { bottom: 84px; }
   .pmc-cp-img { width: 168px; }
   .pmc-cp-rel-card { font-size: 13.5px; padding: 10px; }
 }
+
+/* 只看收藏（2026-11-22 站長：「畫面應該要乾淨到只剩下選取的那些活動」）：
+   頁內索引列、站長推薦、行李箱專區、搜尋列、篩選列整段藏起來，清單標題由 promos.js 改成「我的收藏」。
+   出口只有口袋名單上的「看全部活動」。!important：這幾區各自有 display 規則（flex／grid），同分會被蓋回來。 */
+body.is-fav-only .pmc-jump,
+body.is-fav-only .pmc-picks,
+body.is-fav-only .pmc-luggage,
+body.is-fav-only .promos-search-row,
+body.is-fav-only .promos-controls,
+body.is-fav-only .pmc-dots { display: none !important; }

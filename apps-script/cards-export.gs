@@ -4004,7 +4004,7 @@ function pmcShortDate_(iso) {
   return iso ? parseInt(iso.slice(5, 7), 10) + '/' + parseInt(iso.slice(8, 10), 10) : '';
 }
 
-// 一檔活動的一句話獎勵（description／「也可以看看」用，純文字）
+// 一檔活動的一句話獎勵（description／「相關卡片」用，純文字）
 function pmcRewardPlain_(promo, withGiftName) {
   if (pmcIsBonus_(promo)) {
     const rate = pmcRateDisplay_(promo);
@@ -4056,7 +4056,7 @@ function pmcCardPageLede_(g) {
     '。以下整理每一檔的獎勵、條件與新戶定義。';
 }
 
-// 「也可以看看」：同類型（主活動的類型）優先，其餘照清單順序，取 3 張
+// 「相關卡片」（站長 2026-11-22 從「也可以看看」改名）：同類型（主活動的類型）優先，其餘照清單順序，取 3 張
 function pmcCardPageRelated_(g, groups) {
   const tier = g.sortKey ? g.sortKey.tier : 0;
   const others = groups.filter(function (o) { return o !== g && pmcCardPagePath_(o.cardId); });
@@ -4065,7 +4065,7 @@ function pmcCardPageRelated_(g, groups) {
   const picks = same.concat(rest).slice(0, 3);
   if (!picks.length) return '';
   return '  <section class="pmc-cp-rel" aria-labelledby="pmc-cp-rel-h">\n' +
-    '    <div class="pmc-section-head"><h2 id="pmc-cp-rel-h">也可以看看</h2></div>\n' +
+    '    <div class="pmc-section-head"><h2 id="pmc-cp-rel-h">相關卡片</h2></div>\n' +
     '    <div class="pmc-cp-rel-grid">\n' +
     picks.map(function (o) {
       return '      <a class="pmc-cp-rel-card" href="' + pmcEscapeHtml_(pmcCardPagePath_(o.cardId)) + '">' +
@@ -4151,7 +4151,7 @@ function pmcCardPageHtml_(g, groups, ctx) {
       pmcEscapeHtml_(pmcFormatDateDisplay_(updatedIso)) + '</time></div>\n' +
     '  </section>\n' +
     pmcRenderTrust_() +
-    '  <div class="pmc-section-head" id="all-promos"><h2>這張卡的新戶活動</h2></div>\n' +
+    '  <div class="pmc-section-head" id="all-promos"><h2>新戶活動</h2></div>\n' +
     '  <div class="pmc-cp-acts">\n' + pmcRenderCardGroup_(g, { page: true }) + '\n  </div>\n' +
     // 部署之後才到期的情況：promos.js 把整張卡藏起來時，改顯示這一句（見 setupCardPage）
     '  <p class="pmc-cp-ended" id="pmc-cp-ended" hidden>這張卡的新戶活動都已經結束了。<a href="/promos">看其他卡的新戶活動 ›</a></p>\n' +

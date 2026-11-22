@@ -698,6 +698,8 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
 - 底部口袋名單 `.pmc-fav-bar`：前 3 張卡圖＋「已收藏 N 張」＋「看我的收藏」（2026-11-19 站長從「並排比較」改名：手機上收藏的卡是上下排，名不副實）。看我的收藏＝清單只留收藏的卡
   （`filterState.favOnly`，進入時先清掉其他篩選），再按一次「看全部活動」回來。單卡頁的按鈕是連到 `/promos?fav=1`，清單頁讀到就直接進入。
   `clearAllFilters()`（站長推薦／行李箱的跳轉會用）也會退出只看收藏。
+  **只看收藏時整頁只剩收藏的卡**（站長 2026-11-22）：`body.is-fav-only` 藏掉頁內索引列、站長推薦、行李箱專區、搜尋列、篩選列，
+  清單標題改「我的收藏」，出口只有口袋名單的「看全部活動」。站長否決「篩選列加一顆『我的收藏』chip」——篩選列整段藏掉，就不會有選錯 chip 的誤導。
 - 清單頁載入時會把「已不在清單上」的收藏清掉（活動下架），口袋名單只放比得到的卡。
 - 口袋名單出現時 `body.has-fav-bar`：頁尾多留 76px、回到頂部鈕往上讓。
 - 愛心只在收藏中才上玫瑰紅（實心）——這頁的紅是「快截止」，沒收藏時一律灰。
@@ -716,11 +718,11 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
 - **卡片 id 只收 `^[a-z0-9][a-z0-9-]*$`**（`pmcCardPagePath_`）：它同時是網址與檔名，不合規的卡沒有頁、清單上的卡名也不加連結。
 - 內容：麵包屑（三層）→ h1「<卡名>新戶活動（YYYY 年 M 月，部署當天）」→ 一句引言（1 檔＝該檔摘要＋截止日；多檔＝檔數＋最快截止）
   → 卡圖＋申辦鈕（去向同清單、GA 帶 `section=card_page`）＋愛心 → 三格（檔數／主活動獎勵／截止）→ 資料更新於 → 信任列
-  → 這張卡的活動（同清單的活動卡）→ 卡片特色（直接攤開，不開 modal；沒注入就整節藏）→ 也可以看看（同主活動類型優先，3 張，連到各自的單卡頁）。
+  →「新戶活動」（同清單的活動卡；站長 2026-11-22 從「這張卡的新戶活動」改名）→ 卡片特色（直接攤開，不開 modal；沒注入就整節藏）→ 相關卡片（2026-11-22 從「也可以看看」改名；同主活動類型優先，3 張，連到各自的單卡頁）。
   JSON-LD：WebPage（dateModified）＋BreadcrumbList。canonical＝`/promos/<id>`。
 - **活動全部到期、但還在 cards.data 裡的卡**：輸出一頁「目前沒有進行中的新戶活動」＋`noindex`，免得 sitemap／外部連結在下次匯出前 404。
   部署之後才到期的：`promos.js` 的 `setupCardPage()` 在整張卡被藏起來時顯示 `#pmc-cp-ended` 那一句。
-- **入口**：清單卡名 `<a class="promo-card-name-link" href="/promos/<id>">`（`pmcRenderCardGroup_`）＋ sitemap。這兩樣在 Apps Script 端，
+- **入口**：清單卡名 `<a class="promo-card-name-link" href="/promos/<id>">`（卡名後面 CSS 加藍色「›」，站長 2026-11-22：只有滑過才出底線，手機看不出能點）（`pmcRenderCardGroup_`）＋ sitemap。這兩樣在 Apps Script 端，
   **要站長重貼 `cards-export.gs` 才會出現**；之前頁面已經存在、只是沒有連結。
 - **每頁自己的更新日**：`exportToJSON` 用 `pmcPromoCardSignature_`（該卡活動＋申辦連結＋卡名）配 `pmcStampedDate_('PROMOCARD_<id hash>')`，
   寫進 `cards.data` 的 `promoCardUpdatedIso`，部署端烤進頁面（資料更新於／dateModified），sitemap 的 lastmod 同源。

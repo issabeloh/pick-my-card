@@ -1332,7 +1332,15 @@
       clearAllFilters();
       filterState.favOnly = keep;
     }
+    // 只看收藏＝整頁只剩收藏的卡（站長 2026-11-22）：頁內索引列、站長推薦、行李箱專區、搜尋列、
+    // 篩選列都由 promos.css 的 body.is-fav-only 藏起來；清單標題改成「我的收藏」。
+    // 要回去就按口袋名單上的「看全部活動」——頁面上沒有其他出口，所以口袋名單永遠在。
     document.body.classList.toggle('is-fav-only', filterState.favOnly);
+    var listTitle = document.querySelector('#all-promos h2');
+    if (listTitle) {
+      if (!listTitle.hasAttribute('data-default-title')) listTitle.setAttribute('data-default-title', listTitle.textContent);
+      listTitle.textContent = filterState.favOnly ? '我的收藏' : listTitle.getAttribute('data-default-title');
+    }
     refreshVisibility();
     renderFavBar();
   }
