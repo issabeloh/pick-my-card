@@ -3394,7 +3394,7 @@ input[type="number"]:focus {
     }
 
     /* 回饋率不需要太多橫向空間，把省下的寬度分給「回饋金額」欄（四位數金額如
-       NT$1,000＋計算機按鈕 .calc-breakdown-btn 要留同一行）與「回饋消費上限」欄。
+       NT$1,000 要留同一行；2026-11-22 起計算機鈕改成回饋率本身可點）與「回饋消費上限」欄。
        上限欄從 0.85fr → 1fr 並把 detail-value 縮到 12px，讓最寬的
        「NT$300,000+」(台新 Richart)、「NT$500,000」(國泰 CUBE) 在 ≥360px 手機
        維持一行；360px 以下才退回換行（此時金額欄仍受保護不換行）。
@@ -3817,30 +3817,43 @@ input[type="number"]:focus {
 }
 
 /* ── Calculation breakdown button + popup ───────────────────────────────── */
+/* 2026-11-22：計算機圖示鈕拿掉，回饋率數字本身就是按鈕（searchResult：.rate-num；詳情頁：.cd-rate）。
+   灰色虛線底線暗示「這裡有說明」，滑過變深，展開時變實線墨色。
+   ⚠️ 字級／字重／顏色一律「繼承」（搜尋結果由 .rate-value 決定、詳情頁由 .cd-rate 決定，.cd-rate 在檔案較後面、
+   同特異性會蓋過這裡），不要在這裡寫死數字——不然會和回饋率純文字（沒有組成可看的那些列）長得不一樣。
+   也不要改成 font: inherit 簡寫：選項頁示意圖就是 `.mk button{font:inherit}` 蓋掉 .rate、讓 10% 看起來變小。 */
 .calc-breakdown-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 6px;
-    padding: 3px;
-    color: #059669;
-    background: #ecfdf5;
-    border: 1px solid #a7f3d0;
-    border-radius: 6px;
+    display: inline;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+    font-variant-numeric: inherit;
+    text-align: inherit;
     cursor: pointer;
-    vertical-align: middle;
-    line-height: 0;
-    transition: color 0.15s, background 0.15s, border-color 0.15s;
+    text-decoration: underline dashed #9ca3af;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 5px;
+    -webkit-tap-highlight-color: transparent;
 }
 .calc-breakdown-btn:hover {
-    color: #047857;
-    background: #d1fae5;
-    border-color: #6ee7b7;
+    text-decoration-color: #374151;
 }
+.calc-breakdown-btn[aria-expanded="true"],
 .calc-breakdown-btn.active {
-    color: #ffffff;
-    background: #059669;
-    border-color: #059669;
+    text-decoration-style: solid;
+    text-decoration-color: #111827;
+}
+.calc-breakdown-btn:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 3px;
+    border-radius: 3px;
 }
 /* Appended as the LAST CHILD of .card-result / .coupon-item (which are
    position:relative, padded boxes) — bleeds edge-to-edge and sits flush at
@@ -4175,39 +4188,67 @@ input[type="number"]:focus {
    （手機的 16px 是防 iOS 聚焦自動放大，刻意不蓋）。
    ============================================ */
 
-/* 手機：個人設定本身是頁籤，不再重複一個「個人設定」標題；桌機左欄才要（見 ≥1025px 區塊） */
-#card-detail-modal .cd-pan-set > .cd-set-h { display: none; }
-
-/* 儲存狀態列：一直都在。data-state＝ok（綠）／local（黃）／busy（灰）／err（紅），由 cdSaveStatusRender 切 */
-.cd-sv {
+/* 標題列（手機與桌機都顯示，2026-11-22 起）：左「個人設定」、右儲存狀態小字。
+   以前手機把標題藏起來（頁籤本身就叫個人設定）、狀態是標題下一整條彩色底；現在狀態住在這一列，所以手機也要有。 */
+.cd-set-hd {
     display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 12px 0 0;
-    padding: 9px 12px;
-    font-size: 12.5px;
-    line-height: 1.5;
-    border-radius: 8px;
-    border: 1px solid #a7f3d0;
-    background: #ecfdf5;
-    color: #065f46;
+    align-items: flex-start;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 2px 12px;
+    margin: 14px 4px 0;
 }
-.cd-sv-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #059669; }
-.cd-sv-t { flex: 1; min-width: 0; }
-.cd-sv[data-state="local"] { background: #fffbeb; border-color: #f3dfa6; color: #92400e; }
-.cd-sv[data-state="local"] .cd-sv-dot { background: #d97706; }
-.cd-sv[data-state="busy"] { background: #f9fafb; border-color: #e5e7eb; color: #6b7280; }
-.cd-sv[data-state="busy"] .cd-sv-dot { background: #9ca3af; }
-.cd-sv[data-state="err"] { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
-.cd-sv[data-state="err"] .cd-sv-dot { background: #dc2626; }
+#card-detail-modal .cd-pan-set .cd-set-h {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 20px;
+    color: #374151;
+}
+.cd-pan-set > .cd-set-box { margin-top: 12px; }
+
+/* 儲存狀態：標題列右側一行 12px 灰字，data-state＝ok（綠勾）／local（黃手機）／busy（轉圈）／err（紅字），
+   由 cdSaveStatusRender 切。文字長時換行、靠右；失敗的原因放第二行 .cd-sv-d */
+.cd-sv {
+    margin-left: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 12px;
+    line-height: 20px;
+    color: #6b7280;
+    text-align: right;
+}
+.cd-sv-l { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.cd-sv-ic { flex: none; display: inline-flex; align-items: center; margin-right: 5px; }
+.cd-sv-ic:empty { display: none; }
+.cd-sv[data-state="ok"] .cd-sv-ic { color: #059669; }
+.cd-sv[data-state="local"] .cd-sv-ic { color: #d97706; }
+.cd-sv[data-state="err"] { color: #991b1b; }
+.cd-sv[data-state="err"] .cd-sv-ic { color: #dc2626; }
+.cd-sv-d { font-size: 12px; line-height: 1.5; color: #991b1b; }
+.cd-sv-d[hidden], .cd-sv-t2[hidden] { display: none; }
+.cd-sv-spin {
+    width: 12px;
+    height: 12px;
+    box-sizing: border-box;
+    border: 2px solid #d1d5db;
+    border-top-color: #6b7280;
+    border-radius: 50%;
+    animation: cd-sv-spin 0.8s linear infinite;
+}
+@keyframes cd-sv-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cd-sv-spin { animation: none; } }
 /* 「登入」連結：是 button（開登入視窗），畫成底線文字連結 */
 #card-detail-modal .cd-sv-login {
     flex: none;
-    margin: 0 0 0 auto;
+    margin: 0;
     padding: 0;
     border: 0;
     background: none;
-    color: inherit;
+    color: #1d4ed8;
     font: inherit;
     font-weight: 700;
     text-decoration: underline;
@@ -4221,8 +4262,8 @@ input[type="number"]:focus {
 #auth-modal { z-index: 1200; }
 
 /* 組標題：「計算條件」＋灰字副標 */
-.cd-set-sec { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px; margin: 18px 4px 8px; }
-.cd-set-sec-t { margin: 0; font-size: 17px; font-weight: 600; color: #374151; }
+.cd-set-sec { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px; margin: 16px 4px 8px; }
+.cd-set-sec-t { margin: 0; font-size: 14px; font-weight: 600; color: #374151; }
 .cd-set-sec-s { font-size: 12px; color: #6b7280; }
 
 /* 一組一個白底灰框盒子；一欄一列：標籤左、控制項右、說明小字在下一行（跨兩欄） */
@@ -5093,7 +5134,17 @@ input[type="number"]:focus {
 
 /* --- 桌機（≥1025px）兩欄：左欄（sticky）摘要卡＋個人設定，右欄頁籤與內容 --- */
 @media (min-width: 1025px) {
-    .card-detail-content { display: block; }
+    /* 左欄是一塊獨立的白色側欄（2026-11-22）：白底＋右側 1px 細框線，從頁首下緣一路畫到底，右欄維持灰底＋白色卡片。
+       背景畫在捲動容器上（background-attachment 預設 scroll＝不隨內容捲動），所以右欄捲到哪、白欄都在、也總是蓋到視窗底；
+       欄的位置與 .cd-layout 的 grid 對齊：頁面比 --page-w 寬時內容置中，白欄要延伸到視窗左緣，所以用 --page-gutter 把左邊補滿。
+       頁首／頁籤列是不透明的藍底（sticky），白欄只會在它們下面露出來 */
+    .card-detail-content {
+        display: block;
+        background-image: linear-gradient(to right,
+            #fff calc(var(--page-gutter) + 316px),
+            #e5e7eb calc(var(--page-gutter) + 316px) calc(var(--page-gutter) + 317px),
+            transparent calc(var(--page-gutter) + 317px));
+    }
     .cd-top { min-height: 58px; }
     .cd-name { font-size: 19px; }
     .cd-tabsbar { padding-left: calc(var(--page-gutter) + 330px); }
@@ -5109,8 +5160,8 @@ input[type="number"]:focus {
     .cd-side {
         display: flex;
         flex-direction: column;
-        gap: 12px;
-        padding: 14px 0 16px 14px;
+        gap: 0;
+        padding: 14px 12px 24px 14px;
         position: sticky;
         /* 頁首＋頁籤列的高度由 setupCardDetailNav() 量完寫進變數，再空 14px */
         top: calc(var(--pmc-detail-header-h, 58px) + var(--cd-tabs-h, 40px));
@@ -5122,13 +5173,15 @@ input[type="number"]:focus {
     }
     .cd-main { display: block; min-width: 0; padding: 14px 14px 40px; }
 
+    /* 側欄本身已是白底：摘要不再是浮起來的白框，改成只在下面畫一條細分隔線（白框套白底會出現兩層框線） */
     .cd-sum {
         order: 0;
-        padding: 14px;
-        background: #fff;
+        padding: 2px 0 16px;
+        background: none;
         color: #111827;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+        border: 0;
+        border-bottom: 1px solid #e5e7eb;
+        border-radius: 0;
     }
     .cd-thumb { width: 104px; height: 65px; border-color: #e5e7eb; }
     .cd-type { color: #6b7280; }
@@ -5151,7 +5204,13 @@ input[type="number"]:focus {
     .cd-pan-set,
     .cd-pan-set[hidden] { display: block; }
     #card-detail-modal .cd-pan-set { order: 0; }
-    #card-detail-modal .cd-pan-set > .cd-set-h { display: block; margin: 6px 4px 8px; }
+    /* 設定盒子同理：拿掉白框，列與列、組與組之間用細線分段 */
+    .cd-side .cd-set-box { background: none; border: 0; border-radius: 0; }
+    .cd-side .cd-st-r { padding: 10px 0; }
+    .cd-side .cd-pan-set > .cd-set-box { margin-top: 12px; border-top: 1px solid #e5e7eb; }
+    .cd-side .cd-set-sec { margin-left: 0; margin-right: 0; }
+    .cd-side .cd-set-hd { margin: 14px 0 0; }
+    .cd-side .cd-set-foot { padding-left: 0; padding-right: 0; }
 
     /* 近期異動自己一整排（下方細線），展開的清單接在它下面；搜尋框換到下一排、與下方回饋卡同寬。
        2026-11-19 站長：原本兩者同一排，通知被擠窄，搜尋框也像是公告的一部分；搜尋的對象是下面的回饋，
@@ -5443,6 +5502,7 @@ mark.cashback-search-hl {
 #card-detail-modal #card-special-cashback,
 #card-detail-modal #card-upcoming-cashback,
 #card-detail-modal #card-basic-cashback,
+#card-detail-modal #card-basic-exclusions,
 #card-detail-modal #card-coupon-cashback {
     display: flex;
     flex-direction: column;
@@ -5452,6 +5512,7 @@ mark.cashback-search-hl {
 #card-detail-modal #card-special-cashback > .cashback-detail-item,
 #card-detail-modal #card-upcoming-cashback > .cashback-detail-item,
 #card-detail-modal #card-basic-cashback > .cashback-detail-item,
+#card-detail-modal #card-basic-exclusions > .cashback-detail-item,
 #card-detail-modal #card-coupon-cashback > .cashback-detail-item {
     margin-bottom: 0;
 }
@@ -5460,6 +5521,7 @@ mark.cashback-search-hl {
     #card-detail-modal #card-special-cashback,
     #card-detail-modal #card-upcoming-cashback,
     #card-detail-modal #card-basic-cashback,
+#card-detail-modal #card-basic-exclusions,
     #card-detail-modal #card-coupon-cashback {
         display: block;
         column-count: 2;
@@ -5469,6 +5531,7 @@ mark.cashback-search-hl {
     #card-detail-modal #card-special-cashback > .cashback-detail-item,
     #card-detail-modal #card-upcoming-cashback > .cashback-detail-item,
     #card-detail-modal #card-basic-cashback > .cashback-detail-item,
+#card-detail-modal #card-basic-exclusions > .cashback-detail-item,
     #card-detail-modal #card-coupon-cashback > .cashback-detail-item {
         break-inside: avoid;
         margin-bottom: 10px;
@@ -5798,12 +5861,6 @@ mark.cashback-search-hl {
     color: #111827;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
-}
-
-/* 計算機鈕沿用 .calc-breakdown-btn（rateCompositionButtonHtml），只去掉為搜尋結果調的左邊距 */
-.cd-rr .calc-breakdown-btn {
-    flex: none;
-    margin-left: 0;
 }
 
 .cd-lvl {
@@ -11300,10 +11357,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 
     .matched-merchant {
         margin-top: 5px;   /* 原 6px */
-    }
-
-    .calc-breakdown-btn {
-        margin-left: 5px;   /* 原 6px */
     }
 
     .help-btn {

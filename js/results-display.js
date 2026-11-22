@@ -1126,7 +1126,7 @@ let _cdScrollEl = null;
 let _cdActiveTab = 'rates';
 
 const CD_TAB_SECTIONS = {
-    rates: ['card-special-section', 'card-upcoming-section', 'card-basic-cashback-section'],
+    rates: ['card-special-section', 'card-upcoming-section', 'card-basic-cashback-section', 'card-basic-exclusions-section'],
     coupon: ['card-coupon-section', 'card-benefits-section'],
     promo: ['card-promos-section'],
     set: ['card-personal-section']
@@ -1472,15 +1472,12 @@ function createCouponResultElement(coupon, amount) {
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value rate-value"><span class="rate-num">${coupon.actualRate}%</span></div>
+                <div class="detail-value rate-value">${calcRateHtml(`${coupon.actualRate}%`, !!(coupon.calculationLayers && coupon.calculationLayers.length > 0))}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
                 <div class="detail-value cashback-amount">
                     NT$${coupon.potentialCashback.toLocaleString()}
-                    ${coupon.calculationLayers && coupon.calculationLayers.length > 0 ? `
-                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
-                    ` : ''}
                 </div>
             </div>
             <div class="detail-item">
@@ -1709,15 +1706,12 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
         <div class="card-details">
             <div class="detail-item">
                 <div class="detail-label">回饋率</div>
-                <div class="detail-value rate-value"><span class="rate-num">${rateDisplay}</span>${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px; font-weight: normal;">${levelLabel}</small>` : ''}</div>
+                <div class="detail-value rate-value">${calcRateHtml(rateDisplay, !!(result.calculationLayers && result.calculationLayers.length > 0))}${levelLabel ? `<br><small style="color: #6b7280; font-size: 12px; font-weight: normal;">${levelLabel}</small>` : ''}</div>
             </div>
             <div class="detail-item">
                 <div class="detail-label">回饋金額</div>
                 <div class="detail-value ${result.cashbackAmount > 0 ? 'cashback-amount' : 'no-cashback-text'}">
                     ${cashbackText}
-                    ${result.calculationLayers && result.calculationLayers.length > 0 ? `
-                        <button type="button" class="calc-breakdown-btn" title="查看計算明細" aria-label="查看計算明細"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg></button>
-                    ` : ''}
                 </div>
                 ${(() => {
     if (result.card.basicCashbackType) {
@@ -1803,6 +1797,15 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     return cardDiv;
 }
 
+// 搜尋結果卡的回饋率：有計算層（試算明細可看）時，數字本身就是按鈕——灰色虛線底線，點了展開試算抽屜
+// （showCalcBreakdown，經 home-ui.js 的結果區委派點擊找 .calc-breakdown-btn）。2026-11-22 取代「回饋金額」旁的
+// 計算機圖示鈕；沒有計算層的結果維持純文字。字級／字重／顏色一律沿用 .rate-value 與 .rate-num，不另設。
+function calcRateHtml(rateText, hasLayers) {
+    const t = escapeHtml(String(rateText));
+    if (!hasLayers) return `<span class="rate-num">${t}</span>`;
+    return `<button type="button" class="rate-num calc-breakdown-btn" aria-expanded="false" aria-label="${t}，查看試算明細">${t}</button>`;
+}
+
 // Show a small inline breakdown popup when the user clicks "算式"
 // Tracks which button currently has its breakdown open, so a second click on
 // the SAME button toggles it closed, while clicking a DIFFERENT button closes
@@ -1813,6 +1816,7 @@ function closeOpenBreakdown() {
     if (openBreakdownBtn) {
         openBreakdownBtn.closest('.card-result, .coupon-item')?.querySelector('.calc-breakdown-popup')?.remove();
         openBreakdownBtn.classList.remove('active');
+        openBreakdownBtn.setAttribute('aria-expanded', 'false');
         openBreakdownBtn = null;
     }
 }
@@ -1891,6 +1895,7 @@ function showCalcBreakdown(btn, cardResult) {
     // reads clearly as "this card's breakdown" instead of a floating panel.
     cardResult.appendChild(popup);
     btn.classList.add('active');
+    btn.setAttribute('aria-expanded', 'true');
     openBreakdownBtn = btn;
     popup.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -1901,9 +1906,12 @@ document.addEventListener('click', (e) => {
     }
 }, true);
 
+// 鍵盤：回饋率按鈕按 Enter 要能開抽屜——2026-11-23 起由 js/home-ui.js 的全站「Enter＝計算」監聽統一處理
+// （焦點在按鈕等可操作元素上時不計算），這裡不需要再另外攔。
+
 // 詳情頁「回饋組成」抽屜：展開/收合各成分的回饋率與上限（不含金額，
 // 與搜尋結果的計算明細不同——那個要有消費金額才算得出來）。
-// 一次只開一個；資料來自按鈕的 data-comp（rateCompositionButtonHtml 產生）。
+// 一次只開一個；資料來自按鈕的 data-comp（renderPlanRow 的回饋率按鈕帶著，由 rateCompositionData 產生）。
 function toggleRateComposition(btn) {
     const item = btn.closest('.cashback-detail-item');
     if (!item) return;
@@ -1911,7 +1919,7 @@ function toggleRateComposition(btn) {
 
     // 先關掉所有開著的組成抽屜（含自己）
     document.querySelectorAll('.cashback-detail-item .calc-breakdown-popup').forEach(p => p.remove());
-    document.querySelectorAll('.cashback-detail-item .calc-breakdown-btn.active').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.cashback-detail-item .calc-breakdown-btn.active').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-expanded', 'false'); });
     if (wasOpen) return; // 點的是已開啟的按鈕 → 收合即可
 
     let comp;
@@ -1935,6 +1943,7 @@ function toggleRateComposition(btn) {
     // 直接掛在卡片底下會變成第三個格子）
     (btn.closest('.cd-rr') || item.querySelector('.rate-card-body') || item).appendChild(popup);
     btn.classList.add('active');
+    btn.setAttribute('aria-expanded', 'true');
 }
 
 // Format currency

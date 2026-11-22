@@ -1139,24 +1139,30 @@
                         </div>
 
                         <!-- 個人設定（2026-11-17 第三輪改版：統一自動儲存＋常駐儲存狀態列＋兩組一欄一列）。
-                             ① #cd-save-status 最上面一條狀態列，一直都在：已登入＝綠「已儲存到你的帳號」、訪客＝黃「只存在這台裝置…」
-                                ＋「登入」連結、儲存中＝灰、失敗＝紅（js/card-detail.js 的 cdTrackSave／cdSaveStatusRender）
+                             ① #cd-save-status 在「個人設定」標題列右側（2026-11-22 起，以前是標題下整條彩色底）：已登入＝綠勾「已儲存・HH:MM」、
+                                訪客＝黃手機「存在這台裝置・登入同步」、儲存中＝轉圈、失敗＝紅字（js/card-detail.js 的 cdTrackSave／cdSaveStatusRender）
                              ② 「計算條件」組（級別／發卡組織／生日月份／童樂匯）由 showCardDetail() 注入 #cube-level-section，
-                                非分級卡不長這一組；③ 「我的紀錄」組（額度／免年費／筆記）是下面的靜態標記
+                                非分級卡不長這一組；③ 額度／免年費／筆記三列是下面的靜態標記（沒有組標題）
                              每組一個白底灰框盒子 .cd-set-box，一欄一列：標籤左、控制項右、說明小字在下一行。
                              全部欄位自動儲存，沒有儲存鈕。勾選一律是開關樣式（仍是 input type=checkbox）。
                              桌機（≥1025px）常駐左欄；手機是第四個頁籤（data-pan="set"）。 -->
                         <div class="card-info-section cd-pan cd-pan-set" id="card-personal-section" data-pan="set" role="tabpanel" aria-labelledby="cd-tab-set">
-                            <h4 class="cd-set-h">個人設定</h4>
-                            <div class="cd-sv" id="cd-save-status" role="status" aria-live="polite" data-state="local">
-                                <span class="cd-sv-dot" aria-hidden="true"></span>
-                                <span class="cd-sv-t">只存在這台裝置。登入後會同步到帳號</span>
-                                <button type="button" class="cd-sv-login" id="cd-save-login">登入</button>
+                            <!-- 標題列：左「個人設定」、右儲存狀態小字（#cd-save-status，role=status；圖示／文字由 cdSaveStatusRender 填） -->
+                            <div class="cd-set-hd">
+                                <h4 class="cd-set-h">個人設定</h4>
+                                <div class="cd-sv" id="cd-save-status" role="status" aria-live="polite" data-state="local">
+                                    <div class="cd-sv-l">
+                                        <span class="cd-sv-ic" aria-hidden="true"></span>
+                                        <span class="cd-sv-t">存在這台裝置・</span>
+                                        <button type="button" class="cd-sv-login" id="cd-save-login">登入</button>
+                                        <span class="cd-sv-t2">同步</span>
+                                    </div>
+                                    <div class="cd-sv-d" hidden></div>
+                                </div>
                             </div>
 
                             <div id="cube-level-section" style="display: none;"></div>
 
-                            <div class="cd-set-sec"><h5 class="cd-set-sec-t">我的紀錄</h5><span class="cd-set-sec-s">只有你看得到</span></div>
                             <div class="cd-set-box">
                                 <div class="cd-st-r" id="credit-limit-section">
                                     <div class="cd-st-l"><label for="credit-limit-input">我的額度</label></div>
@@ -1182,7 +1188,7 @@
                                               placeholder="本期已消費 / 卡片主要用途 / 個人小提醒..."></textarea>
                                 </div>
                             </div>
-                            <div class="cd-set-foot">所有卡片的設定可以在「我的信用卡」一次看。</div>
+                            <div class="cd-set-foot">想一覽所有個人設定？到首頁點擊右上角的「我的信用卡」。</div>
                         </div>
                     </div>
 
@@ -1239,6 +1245,13 @@
                             <div class="card-info-section" id="card-basic-cashback-section">
                                 <h4>一般回饋</h4>
                                 <div id="card-basic-cashback"></div>
+                            </div>
+
+                            <!-- 一般回饋排除項目（2026-11-22 站長：獨立一區）：原本是一般回饋區最後一張灰卡，
+                                 桌機兩欄由上往下排時總掉到右欄。沒有名單的卡整區 display:none（renderBasicArea） -->
+                            <div class="card-info-section" id="card-basic-exclusions-section" style="display: none;">
+                                <h4>一般回饋排除項目</h4>
+                                <div id="card-basic-exclusions"></div>
                             </div>
                         </div>
 

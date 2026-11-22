@@ -623,7 +623,7 @@ function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
     // overseasCashback 是「海外基準」token，必須也算海外訊號，否則 resolveBaseRate
     // 會退回 basicCashback（國內基準）——`rate+overseasCashback` 這種只列海外基準、
     // 沒列海外加碼的 model 就會少算（幣倍卡 slot2 曾 4%+1%=5% 而非 4%+2%=6%）。
-    // ⚠️ 三處同步：getDisplayRate / rateCompositionButtonHtml / 呼叫端 isOverseasModel。
+    // ⚠️ 三處同步：getDisplayRate / rateCompositionData / 呼叫端 isOverseasModel。
     const isOverseas = model.includes('overseasBonusRate') || model.includes('overseasCashback');
     // Fix B（2026-07-16）：基本層與加碼層都只在 model 字串明確列出對應成分時才計入，
     // 不再無條件加——「寫什麼才加什麼」。基本層關鍵字＝basic 或 overseasCashback
@@ -639,10 +639,10 @@ function getDisplayRate(card, rateGroup, designatedRate, levelSettings) {
     return Math.round((designatedRate + basicRate + bonusRate + crossSlotRate) * 100) / 100;
 }
 
-// 詳情頁「回饋組成」按鈕（計算機圖示）：只有 stacking 模型（cashbackModel 含 '+'）
-// 需要解釋加總的來源（如 5% = 3%+1%+1%）；其他模型 rate 即總率，不顯示按鈕。
-// 組成資料以 JSON 存在按鈕的 data-comp，點擊由 toggleRateComposition 展開抽屜。
-const CALC_BREAKDOWN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10.5" x2="8.01" y2="10.5"/><line x1="12" y1="10.5" x2="12.01" y2="10.5"/><line x1="16" y1="10.5" x2="16.01" y2="10.5"/><line x1="8" y1="14.5" x2="8.01" y2="14.5"/><line x1="12" y1="14.5" x2="12.01" y2="14.5"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg>';
+// 詳情頁「回饋組成」：只有 stacking 模型（cashbackModel 含 '+'）需要解釋加總的來源（如 5% = 3%+1%+1%）；
+// 其他模型 rate 即總率，沒有組成可看。2026-11-22 起不再有計算機圖示鈕——回饋率數字本身變成按鈕
+// （renderPlanRow 產生，class calc-breakdown-btn），組成資料以 JSON 存在按鈕的 data-comp，
+// 點擊由 toggleRateComposition 展開抽屜。
 // 成分表（[{ name, rate, cap }]）：stacking 模型各成分的率與上限，不含金額。
 // 「回饋組成」抽屜與「消費上限」顯示（resolveDisplayCap）共用同一份推導，
 // 兩處不會各算各的。非 stacking 模型回空陣列（rate_N 本身即總率、無成分可拆）。
@@ -694,13 +694,13 @@ function resolveDisplayCapFromLayers(layers) {
     return minPositiveCap(layers);
 }
 
-function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCap, levelSettings) {
+// 回傳已 escape 的 data-comp JSON 字串；沒有組成可看（成分不到兩層）回 ''（呼叫端據此決定回饋率要不要變成按鈕）
+function rateCompositionData(card, rateGroup, designatedRate, designatedCap, levelSettings) {
     const rows = buildRateCompositionRows(card, rateGroup, designatedRate, designatedCap, levelSettings);
     if (rows.length < 2) return '';
 
     const total = Math.round(rows.reduce((s, r) => s + r.rate, 0) * 100) / 100;
-    const comp = escapeHtml(JSON.stringify({ rows, total }));
-    return ` <button type="button" class="calc-breakdown-btn" title="查看回饋組成" aria-label="查看回饋組成" data-comp="${comp}" onclick="toggleRateComposition(this)">${CALC_BREAKDOWN_ICON_SVG}</button>`;
+    return escapeHtml(JSON.stringify({ rows, total }));
 }
 
 // 詳情頁：逐筆整理 cashbackRates（2026-07-09 起不再按 rate+cap 合併），回饋率顯示
@@ -759,8 +759,8 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
         rate: displayRate,
         // 回饋率由級別決定的槽才標「(分級: …)」（見 cdRateUsesLevel／cdLevelLabel）
         levelLabel: cdRateUsesLevel(rate) ? cdLevelLabel(card, levelName) : '',
-        // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
-        rateBtnHtml: rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData),
+        // stacking 模型的回饋率可點開「回饋組成」，解釋加總的來源
+        rateComp: rateCompositionData(card, rate, parsedRate, parsedCap, levelData),
         capText: formatRateCardCap(displayCap),
         title: rate.category,
         endingSoonEnd: rate.periodEnd,
@@ -1310,7 +1310,7 @@ async function calculateCardCashback(card, searchTerm, amount) {
         // from the search term or item name. Including overseasCashback here is
         // what lets a `rate+overseasCashback` model (overseas base, no overseas
         // bonus) resolve its base to overseasCashback instead of basicCashback.
-        // ⚠️ 三處同步：getDisplayRate / rateCompositionButtonHtml / 此處。
+        // ⚠️ 三處同步：getDisplayRate / rateCompositionData / 此處。
         // NOTE: the retired name "rate+basic" (used before this redesign) is NOT
         // an alias for bare "rate" — it now matches the "+" branch (stacking).
         // Rename any existing "rate+basic" data to bare "rate".

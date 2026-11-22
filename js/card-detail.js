@@ -115,9 +115,9 @@ document.addEventListener('pmc:mappings-data-changed', refreshCardDetailApply);
 // 個人設定：統一自動儲存＋常駐儲存狀態列（2026-11-17，三輪改版的第三輪）
 // ============================================================
 // 個人設定每一欄都是「改了就存」（級別／發卡組織／生日月份／童樂匯／免年費＝onchange；額度＝失焦或 Enter；
-// 筆記＝停止輸入約 1 秒、離開輸入框、關閉詳情頁）。最上面一條狀態列（#cd-save-status）一直都在，
-// 把「存好了沒」說清楚：已登入＝綠「已儲存到你的帳號」；訪客＝黃「只存在這台裝置…」＋「登入」連結；
-// 任何一欄儲存時變灰「儲存中…」，成功後回到綠／黃並接上「・今天 HH:MM」；失敗＝紅，寫明原因。
+// 筆記＝停止輸入約 1 秒、離開輸入框、關閉詳情頁）。「個人設定」標題列右側的小字（#cd-save-status）一直都在，
+// 把「存好了沒」說清楚：已登入＝綠勾「已儲存・HH:MM」；訪客＝黃手機「存在這台裝置・登入同步」；
+// 任何一欄儲存時變成「儲存中…」，成功後回到已儲存／訪客；失敗＝紅字，原因寫在第二行與 title。
 // ⚠️ 狀態只反映「真正的儲存結果」：各欄既有的 save 函數回傳結果物件（見 js/levels-payments.js「儲存結果」），
 //    cdTrackSave(key, promise) 等那個 promise 結案才換狀態；沒有任何「假裝成功」的計時器。
 //    唯一的計時器是「儲存中…」至少顯示 CD_SAVE_MIN_BUSY_MS——訪客的本機儲存不到 1ms 就完成，不留一下的話
@@ -135,20 +135,34 @@ function cdSettingRowHtml(labelHtml, controlHtml, subText) {
 
 function cdSaveTimeText(d) {
     const pad = n => String(n).padStart(2, '0');
-    return `今天 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// 依目前狀態重畫狀態列。狀態來源：busy（儲存中的筆數）→ errors（有欄位失敗）→ 登入與否
+// 儲存狀態的小圖示（標題列右側，13px）：已儲存＝勾（綠）、訪客＝手機（黃）、儲存中＝轉圈、失敗＝驚嘆圓圈（紅）
+const CD_SV_ICONS = {
+    ok: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>',
+    local: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="1.5" width="8" height="13" rx="1.6"/><path d="M7 12h2"/></svg>',
+    busy: '<span class="cd-sv-spin"></span>',
+    err: '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="6.2"/><path d="M8 4.8v3.6M8 11h.01"/></svg>'
+};
+
+// 依目前狀態重畫「個人設定」標題列右側的小字。狀態來源：busy（儲存中的筆數）→ errors（有欄位失敗）→ 登入與否
+// 2026-11-22 改成標題列右側一行小字（以前是整條彩色底的狀態列）：
+//   已登入＝勾＋「已儲存・HH:MM」（還沒存過＝「已儲存到你的帳號」）；訪客＝手機圖示＋「存在這台裝置・」＋「登入」連結＋「同步」；
+//   儲存中＝轉圈＋「儲存中…」；失敗＝紅色警告圖示＋「{欄位}沒存成功，請重試」，原因／「已先存在這台裝置」／「另有 N 項」
+//   放第二行小字（.cd-sv-d）並完整寫進 title。
 function cdSaveStatusRender() {
     const el = document.getElementById('cd-save-status');
     if (!el) return;
+    const iconEl = el.querySelector('.cd-sv-ic');
     const textEl = el.querySelector('.cd-sv-t');
     const loginBtn = el.querySelector('.cd-sv-login');
+    const tailEl = el.querySelector('.cd-sv-t2');
+    const detailEl = el.querySelector('.cd-sv-d');
     const loggedIn = !!(typeof currentUser !== 'undefined' && currentUser);
     const errKeys = Object.keys(_cdSv.errors);
     const volKeys = Object.keys(_cdSv.volatile);
-    const when = _cdSv.at ? `・${cdSaveTimeText(_cdSv.at)}` : '';
-    let state, text, showLogin = false;
+    let state, text, tail = '', detail = '', showLogin = false;
     if (_cdSv.busy > 0) {
         state = 'busy';
         text = '儲存中…';
@@ -157,24 +171,32 @@ function cdSaveStatusRender() {
         const latest = errKeys.reduce((a, b) => (_cdSv.errors[b].seq > _cdSv.errors[a].seq ? b : a));
         const e = _cdSv.errors[latest];
         state = 'err';
-        text = `儲存失敗（${CD_SAVE_LABELS[latest] || '設定'}）：${e.reason}。` + (e.local ? '已先存在這台裝置，請稍後再試。' : '請重試。') +
+        text = `${CD_SAVE_LABELS[latest] || '設定'}沒存成功，請重試`;
+        detail = `${e.reason}。` + (e.local ? '已先存在這台裝置。' : '') +
             (errKeys.length > 1 ? `另有 ${errKeys.length - 1} 項也沒存成功。` : '');
     } else if (volKeys.length > 0) {
         // 訪客且這項設定沒有本機備份（目前只有「童樂匯」）：照實說，不假裝存好了
         state = 'local';
-        text = '這項設定只在這次瀏覽有效，登入後才會保存';
+        text = '這項設定只在這次瀏覽有效・';
+        tail = '後才會保存';
         showLogin = true;
     } else if (loggedIn) {
         state = 'ok';
-        text = '已儲存到你的帳號' + when;
+        text = _cdSv.at ? `已儲存・${cdSaveTimeText(_cdSv.at)}` : '已儲存到你的帳號';
     } else {
         state = 'local';
-        text = '只存在這台裝置。登入後會同步到帳號' + when;
+        text = '存在這台裝置・';
+        tail = '同步';
         showLogin = true;
     }
     el.dataset.state = state;
+    if (iconEl) iconEl.innerHTML = CD_SV_ICONS[state];
     if (textEl) textEl.textContent = text;
     if (loginBtn) loginBtn.hidden = !showLogin;
+    if (tailEl) { tailEl.textContent = tail; tailEl.hidden = !tail; }
+    if (detailEl) { detailEl.textContent = detail; detailEl.hidden = !detail; }
+    // 滑過看得到完整句子（失敗時含原因；touch 裝置看第二行）
+    el.title = state === 'err' ? `${text}：${detail}` : '';
 }
 
 // 換卡時清掉上一張卡的儲存記帳（錯誤、時間）；同一張卡重繪（級別切換）保留
@@ -535,7 +557,7 @@ async function showCardDetail(cardId) {
         }
 
         const levelSelectorHTML =
-            '<div class="cd-set-sec"><h5 class="cd-set-sec-t">計算條件</h5><span class="cd-set-sec-s">會改變這張卡的回饋數字</span></div>' +
+            '<div class="cd-set-sec"><span class="cd-set-sec-s">搜尋結果將依照以下條件顯示</span></div>' +   // 2026-11-23 站長：拿掉「計算條件」小標，只留一句說明
             `<div class="cd-set-box">${rows.join('')}</div>`;
 
         cubeLevelSection.innerHTML = levelSelectorHTML;
@@ -746,8 +768,8 @@ async function showCardDetail(cardId) {
 
             entries.push({
                 rate: displayRate,
-                // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
-                rateBtnHtml: rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, null),
+                // stacking 模型的回饋率可點開「回饋組成」，解釋加總的來源
+                rateComp: rateCompositionData(card, rate, parsedRate, parsedCap, null),
                 capText,
                 title: rate.category,
                 endingSoonEnd: rate.periodEnd,
@@ -1143,8 +1165,8 @@ async function generateCubeSpecialContent(card) {
                     parsedRate,
                     // 回饋率旁的「(分級: Level 3)」：只有回饋率由級別決定的槽（rate 寫 {specialRate} 之類）才標
                     levelLabel: cdRateUsesLevel(rate) ? cdLevelLabel(card, savedLevel) : '',
-                    // stacking 模型的「回饋組成」按鈕（合併後以第一個槽為代表，同 key＝同率同活動）
-                    rateBtnHtml: rateCompositionButtonHtml(card, rate, designatedRate, parsedCap, levelSettings),
+                    // stacking 模型的「回饋組成」資料（合併後以第一個槽為代表，同 key＝同率同活動）
+                    rateComp: rateCompositionData(card, rate, designatedRate, parsedCap, levelSettings),
                     // cap 留空的 stacking 槽顯示加碼層的實際上限（見 resolveDisplayCap）
                     parsedCap: resolveDisplayCap(card, rate, parsedCap, levelSettings),
                     items: rate.items ? [...rate.items] : [],
@@ -1160,7 +1182,7 @@ async function generateCubeSpecialContent(card) {
         for (const mergedRate of mergedActiveRates.values()) {
             entries.push({
                 rate: mergedRate.parsedRate,
-                rateBtnHtml: mergedRate.rateBtnHtml,
+                rateComp: mergedRate.rateComp,
                 levelLabel: mergedRate.levelLabel,
                 capText: formatRateCardCap(mergedRate.parsedCap),
                 title: mergedRate.category,
@@ -1355,18 +1377,26 @@ function mergeGeneralListEntries(base, extra) {
     return out;
 }
 
-// 畫一般回饋區（#card-basic-cashback）：基底列＋搬來的特列項目，最後是灰色的「一般消費排除項目」卡。
+// 畫一般回饋區（#card-basic-cashback）：基底列＋搬來的特列項目。灰色的「一般消費排除項目」卡
+// 2026-11-22 起放在下一區「一般回饋排除項目」（#card-basic-exclusions），沒有名單時整區不顯示。
 // 一般回饋區的卡片維持固定順序（國內一般消費、海外一般消費、國內加碼、海外加碼），不依回饋率重排
 async function renderBasicArea(card, extra = []) {
     const div = document.getElementById('card-basic-cashback');
     if (!div) return;
     const entries = mergeGeneralListEntries(await buildBasicEntries(card), extra);
-    // 一般消費排除項目（2026-10-11 站長要求）：放在一般回饋區最後一張，灰色，只列項目
-    div.innerHTML = planCardsHtml(entries, { sort: false }) + renderBasicExclusionsCard(card);
+    div.innerHTML = planCardsHtml(entries, { sort: false });
+    // 一般消費排除項目（2026-10-11 站長要求；2026-11-22 改成獨立一區）：灰色，只列項目
+    const exDiv = document.getElementById('card-basic-exclusions');
+    const exSection = document.getElementById('card-basic-exclusions-section');
+    if (exDiv && exSection) {
+        const exHtml = renderBasicExclusionsCard(card);
+        exDiv.innerHTML = exHtml;
+        exSection.style.display = exHtml ? '' : 'none';
+    }
 }
 
 // entries → 同方案卡的 HTML。entry 欄位：
-//   rate（數字或字串，不含 %）、ratePrefix（加碼用 '+'）、rateBtnHtml（回饋組成按鈕）、levelLabel（已 escape 的 HTML）、
+//   rate（數字或字串，不含 %）、ratePrefix（加碼用 '+'）、rateComp（回饋組成 data-comp；有值回饋率才變成可點的按鈕）、levelLabel（已 escape 的 HTML）、
 //   capText（已格式化，如 'NT$7,500'／'無上限'）、title（category 原文，內部轉顯示名稱並 escape）、titleIsDisplay、
 //   tagText（標題旁灰小標，如「需領券」）、upcomingStart（即將開始的 periodStart）、endingSoonEnd（進行中活動的 periodEnd）、
 //   minSpend、merchants（{ items }）、merchantsLabel、period、conditions（字串或字串陣列）、registerLink、
@@ -1429,7 +1459,7 @@ function renderPlanCard(g, note) {
     return html;
 }
 
-// 一列回饋：左欄回饋率（24px）＋計算機鈕＋分級標籤；右欄 適用通路／條件／銀行官方登錄連結。
+// 一列回饋：左欄回饋率（24px；有組成可看時是可點的按鈕）＋分級標籤；右欄 適用通路／條件／銀行官方登錄連結。
 // 回饋組成面板（toggleRateComposition）展開在這一列下方
 function renderPlanRow(o) {
     let right = '';
@@ -1441,8 +1471,15 @@ function renderPlanRow(o) {
     // 銀行官方登錄連結（renderRegisterLinkLine 自帶 sanitizeUrl，沒有連結回空字串）
     right += renderRegisterLinkLine(o.registerLink);
 
+    // 回饋率：stacking 模型（有組成可看）時，數字本身就是按鈕（灰色虛線底線，點了展開回饋組成面板，
+    // 2026-11-22 取代旁邊的計算機圖示鈕）；沒有組成的維持純文字、不畫虛線
+    const rateText = escapeHtml((o.ratePrefix || '') + String(o.rate)) + '%';
+    const rateHtml = o.rateComp
+        ? `<button type="button" class="cd-rate calc-breakdown-btn" data-comp="${o.rateComp}" aria-expanded="false" aria-label="${rateText}，查看回饋組成" onclick="toggleRateComposition(this)">${rateText}</button>`
+        : `<span class="cd-rate">${rateText}</span>`;
+
     return `<div class="cd-rr"${o.role ? ` data-role="${escapeHtml(o.role)}"` : ''}${o.specialList ? ' data-sl="1"' : ''}>` +
-        `<div class="cd-rr-l"><div class="cd-rr-n"><span class="cd-rate">${escapeHtml((o.ratePrefix || '') + String(o.rate))}%</span>${o.rateBtnHtml || ''}</div>` +
+        `<div class="cd-rr-l"><div class="cd-rr-n">${rateHtml}</div>` +
         (o.levelLabel ? `<div class="cd-lvl">${o.levelLabel}</div>` : '') +
         `</div><div class="cd-rr-r">${right}</div></div>`;
 }
@@ -1702,7 +1739,7 @@ function renderBasicExclusionsCard(card, initialCount = 10) {
     return `<div class="cashback-detail-item rate-card rate-card-excluded">` +
         `<div class="rate-card-header"><div class="rate-card-title">一般消費排除項目</div></div>` +
         `<div class="rate-card-body">` +
-        `<div class="excluded-detail-note">刷以下項目沒有任何回饋（包含基本回饋）；有指定活動的項目以活動為準</div>` +
+        `<div class="excluded-detail-note">刷以下項目沒有任何回饋（包含基本回饋）</div>` +
         `<div class="matched-merchant rate-card-info"><div class="activity-info-line">排除項目: ${listHtml}</div></div>` +
         `</div></div>`;
 }
@@ -1973,6 +2010,7 @@ const DETAIL_SEARCH_SECTIONS = [
     ['card-special-cashback', 'card-special-section'],
     ['card-upcoming-cashback', 'card-upcoming-section'],
     ['card-basic-cashback', 'card-basic-cashback-section'],
+    ['card-basic-exclusions', 'card-basic-exclusions-section'],
     ['card-coupon-cashback', 'card-coupon-section']
 ];
 function filterCashbackItems(searchTerm) {

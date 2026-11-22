@@ -81,10 +81,10 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
     await page.waitForTimeout(300);
     return page;
   }
-  const status = p => p.evaluate(() => { const el = document.getElementById('cd-save-status'); return { s: el.dataset.state, t: el.querySelector('.cd-sv-t').textContent, login: !document.getElementById('cd-save-login').hidden }; });
+  const status = p => p.evaluate(() => { const el = document.getElementById('cd-save-status'); return { s: el.dataset.state, t: el.innerText.replace(/\s+/g, ''), login: !document.getElementById('cd-save-login').hidden }; });
   const watch = p => p.evaluate(() => {
     window.__seq = []; const el = document.getElementById('cd-save-status');
-    const push = () => { const r = { s: el.dataset.state, t: el.querySelector('.cd-sv-t').textContent }; const l = window.__seq[window.__seq.length - 1]; if (!l || l.s !== r.s || l.t !== r.t) window.__seq.push(r); };
+    const push = () => { const r = { s: el.dataset.state, t: el.innerText.replace(/\s+/g, '') }; const l = window.__seq[window.__seq.length - 1]; if (!l || l.s !== r.s || l.t !== r.t) window.__seq.push(r); };
     new MutationObserver(push).observe(el, { attributes: true, childList: true, subtree: true, characterData: true }); push();
   });
   const seq = p => p.evaluate(() => window.__seq);
@@ -94,11 +94,20 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   let p = await open(true);
   await openCube(p);
   let s = await status(p);
-  check('黃色狀態列＋「登入」連結', s.s === 'local' && s.login && /只存在這台裝置。登入後會同步到帳號/.test(s.t), s.t);
+  check('標題列右側：訪客「存在這台裝置・登入同步」＋「登入」連結', s.s === 'local' && s.login && s.t === '存在這台裝置・登入同步', s.t);
+  check('手機也顯示「個人設定」標題列，狀態小字在同一列右側（12px 灰字）', await p.evaluate(() => {
+    const h = document.querySelector('#card-personal-section .cd-set-h'), st = document.getElementById('cd-save-status');
+    const a = h.getBoundingClientRect(), b = st.getBoundingClientRect(), cs = getComputedStyle(st);
+    return a.height > 0 && b.height > 0 && b.left > a.right && Math.abs(b.top - a.top) < 12 && cs.fontSize === '12px' && cs.color === 'rgb(107, 114, 128)' && !/solid/.test(cs.borderTopStyle === 'none' ? '' : cs.borderTopStyle) && cs.backgroundColor === 'rgba(0, 0, 0, 0)';
+  }));
+  check('沒有「我的紀錄」小標與「只有你看得到」；底部說明是新文字', await p.evaluate(() => {
+    const t = document.getElementById('card-personal-section').textContent;
+    return !/我的紀錄|只有你看得到/.test(t) && document.querySelector('#card-personal-section .cd-set-foot').textContent.trim() === '想一覽所有個人設定？到首頁點擊右上角的「我的信用卡」。' && !/計算條件/.test(t) && /搜尋結果將依照以下條件顯示/.test(t);
+  }));
   await watch(p);
   await p.selectOption('#cube-issuer-select', 'JCB'); await p.waitForTimeout(900);
   let q = await seq(p);
-  check('改發卡組織 → 灰「儲存中…」→ 黃色帶時間', q.some(x => x.s === 'busy' && x.t === '儲存中…') && q[q.length - 1].s === 'local' && /・今天 \d\d:\d\d$/.test(q[q.length - 1].t), JSON.stringify(q.map(x => x.s)));
+  check('改發卡組織 → 「儲存中…」→ 回訪客狀態', q.some(x => x.s === 'busy' && x.t === '儲存中…') && q[q.length - 1].s === 'local' && q[q.length - 1].t === '存在這台裝置・登入同步', JSON.stringify(q.map(x => x.s)));
   check('localStorage cubeIssuer 有值', await p.evaluate(() => localStorage.getItem('cubeIssuer')) === 'JCB');
   await p.evaluate(() => document.getElementById('close-card-detail').click()); await p.waitForTimeout(200);
   await openCube(p);
@@ -108,7 +117,7 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   check('筆記：打字 400ms 時狀態列沒動（不假裝已存）', (await seq(p)).length === 1);
   await p.waitForTimeout(1500);
   q = await seq(p);
-  check('筆記：停 1 秒自動存（localStorage＋狀態列 busy→時間）', await p.evaluate(() => localStorage.getItem('notes_cathay-cube')) === '第一行筆記' && q.some(x => x.s === 'busy') && /・今天/.test(q[q.length - 1].t));
+  check('筆記：停 1 秒自動存（localStorage＋狀態列 busy→回訪客狀態）', await p.evaluate(() => localStorage.getItem('notes_cathay-cube')) === '第一行筆記' && q.some(x => x.s === 'busy') && q[q.length - 1].s === 'local');
   check('沒有 💾／#save-indicator／#credit-limit-saved', await p.evaluate(() => !document.getElementById('save-notes-btn') && !document.getElementById('save-indicator') && !document.getElementById('credit-limit-saved') && !document.getElementById('card-detail-modal').textContent.includes('💾')));
   await p.fill('#credit-limit-input', '150000'); await p.press('#credit-limit-input', 'Enter'); await p.waitForTimeout(500);
   check('額度 150000 → 顯示 150,000、墨色、存 localStorage', await p.inputValue('#credit-limit-input') === '150,000' &&
@@ -119,7 +128,7 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   await watch(p);
   await p.click('label[for="children-eligible-checkbox"]'); await p.waitForTimeout(900);
   q = await seq(p);
-  check('訪客改「童樂匯」：存在這台裝置（childrenEligible_guest=false）、狀態列黃色帶時間', q[q.length - 1].s === 'local' && /只存在這台裝置/.test(q[q.length - 1].t) && /・/.test(q[q.length - 1].t) &&
+  check('訪客改「童樂匯」：存在這台裝置（childrenEligible_guest=false）、狀態列回訪客狀態', q.some(x => x.s === 'busy') && q[q.length - 1].s === 'local' && /存在這台裝置・/.test(q[q.length - 1].t) &&
     await p.evaluate(() => localStorage.getItem('childrenEligible_guest')) === 'false' && await p.evaluate(() => isChildrenEligible) === false, q[q.length - 1].t);
   check('計算條件標籤不顯示「童樂匯」（站長 2026-11-20）', await p.evaluate(() => { const e = document.getElementById('card-calc-cond'); return !!e && !/童樂匯/.test(e.textContent); }));
   await p.focus('#children-eligible-checkbox');
@@ -158,25 +167,25 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   p = await open(false);
   await openCube(p);
   s = await status(p);
-  check('綠色狀態列、沒有登入連結', s.s === 'ok' && !s.login && s.t === '已儲存到你的帳號', s.t);
+  check('已登入：綠勾「已儲存到你的帳號」（還沒存過）、沒有登入連結', s.s === 'ok' && !s.login && s.t === '已儲存到你的帳號', s.t);
   await watch(p);
   await p.selectOption('#cube-issuer-select', 'Mastercard'); await p.waitForTimeout(900);
   q = await seq(p);
   check('發卡組織寫入 Firestore users/<uid>，成功回綠＋時間', await p.evaluate(() => __sets.filter(x => x.path === 'users/testuid' && x.data.cubeIssuer === 'Mastercard').length) === 1 &&
-    q[q.length - 1].s === 'ok' && /・今天 \d\d:\d\d$/.test(q[q.length - 1].t));
+    q[q.length - 1].s === 'ok' && /^已儲存・\d\d:\d\d$/.test(q[q.length - 1].t));
   await watch(p);
   await p.evaluate(() => { __failSets = 1; __failCode = 'unavailable'; });
   await p.selectOption('#cube-issuer-select', 'JCB'); await p.waitForTimeout(900);
   q = await seq(p); s = await status(p);
-  check('setDoc 失敗 → 紅字：欄位＋原因＋「已先存在這台裝置」', s.s === 'err' && /儲存失敗（發卡組織）：網路連線不穩/.test(s.t) && /已先存在這台裝置/.test(s.t), s.t);
+  check('setDoc 失敗 → 紅字：欄位＋原因＋「已先存在這台裝置」', s.s === 'err' && /^發卡組織沒存成功，請重試/.test(s.t) && /網路連線不穩/.test(s.t) && /已先存在這台裝置/.test(s.t), s.t);
   check('失敗時沒有出現任何成功狀態（無假成功）', !q.slice(1).some(x => x.s === 'ok' || x.s === 'local'));
   await p.evaluate(() => { __failSets = 1; __failCode = 'permission-denied'; });
   await p.selectOption('#birthday-month-select', '3'); await p.waitForTimeout(900);
   s = await status(p);
-  check('生日月份失敗（沒有本機備援）：不說「已先存在這台裝置」、說「請重試」、另有 1 項', s.s === 'err' && /（生日月份）：沒有寫入權限/.test(s.t) && /請重試。/.test(s.t) && !/已先存在這台裝置/.test(s.t) && /另有 1 項/.test(s.t), s.t);
+  check('生日月份失敗（沒有本機備援）：不說「已先存在這台裝置」、說「請重試」、另有 1 項', s.s === 'err' && /^生日月份沒存成功，請重試/.test(s.t) && /沒有寫入權限/.test(s.t) && !/已先存在這台裝置/.test(s.t) && /另有1項/.test(s.t), s.t);
   await p.selectOption('#cube-issuer-select', 'Visa'); await p.waitForTimeout(900);
   s = await status(p);
-  check('別欄（發卡組織）重存成功，生日月份的錯誤仍在', s.s === 'err' && /（生日月份）/.test(s.t) && !/另有/.test(s.t), s.t);
+  check('別欄（發卡組織）重存成功，生日月份的錯誤仍在', s.s === 'err' && /^生日月份沒存成功/.test(s.t) && !/另有/.test(s.t), s.t);
   await p.selectOption('#birthday-month-select', '3'); await p.waitForTimeout(900);
   check('同一欄重存成功 → 回綠', (await status(p)).s === 'ok');
   await p.fill('#user-notes-input', '關閉前最後一行');
@@ -186,7 +195,7 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   await p.evaluate(() => { __failSets = 1; __failCode = 'unavailable'; });
   await p.fill('#user-notes-input', '會失敗的筆記'); await p.waitForTimeout(1700);
   s = await status(p);
-  check('筆記雲端失敗 → 紅字（筆記）＋已先存在這台裝置，本機有備份', s.s === 'err' && /（筆記）/.test(s.t) && /已先存在這台裝置/.test(s.t) &&
+  check('筆記雲端失敗 → 紅字（筆記）＋已先存在這台裝置，本機有備份', s.s === 'err' && /^筆記沒存成功，請重試/.test(s.t) && /已先存在這台裝置/.test(s.t) &&
     await p.evaluate(() => localStorage.getItem('notes_testuid_cathay-cube')) === '會失敗的筆記', s.t);
   // 級別：yushan-unicard
   await p.evaluate(() => { __failSets = 0; return showCardDetail('yushan-unicard'); }); await p.waitForTimeout(600);
@@ -196,7 +205,7 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   await p.selectOption('#card-level-select', target); await p.waitForTimeout(1500);
   const after = await p.evaluate(() => ({ rates: [...document.querySelectorAll('#card-special-cashback .cd-rate')].map(e => e.textContent).join(), sets: __sets.filter(x => x.path === 'cardSettings/testuid_yushan-unicard').map(x => x.data.level) }));
   s = await status(p);
-  check('級別改了：回饋卡更新、寫入 Firestore、狀態列綠＋時間', before.rates !== after.rates && after.sets.includes(target) && s.s === 'ok' && /・今天/.test(s.t), s.t);
+  check('級別改了：回饋卡更新、寫入 Firestore、狀態列綠＋時間', before.rates !== after.rates && after.sets.includes(target) && s.s === 'ok' && /^已儲存・\d\d:\d\d$/.test(s.t), s.t);
   await p.click('#level-help-btn'); await p.waitForTimeout(200);
   check('「i」說明窗仍可開', await p.evaluate(() => document.getElementById('level-help-popup').matches(':popover-open')));
   await p.keyboard.press('Escape');
@@ -204,13 +213,45 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   await p.evaluate(() => showCardDetail('yushan-unicard')); await p.waitForTimeout(600);
   const nf = await p.evaluate(() => ({ sel: document.getElementById('card-level-select').value, writes: __sets.filter(x => x.path.startsWith('cardSettings')).length, ls: localStorage.getItem('cardLevel_testuid_yushan-unicard'), cloud: __docs['cardSettings/testuid_yushan-unicard'].level }));
   check('鐵則 1：存的級別找不到 → 只顯示預設、本機與雲端都沒被改寫', nf.writes === 0 && nf.ls === '不存在的級別' && nf.cloud === '不存在的級別' && nf.sel === before.opts[0], JSON.stringify(nf));
-  const noLv = await p.evaluate(async () => { const c = cardsData.cards.find(c => !c.hasLevels); await showCardDetail(c.id); await new Promise(r => setTimeout(r, 400)); return [...document.querySelectorAll('#card-personal-section .cd-set-sec-t')].map(e => e.textContent).join(); });
-  check('非分級卡只有「我的紀錄」一組', noLv === '我的紀錄', noLv);
+  check('分級卡：沒有「計算條件」小標，說明是「搜尋結果將依照以下條件顯示」（站長 2026-11-23）', await p.evaluate(() =>
+    document.querySelectorAll('#card-personal-section .cd-set-sec-t').length === 0 &&
+    [...document.querySelectorAll('#card-personal-section .cd-set-sec-s')].map(e => e.textContent.trim()).join('|') === '搜尋結果將依照以下條件顯示'));
+  const noLv = await p.evaluate(async () => { const c = cardsData.cards.find(c => !c.hasLevels); await showCardDetail(c.id); await new Promise(r => setTimeout(r, 400)); return { secs: [...document.querySelectorAll('#card-personal-section .cd-set-sec-t')].map(e => e.textContent).join(), rows: document.querySelectorAll('#card-personal-section .cd-st-r').length, txt: document.getElementById('card-personal-section').textContent }; });
+  check('非分級卡沒有「計算條件」組、也沒有「我的紀錄」小標（站長 2026-11-22）：只有額度／免年費／筆記三列', noLv.secs === '' && noLv.rows === 3 && !/我的紀錄|只有你看得到/.test(noLv.txt), JSON.stringify({ secs: noLv.secs, rows: noLv.rows }));
   await p.evaluate(() => { __failSets = 0; selectCardDetailTab('set'); }); await p.fill('#user-notes-input', '成功的筆記'); await p.waitForTimeout(1700);
   await p.evaluate(() => { __AUTH.currentUser = null; __authCbs.forEach(cb => cb(null)); }); await p.waitForTimeout(600);
   s = await status(p);
   check('auth 變化（登出）→ 狀態列切成訪客黃色＋登入連結', s.s === 'local' && s.login, s.t);
   await p.context().close();
+
+  console.log('D. 桌機（≥1025px）左欄是獨立白色側欄（2026-11-22）');
+  {
+    const probe = await browser.newPage({ viewport: { width: 100, height: 100 } });   // 拿來解 PNG 取像素
+    const pixels = async (png, pts) => { await probe.setContent('<canvas id=c></canvas>'); return probe.evaluate(async ({ b64, pts }) => {
+      const img = new Image(); img.src = 'data:image/png;base64,' + b64; await img.decode();
+      const c = document.getElementById('c'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+      return pts.map(([x, y]) => [...g.getImageData(x, y, 1, 1).data].slice(0, 3).join(','));
+    }, { b64: png.toString('base64'), pts }); };
+    for (const [W, H] of [[1440, 900], [1100, 800]]) {
+      const pd = await open(true); await pd.setViewportSize({ width: W, height: H });
+      await pd.evaluate(() => showCardDetail('cathay-cube')); await pd.waitForTimeout(700);
+      const g = await pd.evaluate(() => { const r = document.querySelector('.cd-side').getBoundingClientRect(); const bgc = e => getComputedStyle(e).backgroundColor; const bd = e => getComputedStyle(e).borderTopWidth + '/' + getComputedStyle(e).borderLeftWidth;
+        return { right: Math.round(r.right), top: Math.round(r.top), bottom: Math.round(r.bottom), sumBg: bgc(document.querySelector('.cd-sum')), sumBd: bd(document.querySelector('.cd-sum')), boxBg: bgc(document.querySelector('.cd-side .cd-set-box')), boxBd: bd(document.querySelector('.cd-side .cd-set-box')), box2Bg: bgc(document.querySelector('#card-personal-section > .cd-set-box')), box2Bd: bd(document.querySelector('#card-personal-section > .cd-set-box')),
+          hd: document.querySelector('.cd-set-hd').getBoundingClientRect().height > 0, tabLeft: Math.round(document.querySelector('.cd-tab:not([hidden])').getBoundingClientRect().left), mainLeft: Math.round(document.querySelector('.cd-main').getBoundingClientRect().left) }; });
+      const xs = g.right;   // 側欄右緣＝框線所在
+      let shot = await pd.screenshot();
+      let px = await pixels(shot, [[5, H - 5], [xs - 4, 600], [xs, 600], [xs + 3, 600], [xs + 3, H - 5]]);
+      check(`${W}×${H}：左欄白底到最底（頭＋底）、右側 1px 細框線 #e5e7eb、右欄灰底`, px[0] === '255,255,255' && px[1] === '255,255,255' && px[2] === '229,231,235' && px[3] === '243,244,246' && px[4] === '243,244,246', JSON.stringify(px));
+      check(`${W}×${H}：左欄內沒有白框套白底（摘要與設定盒子無底色、無外框）`, g.sumBg === 'rgba(0, 0, 0, 0)' && g.boxBg === 'rgba(0, 0, 0, 0)' && g.boxBd === '0px/0px' && g.box2Bg === 'rgba(0, 0, 0, 0)' && g.box2Bd === '1px/0px' && g.sumBd.startsWith('0px/0px') && g.hd, JSON.stringify(g));
+      check(`${W}×${H}：頁籤列仍和右欄對齊（第一個頁籤左緣＝右欄左緣＋14）`, g.tabLeft === g.mainLeft + 14, `${g.tabLeft} vs ${g.mainLeft}`);
+      await pd.evaluate(() => { document.getElementById('card-detail-scroll').scrollTop = 700; }); await pd.waitForTimeout(300);
+      const g2 = await pd.evaluate(() => { const r = document.querySelector('.cd-side').getBoundingClientRect(); return { top: Math.round(r.top), bottom: Math.round(r.bottom), st: document.getElementById('card-detail-scroll').scrollTop }; });
+      shot = await pd.screenshot(); px = await pixels(shot, [[5, H - 5], [xs, H - 5]]);
+      check(`${W}×${H}：捲動右欄（scrollTop=${g2.st}）左欄不動、仍白底到底`, g2.st > 0 && g2.top === g.top && g2.bottom === H && px[0] === '255,255,255' && px[1] === '229,231,235', JSON.stringify({ g2, px }));
+      await pd.context().close();
+    }
+    await probe.close();
+  }
 
   console.log('C. 新戶活動票券（欄位對照）');
   p = await open(true);

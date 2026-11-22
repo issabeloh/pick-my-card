@@ -20,7 +20,7 @@
 - 分級卡兩條路徑共用 `renderCashbackRatesIndividually()`（2026-11-17 起回傳 `{ entries, upcoming }`，entry 交給 `planCardsHtml` 併成同方案卡；CUBE 用自己的 `generateCubeSpecialContent`，回傳 `{ html, general }`）
 - `category` 顯示為回饋卡的標題列（2026-10-05 起，原為回饋率旁的藍色 chip；見 1h 節），`getCategoryDisplayName()` 做名稱轉換
 - 回饋率顯示 `getDisplayRate()` 加總值（stacking = 指定+基本+加碼，與搜尋結果一致）
-- stacking 模型（cashbackModel 含 `+`）回饋率旁有「回饋組成」計算機按鈕（`rateCompositionButtonHtml` + `toggleRateComposition`）
+- stacking 模型（cashbackModel 含 `+`）的回饋率數字本身是按鈕、點了展開「回饋組成」（`rateCompositionData` + `toggleRateComposition`；2026-11-22 起不再有計算機圖示，見 1q）
 
 **仍存在的合併只有兩處**：CUBE 專屬產生器（按 rate+category+period 合併，category 不會被吃掉）與搜尋結果的 `mergeResultsByActivity`。
 
@@ -262,7 +262,7 @@ Grep `titleParts`）：
 規則與比對見 `docs/project/cashback-engine.md` 第 10 節。目的：用戶自己也能判斷——看得到「匹配到哪個排除項目」才排除，又不用讀一堆數字。
 - **搜尋結果**：`createExcludedCardResultElement()`（`js/results-display.js`）。只有卡名＋ⓘ詳情＋右上灰色徽章「一般消費排除」＋「排除項目: **命中的項目**」＋一行小字；**不出**回饋率／回饋金額／上限／活動期間／計算明細／釘選。墊在進行中結果最後（即將開始之前）。**有指定通路結果時也會出現**（沒活動、名單命中的比較卡）；1e 節清場只收基本回饋、不收灰卡。結果標題多一段「一般消費排除項目」（1f 節的 `titleParts`）
 - **可能排除**（搜尋詞只是名單項目的一部分）：同一個灰卡產生器，多 `.maybe-excluded-card`；只有標籤換成「可能屬於排除項目: **完整項目**」，徽章「一般消費排除」與說明維持原字（站長要求）
-- **詳情頁**：`renderBasicExclusionsCard()`（`js/card-detail.js`）放在「一般回饋」區最後一張，標題「一般消費排除項目」，超過 10 項先收合（沿用 `toggleMerchants`）。刻意不走 `renderRateCard`（那支一律輸出回饋率／上限兩欄），但外框沿用 `.rate-card` 的標題列｜body 兩段，桌機兩欄同排對齊照常
+- **詳情頁**：`renderBasicExclusionsCard()`（`js/card-detail.js`）2026-11-22 起放在獨立一區「一般回饋排除項目」（`#card-basic-exclusions-section`，接在一般回饋區後面，沒有名單整區不顯示；原本是一般回饋區最後一張，桌機兩欄由上往下排時總掉到右欄）。說明文字「刷以下項目沒有任何回饋（包含基本回饋）」（同日拿掉後半句「；有指定活動的項目以活動為準」）。標題「一般消費排除項目」，超過 10 項先收合（沿用 `toggleMerchants`）。刻意不走 `renderRateCard`（那支一律輸出回饋率／上限兩欄），但外框沿用 `.rate-card` 的標題列｜body 兩段，桌機兩欄同排對齊照常
 - **灰色調**：`.excluded-card`／`.rate-card-excluded`（底色 `#f3f4f6`），項目用深灰粗體 `#374151`——不用一般匹配項目的藍色（藍色是「有得刷」的語氣）；不用 `opacity`（ⓘ 要維持可點）
 - **詳情頁搜尋框**（外觀：淺藍底區塊＋「搜尋這張卡的所有回饋商家」標籤、提示字「輸入通路名稱（如：全聯、水費）」，跟上方近期異動的灰色清單分開；導覽列「指定通路回饋」靠 `data-anchor="cashback-search-bar"` 捲到搜尋框，`setupCardDetailNav` 的點擊與高亮都認 anchor）（2026-10-14 站長要求改版，`filterCashbackItems()`→`filterDetailCards()`）：搜尋框 `#cashback-search-bar` 放在**所有回饋區上方**（原本在「指定通路回饋」標題下，但它也搜得到下面的區，位置會誤導），一次過濾指定通路／即將開始／一般回饋／領券四區（`DETAIL_SEARCH_SECTIONS`）；國內／海外一般消費卡、排除灰卡跟活動卡一樣照字過濾。沒命中的區整區（含標題）收起（`section._searchHidden`，本來就沒顯示的區不動），四區都沒命中才出「找不到符合的通路或項目」；換卡時 `showCardDetail` 還原。命中卡片裡的通路／排除清單（`strong.merchant-list`）只留命中項目、沒命中的段落縮成「…」（`condenseMerchantList()`；括號裡的頓號不切，見 `splitMerchantList()`），清空搜尋還原。曾試過在搜尋框下方加提示句，站長看過後拿掉
 - **小額支付提示**（2026-11-13，`displayMerchantPaymentInfo()`／`renderMicropaymentNote()`，`js/cashback-engine.js`）：搜到 NCCC 小額支付名單上的品牌時，搜尋結果上方「商家付款方式」灰框多一行提示文字＋「?」鈕；按「?」才展開說明（`MICROPAYMENT_HELP_HTML`，站長指定、寫死在程式）與資料來源連結（聯卡中心頁面，附「截至」日期，隨名單更新自動變）。2026-11-14 站長要求從整段攤開改成這樣，並拿掉標題。該品牌在 Merchant Payments 沒有列時，灰框只出這一段；有付款方式時用細線隔開。文字來源順序：該商家列的 `micropayment_note` → `_default` 列的通用提示（`cardsData.micropaymentDefaultNote`）；兩者都空就不出這一段（灰卡照常）。文字裡的 `{部分}` 在部分門市品牌顯示「部分」、其餘拿掉。跟付款方式一樣不理精準搜尋。排除這類交易的卡變灰卡的規則見 cashback-engine.md 第 10 節
@@ -339,6 +339,8 @@ Grep `titleParts`）：
 
 ## 1n. 詳情頁回饋卡「同方案一張卡」（2026-11-17，三輪改版的第二輪）
 
+> ⚠️ 2026-11-22：下面提到的「計算機鈕（`rateCompositionButtonHtml`）」已改成「回饋率數字本身可點」（`rateCompositionData`＋`renderPlanRow` 畫成按鈕），見 1q。
+
 動機：CUBE 指定通路回饋 19 張卡、平均 247px，同一個方案（秋日遊 5 張、慶生月 3 張…）被拆散、每張重寫一次上限與期間。站長逐項核定設計（示意圖 `detail-proposal/preview.html` 第七版），照做。
 
 **併卡規則**（`planCardsHtml(entries, opts)`，`js/card-detail.js`）：各條 render 路徑只把每個回饋組整理成一筆 entry（＝卡裡的一列），**標題、回饋消費上限、活動期間三者都相同才併成同一張**（鍵再加徽章用的開始／結束日、`extraClass`、`tagText`）；三者任一不同就各自一張，絕不能把一筆的上限或期間寫成別人的。實例：台新 Richart「Pay著刷」三筆同標題同上限、期間不同 → 三張；玉山 Pi「滿額登錄加碼」上限 NT$150,000／無上限 → 兩張；玉山 Ubear「網購 - …」標題各不同 → 各自一張。
@@ -368,12 +370,14 @@ Grep `titleParts`）：
 
 ## 1o. 詳情頁個人設定與新戶活動票券（2026-11-17，三輪改版的第三輪）
 
+> ⚠️ 2026-11-22：下面「常駐儲存狀態列」的**外觀**（整條彩色底、`.cd-sv-dot`、「只存在這台裝置。登入後會同步到帳號」等整句）已改成「個人設定」標題列右側一行小字，「我的紀錄」小標與副標拿掉、底部說明改新文字；狀態邏輯（`cdTrackSave`、save 回傳值、`volatile`、依欄位記帳）沒變。見 1q。
+
 動機：站長說個人設定「排版有點亂，看起來資料像是會不見一樣，沒有填寫後會被存好的感覺」；新戶活動要「更有獎勵感，資料要更完整」。示意圖 `detail-proposal/preview.html`（`#p2` 個人設定、`#p3`／`#gal`／`#multi` 票券），站長逐項核定，照做。
 
 ### 個人設定：統一自動儲存＋常駐儲存狀態列＋兩組一欄一列
 
 **結構**（`index.html` 的 `#card-personal-section` 註解有全圖；命名 `cd-` 前綴）：`h4.cd-set-h`「個人設定」（只在桌機左欄顯示，手機本身就是頁籤）→ 儲存狀態列 `#cd-save-status` → `#cube-level-section`（分級卡才有的「計算條件」組，`showCardDetail()` 注入）→「我的紀錄」組（靜態標記）→ 灰字「所有卡片的設定可以在「我的信用卡」一次看。」。每組＝`.cd-set-sec`（標題＋灰字副標）＋`.cd-set-box`（白底灰框盒子，內含多列 `.cd-st-r`）。一列＝標籤左 `.cd-st-l`／控制項右 `.cd-st-c`／說明小字 `.cd-st-s`（下一行、跨兩欄，空的不佔位）。下拉 `.cd-st-sel` 與輸入 `.cd-st-inp` 同高 36px、寬 132px、靠右、同框色；筆記是整列寬的 `textarea.cd-st-ta`。列由 `cdSettingRowHtml(labelHtml, controlHtml, subText)` 組（`js/card-detail.js`）。
-- **兩組**：「計算條件」（副標：會改變這張卡的回饋數字）＝選擇級別（標籤後面跟「i」說明窗按鈕）、發卡組織、我的生日月份、我符合「童樂匯」權益（後三項只有 CUBE）；「我的紀錄」（副標：只有你看得到）＝我的額度、我已過免年費門檻（說明小字＝`feeWaiver` 原文，`#card-fee-waiver`）、我的筆記。非分級卡只有「我的紀錄」
+- **兩組**：「計算條件」（2026-11-23 起不顯示小標，只有一行灰字說明「搜尋結果將依照以下條件顯示」）＝選擇級別（標籤後面跟「i」說明窗按鈕）、發卡組織、我的生日月份、我符合「童樂匯」權益（後三項只有 CUBE）；「我的紀錄」（副標：只有你看得到）＝我的額度、我已過免年費門檻（說明小字＝`feeWaiver` 原文，`#card-fee-waiver`）、我的筆記。非分級卡只有「我的紀錄」
 - **開關**：勾選一律是 `input type="checkbox" role="switch" class="cd-sw"`（`appearance:none` 畫外觀；id 不變、Tab 可聚焦、空白鍵切換、`:focus-visible` 有 2px 外框）。舊的 `.fee-waiver-checkbox`／`.checkmark` 已刪
 - **訪客的生日月份**仍是 disabled 下拉（只有「需先登入」一個選項）——一眼看出「這裡可以選，但要先登入」。文字別寫長：16px 下 132px 放不下「登入後即可設定」（會被截成「登入後即可設」）
 
@@ -399,6 +403,36 @@ Grep `titleParts`）：
 
 ### 驗證
 `node tools/regression/card-settings-promo-test.js`（28 項）：訪客／已登入（Firestore 替身可讓下一次 setDoc 失敗）的狀態列各態、無假成功、筆記 1 秒自動存與關閉即存、鐵則 1、auth 切換，以及對**所有**有新戶活動的卡逐欄比對詳情頁文字（summary、每一步條件、每條備註、新戶資格、期間、金額／回饋率／上限／贈品／通路／圖片）。`card-detail-test.js`（回饋卡）與 `mappings-page-test.js`（額度合計）沒變。
+
+## 1q. 回饋率本身可點＋個人設定儲存狀態搬到標題列＋桌機側欄（2026-11-22，站長從選項頁選定）
+
+四項小改版，一次做完。
+
+**1. 計算機鈕 → 回饋率本身可以點**（搜尋結果卡與詳情頁一致）
+- 拿掉所有計算機圖示鈕（`CALC_BREAKDOWN_ICON_SVG`、`rateCompositionButtonHtml` 已刪）。回饋率數字改成 `<button class="… calc-breakdown-btn">`：灰色虛線底線（`text-decoration: underline dashed #9ca3af`、1.5px、offset 5px），hover 變深 #374151，展開（`aria-expanded="true"`／`.active`）變實線墨色 #111827。樣式在 `styles.css` 的 `.calc-breakdown-btn`（原本綠底小方塊那條規則整個改寫）
+- **class 名稱 `calc-breakdown-btn` 刻意保留**：`js/home-ui.js` 的結果區／領券區委派點擊（`closest('.calc-breakdown-btn')`）、`showCalcBreakdown` 的 click-outside 與 `card-detail-test.js` 的 `calc` 欄都用它，保留就不必動那幾處。新按鈕同時帶 `.rate-num`（搜尋結果）或 `.cd-rate`（詳情頁）
+- ⚠️ **字級／字重／顏色一律繼承**：搜尋結果由 `.rate-value`（28px／手機 24px、800、#111827）決定，詳情頁由 `.cd-rate`（24px／800／#111827）決定。`.calc-breakdown-btn` 只寫 `font-size: inherit` 等逐項繼承，**不要用 `font: inherit` 簡寫**，也不要寫死數字——選項頁示意圖的「10% 變小」就是 `.mk button{font:inherit}` 蓋掉 `.rate` 造成的特異性錯誤，不是設計
+- 詳情頁：`rateCompositionData()`（`js/cashback-engine.js`）回傳已 escape 的 `data-comp` JSON，成分不到兩層回 `''`；entry 欄位從 `rateBtnHtml` 改名 `rateComp`；`renderPlanRow`（`js/card-detail.js`）有 `rateComp` 才畫成按鈕、否則仍是 `<span class="cd-rate">`（沒有組成的列——例如 CUBE 秋日遊各列——沒有虛線、不可點）。`toggleRateComposition` 行為與面板內容不變
+- 搜尋結果：`calcRateHtml(rateText, hasLayers)`（`js/results-display.js`，緊接在 `showCalcBreakdown` 前）；有 `calculationLayers` 才是按鈕，點了展開同一個試算抽屜（`showCalcBreakdown`）。一般結果卡與領券卡（`createCouponResultElement`）兩處；「回饋金額」旁不再有按鈕。行動支付清單列（1i）本來就沒有計算機鈕
+- 無障礙：`aria-expanded`（`showCalcBreakdown`／`closeOpenBreakdown`／`toggleRateComposition` 同步維護）、`aria-label`「10%，查看回饋組成」／「2%，查看試算明細」、`:focus-visible` 2px 藍框
+- ⚠️ **鍵盤 Enter**：全站 `document` 的 `keypress`「Enter＝計算」（`js/home-ui.js`，`ENTER_OWN_ACTION`）2026-11-23 起在焦點位於按鈕、連結、下拉、多行文字框、`role=button/switch/tab` 時不計算，讓那個元素自己處理 Enter（原本會重算、重畫結果區，回饋率抽屜、「加到小抄」「詳情」都像按了沒反應）。在商家、金額輸入框裡按 Enter 照舊計算。新增會被 Enter 啟動的自訂元件時，用真的 `<button>` 或加上對應 role
+- GA4：原本計算機鈕就沒有送事件（`js/quick-options-misc.js` 的 GA4 選擇器沒有它），所以沒有要搬的事件
+- 首次引導（`js/home-ui.js`）不引用計算機鈕：第 3 步打亮的是整張 `#results-container > .card-result`，洞跟著卡的邊框走（拿掉圖示後卡高少 1–2px，洞跟著變）。`?ab=B` 清 localStorage 實測四步照常跑完
+
+**2. 個人設定儲存狀態 → 標題列右側小字**
+- `.cd-set-hd`（flex）＝`h4.cd-set-h`「個人設定」＋右側 `#cd-save-status`（`.cd-sv`，12px #6b7280，`role="status" aria-live="polite"`）。**手機也顯示這一列**（以前手機把 h4 藏起來；現在狀態住在這裡）。整條彩色底、`.cd-sv-dot` 都拿掉
+- 四態（`cdSaveStatusRender`，狀態邏輯、`cdTrackSave`、各 save 回傳值、`volatile` 都沒動）：已登入＝綠勾＋「已儲存・HH:MM」（還沒存過＝「已儲存到你的帳號」；時間不再帶「今天」）；訪客＝黃手機＋「存在這台裝置・」＋「登入」連結（`#cd-save-login`，id 保留）＋「同步」（訪客不再顯示時間）；儲存中＝轉圈＋「儲存中…」；失敗＝紅警告圖示＋紅字「{欄位}沒存成功，請重試」，**原因、「已先存在這台裝置」、「另有 N 項也沒存成功」放第二行 `.cd-sv-d`**，並完整寫進元素的 `title`。`volatile`（童樂匯）＝「這項設定只在這次瀏覽有效・登入後才會保存」。DOM：`.cd-sv-l`（圖示 `.cd-sv-ic`＋文字 `.cd-sv-t`＋登入鈕＋`.cd-sv-t2`）＋`.cd-sv-d`；文字長時換行、靠右
+- 測試讀狀態一律用 `el.innerText` 去空白（`card-settings-promo-test.js` 的 `status`／`watch`），不要再讀 `.cd-sv-t`（只是整句的前半）
+
+**3. 個人設定文字**：拿掉「我的紀錄」小標（含副標「只有你看得到」；額度／免年費／筆記三列直接接在上一組下面，`.cd-pan-set > .cd-set-box` 有 12px 上距）；「計算條件」小標保留（縮成 14px，因為上面多了 17px 的「個人設定」）。底部說明：「想一覽所有個人設定？到首頁點擊右上角的「我的信用卡」。」非分級卡因此沒有任何組標題
+
+**4. 桌機（≥1025px）左欄＝獨立白色側欄**
+- 白底＋右側 1px 細框線（#e5e7eb）＋從頁首下緣一路到底。**畫在捲動容器 `.card-detail-content` 的 `background-image`**（一條 `linear-gradient`，stop 位置用 `calc(var(--page-gutter) + 316px)`）：預設 `background-attachment: scroll`＝不隨內容捲動，所以右欄捲到哪白欄都在、也總是蓋到視窗底；頁面比 `--page-w` 寬時內容置中，用 `--page-gutter` 把左邊補滿（白欄延伸到視窗左緣）。頁首／頁籤列是不透明藍底，白欄只會在它們下面露出來。`.cd-side` 仍是 sticky、自己 `overflow-y:auto`，行為沒變
+- ⚠️ **白欄寬度與 `.cd-layout` 的 `grid-template-columns: 316px` 是同一個數字**，改一邊要改另一邊（gradient 的 316／317px）。頁籤列 `padding-left: gutter+330px` 與右欄對齊沒動
+- 左欄內部不再有白框：`.cd-sum` 拿掉底色／外框／圓角，只留下緣一條細線；`.cd-side .cd-set-box` 無底無框，列與列之間細線（#f0f1f3）、「計算條件」組與下一組之間 1px #e5e7eb 分隔線。`.cd-side` 內距改 `14px 12px 24px 14px`（右側多留 12px 離框線）。灰底小格（`.cd-fact`）不是「白框」，保留
+- 769–1024px 與手機版面不變（只有標題列與狀態小字、計算條件小標縮字是共用的）
+
+**自動化**：`card-detail-test.js` 的 390px 不變式多驗「有組成的回饋率是帶虛線的按鈕（aria、沒有圖示）、沒組成的是純文字、字重 800」；`card-settings-promo-test.js` 多了標題列／新文字檢查與 D 段桌機版面（1440×900、1100×800 取像素驗白欄、框線、右欄灰底、捲動右欄左欄不動、頁籤對齊）。基準（`baseline.json`／`card-detail-baseline.json`）**沒有重拍**：兩支測試抓的是文字欄位，計算機鈕與回饋率按鈕的差別不在文字裡，13 組＋33 張卡 × 2 日期逐字一致就是「回饋率、金額、上限、通路、條件文字完全沒變」的證據。
 
 ## 1p. 標籤只有兩種樣式（2026-11-16，站長選定「灰＋黃」）
 
@@ -632,3 +666,6 @@ Grep `titleParts`）：
 - [2026-11-17] 錯誤用「單一 lastError」記會被別欄的成功洗掉（A 欄存失敗、B 欄隨後成功 → 紅字消失，用戶以為 A 也存好了）→ 錯誤依欄位 key 記帳，同一欄之後成功才清
 - [2026-11-17] run-regression.js **不涵蓋搜尋結果的新戶活動卡**（它只抓 `#results-container`／停車／領券）；抽 `createCardholderPromoElement` 的共用函數時，「逐字一致」要自己比：載入 `git show HEAD:js/results-display.js` 的舊版，對所有活動 × 兩種模式（搜尋／詳情）比 outerHTML，並換好幾個凍結日期（徽章依日期而變）。本輪用 7 個日期 × 55 筆 × 2 模式比過全一致
 - [2026-11-17] 票券頁籤筆數若把「共用新戶資格」放在 `#card-promos-content` 底下，`cdTabCount` 的 `> *:not(.card-apply-cta)` 會多算一個 → 共用的東西放在 content 之外（`#card-promos-foot`），每筆活動的所有內容包進同一個 `.cd-pm`
+- [2026-11-22] 回饋率改成按鈕後，鍵盤 Enter 開不了試算抽屜 → 全站 `document` 的 keypress「Enter＝計算」在按鈕被啟動的同時重算、重畫結果區，抽屜被洗掉 → 新增「Enter 會被全站快捷鍵吃掉」的可點元素，要在 capture 階段攔 keypress（見 1q）；驗證要真的用鍵盤（Tab＋Enter＋空白鍵）走一遍，滑鼠點得開不代表鍵盤開得了
+- [2026-11-22] 選項頁示意圖裡「回饋率本身可點」的 10% 看起來比較小 → 示意頁 CSS 的 `.mk button{font:inherit}` 特異性大於 `.rate`，不是設計 → 實作時回饋率字級／字重／顏色一律繼承原樣式、不用 `font` 簡寫，用瀏覽器 computed style 前後比對（搜尋結果 24／28px、詳情頁 24px，800，#111827）
+- [2026-11-22] 桌機左欄要「獨立白色側欄、到底」→ 左欄是 sticky、高度只有視窗高，沒辦法靠它自己的背景一路畫到底，也畫不到視窗左緣（內容置中時）→ 白欄畫在捲動容器的 `background-image`（不隨捲動），位置用 `calc(var(--page-gutter) + 316px)`，並以像素取樣測試守住
