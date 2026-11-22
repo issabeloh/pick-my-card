@@ -4343,6 +4343,22 @@ input[type="number"]:focus {
 }
 #card-detail-modal .cd-st-ta::placeholder { color: #9ca3af; font-size: 14px; }
 
+/* 字級整理（2026-11-23 站長：有些字特別大、看起來亂）。
+   手機的輸入框／下拉被全站規則固定 16px（低於 16px 時 iPhone 聚焦會自動放大畫面，見檔尾「Prevent iOS/Android auto-zoom」），
+   旁邊標籤卻只有 14px，提示字「未設定」也跟著 16px，值和提示字比標籤還大。
+   做法：輸入框本身維持 16px（不能動）；提示字一律 14px 淺灰；值改深灰 #374151 不搶標籤；手機標籤 15px。
+   停用的下拉（訪客的生日月份「需先登入」）聚焦不了、不會觸發放大，可以縮成 14px */
+#card-detail-modal .cd-st-sel,
+#card-detail-modal input[type="text"].cd-st-inp,
+#card-detail-modal .cd-st-ta { color: #374151; }
+#card-detail-modal input.cd-st-inp::placeholder { font-size: 14px; }
+@media (max-width: 768px) {
+    #card-detail-modal .cd-st-l label { font-size: 15px; }
+    #card-detail-modal .cd-st-sel,
+    #card-detail-modal input[type="text"].cd-st-inp { height: 38px; }
+    #card-detail-modal .cd-st-sel:disabled { font-size: 14px !important; }
+}
+
 /* 開關：仍是 input type=checkbox（id 不變；Tab 聚焦、空白鍵切換），只換外觀 */
 #card-detail-modal input[type="checkbox"].cd-sw {
     appearance: none;
