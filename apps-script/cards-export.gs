@@ -4138,7 +4138,7 @@ function pmcCardPageHtml_(g, groups, ctx) {
   const titleReward = pmcCardPageTitleReward_(g);
   const title = name + '新戶' + (/^[A-Za-z0-9]/.test(titleReward) ? ' ' : '') + titleReward +
     (g.items.length > 1 ? (/[A-Za-z0-9]$/.test(titleReward) ? ' 等 ' : '等 ') + g.items.length + ' 檔' : '') +
-    '｜' + ctx.yearMonthLabel + '新戶活動 - Pick My Card';
+    '｜' + ctx.yearMonthLabelFor(updatedIso) + '新戶活動 - Pick My Card';
   const rewards = pmcRewardList_(g, 3);
   const ends = g.items.map(function (p) { return p.periodEndIso; }).filter(Boolean).sort();
   const endText = ends.length ? (g.items.length > 1 ? '，最快 ' : '，活動到 ') + pmcShortDate_(ends[0]) + (g.items.length > 1 ? ' 截止' : '') : '';
@@ -4164,7 +4164,7 @@ function pmcCardPageHtml_(g, groups, ctx) {
     '  <section class="pmc-cp-hero" data-card-id="' + pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(name) + '">\n' +
     // 月份不放進 h1（站長 2026-11-22：標題太長、手機折成兩行），改成標題下方一行小灰字；<title> 仍帶月份
     '    <h1>' + pmcEscapeHtml_(name) + '新戶活動</h1>\n' +
-    '    <p class="pmc-cp-month">' + pmcEscapeHtml_(ctx.monthLabel) + '整理</p>\n' +
+    '    <p class="pmc-cp-month">' + pmcEscapeHtml_(ctx.monthLabelFor(updatedIso)) + '整理</p>\n' +
     '    <p class="pmc-cp-lede">' + pmcEscapeHtml_(pmcCardPageLede_(g)) + '</p>\n' +
     '    <div class="pmc-cp-top">\n' +
     '      <span class="pmc-cp-img"><img src="/assets/images/cards/' + encodeURIComponent(cardId) + '.png" alt="' +
@@ -4237,9 +4237,11 @@ function generatePromoCardPages(exportData) {
   const pg = pmcPreparePromoGroups_(exportData, todayIso);
   const perCard = (exportData && exportData.promoCardUpdatedIso) || {};
   const fallbackIso = (exportData && exportData.promosUpdatedIso) || todayIso;
+  // 月份跟著「這張卡自己的資料更新日」走，不跟部署日（站長 2026-11-22 選 a）：
+  // 活動沒更新、月份卻每月自動往前跳＝假的新鮮度，而且跟頁面上的「資料更新於」對不起來
   const ctx = {
-    monthLabel: todayIso.slice(0, 4) + ' 年 ' + parseInt(todayIso.slice(5, 7), 10) + ' 月',
-    yearMonthLabel: todayIso.slice(0, 4) + '年' + parseInt(todayIso.slice(5, 7), 10) + '月',
+    monthLabelFor: function (iso) { return iso.slice(0, 4) + ' 年 ' + parseInt(iso.slice(5, 7), 10) + ' 月'; },
+    yearMonthLabelFor: function (iso) { return iso.slice(0, 4) + '年' + parseInt(iso.slice(5, 7), 10) + '月'; },
     versionTag: (exportData && exportData.versionTagOverride) || 'dev',
     updatedFor: function (id) { return perCard[id] || fallbackIso; }
   };
