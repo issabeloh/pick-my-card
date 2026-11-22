@@ -1140,7 +1140,6 @@
                                     <!-- 銀行名稱＝Cards Data 的 fullName -->
                                     <div class="cd-bank" id="card-full-name-link"></div>
                                     <div class="cd-type">
-                                        <span id="card-cashback-type"></span>
                                         <!-- 信用卡官網連結：Cards Data 的 website 欄，showCardDetail() 填 href、沒網址就 hidden。
                                              GA4 button_type = detail_official_site -->
                                         <a id="card-official-site-link" class="card-official-site-link" target="_blank" rel="noopener noreferrer" hidden>信用卡官網 ↗</a>
@@ -1285,6 +1284,17 @@
                                 <h4>一般回饋排除項目</h4>
                                 <div id="card-basic-exclusions"></div>
                             </div>
+
+                            <!-- 回饋類型與點數效期（2026-11-23 站長：從摘要那行小字搬來「回饋」頁籤最下面；不常看、有些很長 → 預設收合）。
+                                 資料是 Cards Data 的 basicCashbackType／pointsExpiry，showCardDetail() 用 textContent 填；
+                                 兩個都沒有就整塊 hidden，只有一個就只顯示那一列 -->
+                            <details class="cd-reward-info" id="card-reward-info" hidden>
+                                <summary>回饋類型與點數效期</summary>
+                                <dl>
+                                    <div id="card-cashback-type-row"><dt>回饋類型</dt><dd id="card-cashback-type"></dd></div>
+                                    <div id="card-points-expiry-row"><dt>點數效期</dt><dd id="card-points-expiry"></dd></div>
+                                </dl>
+                            </details>
                         </div>
 
                         <!-- 頁籤二「領券・停車」 -->
