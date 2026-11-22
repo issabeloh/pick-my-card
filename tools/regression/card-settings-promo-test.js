@@ -119,16 +119,40 @@ const check = (name, ok, extra = '') => { results.push({ name, ok }); console.lo
   await watch(p);
   await p.click('label[for="children-eligible-checkbox"]'); await p.waitForTimeout(900);
   q = await seq(p);
-  check('訪客改「童樂匯」：照實說「只在這次瀏覽有效」（沒有本機備份，不假裝存好）', q[q.length - 1].s === 'local' && /只在這次瀏覽有效/.test(q[q.length - 1].t), q[q.length - 1].t);
+  check('訪客改「童樂匯」：存在這台裝置（childrenEligible_guest=false）、狀態列黃色帶時間', q[q.length - 1].s === 'local' && /只存在這台裝置/.test(q[q.length - 1].t) && /・/.test(q[q.length - 1].t) &&
+    await p.evaluate(() => localStorage.getItem('childrenEligible_guest')) === 'false' && await p.evaluate(() => isChildrenEligible) === false, q[q.length - 1].t);
+  check('計算條件標籤不顯示「童樂匯」（站長 2026-11-20）', await p.evaluate(() => { const e = document.getElementById('card-calc-cond'); return !!e && !/童樂匯/.test(e.textContent); }));
   await p.focus('#children-eligible-checkbox');
   const b4 = await p.evaluate(() => document.getElementById('children-eligible-checkbox').checked);
   await p.keyboard.press('Space');
   check('開關：input type=checkbox、Tab 可聚焦、空白鍵切換、有 focus 樣式',
     await p.evaluate(() => { const e = document.getElementById('children-eligible-checkbox'); return e.type === 'checkbox' && document.activeElement === e && /solid/.test(getComputedStyle(e).outlineStyle); }) &&
     b4 !== await p.evaluate(() => document.getElementById('children-eligible-checkbox').checked));
+  check('空白鍵切回 → childrenEligible_guest=true', await p.evaluate(() => localStorage.getItem('childrenEligible_guest')) === 'true');
+  // 重開頁面：訪客關掉的選擇還在
+  await p.evaluate(() => saveChildrenEligible(false)); await p.reload({ waitUntil: 'domcontentloaded' });
+  await p.waitForFunction(() => typeof appStarted !== 'undefined' && appStarted && cardsData && cardsData.cards && cardsData.cards.length > 0, null, { timeout: 20000 });
+  await p.waitForTimeout(300); await openCube(p);
+  check('重開頁面：訪客的「童樂匯」關閉仍在（變數與開關都是關）', await p.evaluate(() => isChildrenEligible === false && document.getElementById('children-eligible-checkbox').checked === false));
+  // 登出清理會清掉這個訪客 key
+  await p.evaluate(() => clearPersonalLocalDataOnSignOut('someone'));
+  check('登出清理移除 childrenEligible_guest', await p.evaluate(() => localStorage.getItem('childrenEligible_guest')) === null);
+  await p.evaluate(() => localStorage.setItem('childrenEligible_guest', 'false'));
   await p.click('#cd-save-login'); await p.waitForTimeout(200);
   check('「登入」連結開登入視窗，且疊在詳情頁上面', await p.evaluate(() => { const m = document.getElementById('auth-modal'); const t = document.elementFromPoint(innerWidth / 2, innerHeight / 2); return m.style.display === 'flex' && m.contains(t); }));
   await p.context().close();
+
+  console.log('A2. 訪客登入：童樂匯帶進帳號');
+  for (const cloud of [undefined, true]) {
+    p = await open(true);
+    await p.evaluate(c => { localStorage.setItem('childrenEligible_guest', 'false'); if (c !== undefined) __docs['users/testuid'] = { isChildrenEligible: c }; }, cloud);
+    await p.evaluate(() => { __AUTH.currentUser = { uid: 'testuid', email: 't@example.com', displayName: '測試', photoURL: '', providerData: [{ providerId: 'google.com' }] }; __authCbs.forEach(cb => cb(__AUTH.currentUser)); });
+    await p.waitForFunction(() => typeof currentUser !== 'undefined' && currentUser, null, { timeout: 10000 }); await p.waitForTimeout(1500);
+    const r = await p.evaluate(() => ({ key: localStorage.getItem('childrenEligible_guest'), v: isChildrenEligible, sets: __sets.filter(x => x.path === 'users/testuid' && 'isChildrenEligible' in x.data).map(x => x.data.isChildrenEligible) }));
+    if (cloud === undefined) check('雲端沒值 → 帶入訪客的「關」、寫入 Firestore、移除訪客 key', r.key === null && r.v === false && r.sets.includes(false), JSON.stringify(r));
+    else check('雲端有值 → 以雲端為準、不寫入、移除訪客 key', r.key === null && r.v === true && r.sets.length === 0, JSON.stringify(r));
+    await p.context().close();
+  }
 
   console.log('B. 已登入');
   p = await open(false);

@@ -1599,8 +1599,7 @@ function updateCardCalcConditions(card) {
     if (card.id === 'cathay-cube') {
         const issuer = document.getElementById('cube-issuer-select');
         if (issuer && issuer.value) vals.push(issuer.value);
-        const kids = document.getElementById('children-eligible-checkbox');
-        if (kids && kids.checked) vals.push('童樂匯');
+        // 「童樂匯」不顯示在這裡（站長 2026-11-20）：開關照舊在個人設定
     }
     if (vals.length === 0) { bar.hidden = true; return; }
 

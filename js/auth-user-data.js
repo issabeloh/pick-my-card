@@ -150,7 +150,7 @@ function clearPersonalLocalDataOnSignOut(uid) {
     const guestExact = [
         'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs', 'mappingsPrefs_guest',
         'merchantAliases_guest', 'mappingsTitle_guest',
-        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
+        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest', 'childrenEligible_guest'
     ];
     const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
     // 訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
@@ -431,7 +431,7 @@ function ensureAuthSubscribed() {
             await loadSpendingMappings();
             userBirthdayMonth = null;
             isBirthdayMonth = false;
-            isChildrenEligible = true;
+            isChildrenEligible = readLocalJSON('childrenEligible_guest', true) !== false;
             cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa';
             setGuestAvatarState();
 
@@ -677,6 +677,20 @@ async function absorbGuestPersonalData(userData) {
             await saveCubeIssuer(localIssuer);
             console.log('🔀 雲端無 CUBE 發卡組織設定，帶入訪客選擇:', localIssuer);
         }
+    }
+
+    // 7. 「童樂匯」權益（訪客 key childrenEligible_guest，2026-11-20 起）：雲端有值 → 雲端為準、丟掉訪客值；
+    //    雲端沒值 → 帶入訪客值。處理完就移除訪客 key（共用電腦上不留「有沒有未成年子女」）；
+    //    帶入失敗時保留 key，下次登入再試
+    if (allKeys.includes('childrenEligible_guest')) {
+        const guestKids = readLocalJSON('childrenEligible_guest', null);
+        let done = true;
+        if (typeof guestKids === 'boolean' && !(userData && userData.isChildrenEligible != null)) {
+            const r = await saveChildrenEligible(guestKids);
+            done = !!(r && r.ok);
+            if (done) console.log('🔀 雲端無童樂匯設定，帶入訪客選擇:', guestKids);
+        }
+        if (done) { try { localStorage.removeItem('childrenEligible_guest'); } catch (e) {} }
     }
 }
 
