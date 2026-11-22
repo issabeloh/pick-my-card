@@ -10083,33 +10083,31 @@ html.pmc-onboard #search-hints-container {
     line-height: 1.5;
     margin: 0 0 16px;
 }
-/* 推薦活動 modal 最下面的「新戶」連結（buildSpotlightPromoLink，2026-11-22 站長選：Uber／Klook 式優惠標籤、
-   放在 Amazon 信用卡優惠列的位置）：細線分隔＋綠色小標籤＋一行字＋›，不做成框，不跟上面的通路活動搶 */
+/* 推薦活動 modal 最下面的新戶活動連結（buildSpotlightPromoLink）。2026-11-22 站長：外觀比照詳情頁手機
+   申辦膠囊 .cd-fab——白底黃框膠囊、黃色禮物圓圈（共用 .cd-gift）、右邊黃色按鈕（共用 .cd-apply-btn）。
+   不浮動，固定在內文最下面；位置沿用前一版（Amazon 信用卡優惠列的位置） */
 .spotlight-promo-link {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 4px 0 0;
-    padding: 14px 0 2px;
-    border-top: 1px solid #e5e7eb;
-    font-size: 13.5px;
-    line-height: 1.4;
-    color: #111827;
+    gap: 10px;
+    margin: 4px 0 2px;
+    padding: 6px 6px 6px 8px;
+    background: #fff;
+    border: 1.5px solid #ffe184;
+    border-radius: 999px;
+    box-shadow: 0 4px 12px rgba(122, 78, 0, 0.12);
+    color: #7a4e00;
     text-decoration: none;
 }
-.spotlight-promo-tag {
-    flex: none;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: #059669;
-    color: #fff;
-    font-size: 11.5px;
-    font-weight: 700;
-}
-.spotlight-promo-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.spotlight-promo-go { flex: none; color: #6b7280; font-size: 18px; }
-.spotlight-promo-link:hover .spotlight-promo-text { text-decoration: underline; }
-.spotlight-promo-link:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
+.spotlight-promo-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
+.spotlight-promo-main,
+.spotlight-promo-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spotlight-promo-main { font-size: 13.5px; }
+.spotlight-promo-main b { font-size: 15.5px; font-weight: 800; }
+.spotlight-promo-sub { font-size: 11.5px; color: #6b7280; }
+.spotlight-promo-btn { padding: 7px 14px; font-size: 13.5px; }
+.spotlight-promo-link:hover .spotlight-promo-btn { filter: brightness(1.03); }
+.spotlight-promo-link:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
 .spotlight-modal-info {
     display: flex;
     flex-direction: column;

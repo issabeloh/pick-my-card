@@ -562,22 +562,28 @@ function buildSpotlightPromoLink(card) {
     const promos = getActiveCardholderPromos(card.id).filter(p => Array.isArray(p.promo_types) && p.promo_types[0]);
     if (!promos.length) return '';
     const promo = promos[0];
-    let text = String(promo.promo_types[0]);
-    if (promo.voucher_amount) text += ` NT$${Math.round(Number(promo.voucher_amount)).toLocaleString()}`;
-    else if (promo.bonus_rate != null && promo.bonus_rate !== '') text += ' ' + formatBonusRate(promo.bonus_rate);
+    const type = String(promo.promo_types[0]);
+    let emphasis = '';
+    if (promo.voucher_amount) emphasis = `NT$${Math.round(Number(promo.voucher_amount)).toLocaleString()}`;
+    else if (promo.bonus_rate != null && promo.bonus_rate !== '') emphasis = formatBonusRate(promo.bonus_rate);
     else {
         const opts = String(promo.gift_content || '').split(/\n|[①②③④⑤⑥⑦⑧⑨]/).map(x => x.trim()).filter(Boolean);
-        if (opts.length > 1) text += ` ${opts.length} 選 1`;
+        if (opts.length > 1) emphasis = `${opts.length} 選 1`;
     }
-    if (promos.length > 1) text += ` 等 ${promos.length} 檔`;
+    // 第二行：「新戶活動」或「共 N 檔新戶活動」＋最快截止
+    let sub = promos.length > 1 ? `共 ${promos.length} 檔新戶活動` : '新戶活動';
     const ends = promos.map(p => (p.period_end ? String(p.period_end).replace(/\//g, '-') : '')).filter(Boolean).sort();
     if (ends.length) {
         const parts = ends[0].split('-');
-        if (parts[1] && parts[2]) text += `・至 ${Number(parts[1])}/${Number(parts[2])}`;
+        if (parts[1] && parts[2]) sub += `・至 ${Number(parts[1])}/${Number(parts[2])}`;
     }
+    // 外觀比照詳情頁手機申辦膠囊 .cd-fab（站長 2026-11-22）：白底黃框膠囊、黃色禮物圓圈、右邊黃色按鈕。
+    // 整顆是一個連結；它不浮動，固定在 modal 內文最下面
     return `<a class="spotlight-promo-link" href="/promos/${escapeHtml(card.id)}" data-card-id="${escapeHtml(card.id)}">` +
-        `<span class="spotlight-promo-tag">新戶</span><span class="spotlight-promo-text">${escapeHtml(text)}</span>` +
-        `<span class="spotlight-promo-go" aria-hidden="true">›</span></a>`;
+        `<span class="cd-gift" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg></span>` +
+        `<span class="spotlight-promo-text"><span class="spotlight-promo-main">${escapeHtml(type)}${emphasis ? ` <b>${escapeHtml(emphasis)}</b>` : ''}</span>` +
+        `<span class="spotlight-promo-sub">${escapeHtml(sub)}</span></span>` +
+        `<span class="cd-apply-btn spotlight-promo-btn">看活動</span></a>`;
 }
 
 function buildSpotlightModalBody(item, card) {
