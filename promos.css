@@ -37,11 +37,13 @@
   --promo-reward-size: 24px;       /* 金額（如「$500」） */
   --promo-reward-gift-size: 17px;  /* 禮物名稱（.is-gift） */
   --pmc-white: #ffffff;
-  --pmc-page-bg-1: #e4e5e8;
-  --pmc-page-bg-2: #b0b2b8;
+  /* 頁面底色（2026-11-22 跟主站同步去灰底）：原本是 #e4e5e8 → #b0b2b8 的 135° 灰漸層，
+     白色容器浮在上面。現在同 styles.css body 的 #f9fafb，只在 .promos-container 之外
+     （頁尾、申辦前 FAQ）看得到。 */
+  --pmc-page-bg: #f9fafb;
   --pmc-warn-bg: #1f2937;
   --pmc-border: #e5e7eb;
-  /* 白卡上的極淺填色（hero 引言塊）：比 --pmc-page-bg-1 淺一階，只求跟純白有區隔 */
+  /* 白底上的極淺填色（hero 引言塊）：只求跟純白有區隔 */
   --pmc-tint: #f5f6f8;
   --pmc-chip-border: #7dd3fc;
   --pmc-chip-text: #0369a1;
@@ -70,7 +72,22 @@
   --pmc-radius-lg: 16px;
   --pmc-radius-md: 12px;
   --pmc-shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --pmc-shadow-container: 0 20px 40px rgba(0, 0, 0, 0.15);
+
+  /* 全幅版面的兩個尺寸（2026-11-22，比照 styles.css 檔頭的 --page-w／--page-gutter，
+     主站 2026-11-16 那一輪見 docs/project/ui-refresh-diagnosis.md 3.4 節）：
+     --pmc-page-w      內容寬度上限（原本寫在 .promos-container 的 max-width）。
+                       三段值（1200／≥1400 1360／≥1700 1560）跟主站一樣，頁首 logo 與導覽在兩頁之間切換時位置不跳
+     --pmc-page-gutter 內容兩側到視窗邊的距離。頁首這種「底色滿版、內容對齊」的區塊把它加進左右 padding；
+                       其餘區塊直接 max-width: var(--pmc-page-w) 置中
+     ⚠️ gutter 裡的 100% 在「使用處」才解析（相對該元素包含區塊的寬度），只能用在 padding／margin，
+        而且該元素的父層必須是滿版寬（.promos-container 的直系子節點才行） */
+  --pmc-page-w: 1200px;
+  --pmc-page-gutter: 0px;
+}
+@media (min-width: 769px) {
+  :root {
+    --pmc-page-gutter: max(0px, calc((100% - var(--pmc-page-w)) / 2));
+  }
 }
 
 html, body {
@@ -84,15 +101,15 @@ html, body {
   overflow-x: clip;
 }
 
-/* 頁面底色：抄自 styles.css body{}（灰階漸層，.container 白卡浮在上面）。
+/* 頁面底色：抄自 styles.css body{}。2026-11-22 跟主站同步改成全幅版面——原本是灰漸層＋
+   外圈 20px 留白，白色容器像一張浮在灰底上的卡片（站長：「主要內容都浮在灰色背景前面，很怪」）。
    奶油黃整頁背景在 v2 移除。 */
 body {
   font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.6;
   color: var(--pmc-ink);
-  background: linear-gradient(135deg, var(--pmc-page-bg-1) 0%, var(--pmc-page-bg-2) 100%);
+  background: var(--pmc-page-bg);
   min-height: 100vh;
-  padding: 20px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -102,12 +119,10 @@ a {
 
 /* ---------------- 白底容器（抄自 styles.css .container）---------------- */
 
+/* 滿版（2026-11-22，同主站 2026-11-16）：不再有圓角、陰影與寬度上限，
+   寬度改由裡面的 .promos-main 用 --pmc-page-w 自己管、頁首用 --pmc-page-gutter 對齊 */
 .promos-container {
-  max-width: 1200px;
-  margin: 0 auto;
   background: var(--pmc-white);
-  border-radius: var(--pmc-radius-lg);
-  box-shadow: var(--pmc-shadow-container);
   overflow: clip;
 }
 
@@ -117,8 +132,15 @@ a {
   /* 2026-11-17 跟主站同步改單色（styles.css 的 header 在 2026-11-16 拿掉 135° 漸層） */
   background: var(--pmc-blue-deep);
   color: white;
-  padding: 10px 20px;
+  padding: 10px calc(var(--pmc-page-gutter) + 20px);   /* 底色滿版、內容對齊（--pmc-page-gutter 見 :root） */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+/* 桌機左右內距跟主站 styles.css 檔尾密度區塊的 header 同值（17px），logo 在兩頁之間切換時不會差 3px */
+@media (min-width: 1025px) {
+  .promos-header {
+    padding-left: calc(var(--pmc-page-gutter) + 17px);
+    padding-right: calc(var(--pmc-page-gutter) + 17px);
+  }
 }
 
 .promos-header-top {
@@ -470,6 +492,8 @@ a {
 /* ---------------- Main / hero ---------------- */
 
 .promos-main {
+  max-width: var(--pmc-page-w);   /* 全幅版面：內容置中，見 :root 註解 */
+  margin: 0 auto;
   padding: 16px 24px 28px;
 }
 
@@ -1246,7 +1270,8 @@ a {
   font-size: 15px;
   font-weight: 700;
   letter-spacing: 2px;
-  border-radius: 0 0 12px 12px;
+  /* 四角直角：容器滿版之後（手機 2026-09、桌機 2026-11-22），留下圓角會在左右下角露出缺口 */
+  border-radius: 0;
   margin-top: 16px;
 }
 
@@ -1258,7 +1283,7 @@ a {
    promos.html 卻要等站長把 cards-export.gs 貼回 Sheets 後的下一次匯出才換新標記，
    中間這段時間兩種標記都要排得好看。換完之後可以刪掉。 */
 .social-media-footer {
-  max-width: 1200px;
+  max-width: var(--pmc-page-w);
   margin: 20px auto 10px;
   padding: 0 24px;
   text-align: center;
@@ -1305,19 +1330,20 @@ a {
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.75);
+  /* 2026-11-22 同步 styles.css：原本半透明白＋毛玻璃是配灰漸層底的，
+     頁面底色改成 #f9fafb 之後看不出按鈕外形，改實心白底＋灰框 */
+  background: #fff;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   color: #1f2937;
   text-decoration: none;
   font-size: 13px;
   transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
 }
 
 .social-link:hover {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(255, 255, 255, 0.95);
+  background: #fff;
+  border-color: #d1d5db;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -1446,25 +1472,8 @@ a {
    點卡片（除申辦鈕外）展開看完整內容。桌機（預設樣式，不在這個 media query 內）
    維持原本全部展開的 grid 卡片版型不變。 */
 @media (max-width: 768px) {
-  /* 手機版滿版：拿掉 body 的 10px 內距，.promos-container 也不再是「浮在灰底上
-     的白卡片」（圓角＋陰影）。手機螢幕窄，那圈灰邊框只是白白吃掉左右各 10px。
-     與首頁（styles.css 同名處理，2026-09-03）一致。
-     ⚠️ body 的灰漸層要留著：.promos-container 之外的 <footer class="social-media-footer">
-     文字是白色的（.social-media-title 用 rgba(255,255,255,.7)），靠的就是這層灰底；
-     把 body 洗白會讓那些按鈕整組看不見——首頁改這裡時就踩過一次。 */
-  body {
-    padding: 0;
-  }
-
-  .promos-container {
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  /* container 沒有圓角之後，警語橫條再留 12px 下圓角會在左右下角露出白色缺口 */
-  .promos-warning-row {
-    border-radius: 0;
-  }
+  /* 手機版滿版（2026-09-03 起）原本在這裡覆寫 body padding、容器圓角、警語橫條圓角；
+     2026-11-22 桌機也改成滿版，這些都併進基礎樣式了。 */
 
   .promos-header {
     padding: 12px 16px;
@@ -1744,10 +1753,10 @@ a {
 /* ═══ 光影區結束 ═══ */
 
 /* ═══ 申辦前 FAQ（白色框框外、社群 footer 之後，收合區塊，預設關閉）═══
-   位置與外框比照 styles.css .disclaimer-footer：置中、無底色、直接坐在頁面灰底上，
+   位置與外框比照 styles.css .disclaimer-footer：置中、無底色、直接坐在頁面底色（#f9fafb）上，
    收合態就只是一行低調小字（2026-07-29 從 .promos-main 內搬出來）。 */
 .promos-faq {
-  max-width: 1200px;
+  max-width: var(--pmc-page-w);
   margin: 20px auto;
   padding: 0 24px 24px;
   text-align: center;
@@ -1794,12 +1803,13 @@ a {
 }
 
 /* 展開後的內容面板：比照 styles.css .disclaimer-content-wrapper（圓角面板、左對齊、
-   跟上方摘要鈕留一段距離）。底色不能照抄主站的 rgba(255,255,255,0.1)——那是配深色
-   白字用的；這裡文字是深色，需要一塊夠亮的底才讀得動，所以用近乎不透明的白。 */
+   跟上方摘要鈕留一段距離）。2026-11-22 頁面底色由灰漸層改成 #f9fafb 後，原本的半透明白
+   跟底色分不出來，改實心白底＋灰框（同頁尾按鈕的處理）。 */
 .promos-faq-body {
   margin-top: 12px;
   padding: 16px 20px 18px;
-  background: rgba(255, 255, 255, 0.75);
+  background: var(--pmc-white);
+  border: 1px solid var(--pmc-border);
   border-radius: 8px;
   text-align: left;
 }
@@ -2668,15 +2678,16 @@ a {
 
 /* 寬螢幕（≥1400px）：一列放得下 4 張活動卡（站長 2026-09-21）。
    欄數要加一格，容器就得跟著放寬——1200px 切成 4 欄只剩 286px/欄，卡圖與獎勵大字
-   會擠在一起。1440px 容器（body 左右各 20px padding，實際 1400）切 4 欄是 326px/欄，
+   會擠在一起。1440px 容器（2026-09 量測時 body 左右各有 20px padding，實際 1400）切 4 欄是 326px/欄，
    跟原本 1200px 三欄的 373px 同一個量級。
    斷點壓在 1400：低於它維持 3 欄，1366 那類筆電不會拿到過窄的欄位。
    ⚠️ 這一段必須排在上面 ≥1025px 那個 block **之後**——品牌欄寬度等規則同分，
    後定義的才會贏（放前面會被 236px 蓋回去，2026-09-21 實測）。
-   ⚠️ .social-media-footer 的 max-width 要一起改，否則頁尾會比主體窄一截。 */
+   2026-11-22 起寬度上限是 :root 的 --pmc-page-w（.promos-main、.social-media-footer、.promos-faq 都讀它），
+   改成跟主站同值：≥1400 是 1360（4 欄約 316px/欄，等於 2026-09 時 1400px 視窗看到的寬度）、
+   ≥1700 是 1560（約 366px/欄，跟原本 1200px 三欄同一個量級）。原本這裡是固定 1440。 */
 @media (min-width: 1400px) {
-  .promos-container,
-  .social-media-footer { max-width: 1440px; }
+  :root { --pmc-page-w: 1360px; }
   .promo-grid { grid-template-columns: repeat(4, 1fr); }
 
   /* 4 欄時多檔卡跨 2 欄＝半列，比 3 欄窄：品牌欄與 meta 各讓一點寬度給標題 */
@@ -2689,6 +2700,10 @@ a {
      兩邊都選不中（2026-09-22 實測 1280/1440/1500 三個寬度，side 恆 140、solo 恆 84）。
      真要縮就得寫成 `.promo-card-rail--side .promo-rail-thumb`；但 rail 從 236px 縮到
      208px 之後，扣掉 32px 內距還有 176px，140px 的卡圖放得下，所以直接刪掉不補。 */
+}
+/* ≥1700 必須排在上面 ≥1400 那段之後：兩條都改 :root 的同一個變數，後定義的才會贏 */
+@media (min-width: 1700px) {
+  :root { --pmc-page-w: 1560px; }
 }
 
 /* ⚠️ [hidden] 安全網（2026-09-18 立）

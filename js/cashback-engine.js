@@ -703,12 +703,15 @@ function rateCompositionButtonHtml(card, rateGroup, designatedRate, designatedCa
     return ` <button type="button" class="calc-breakdown-btn" title="查看回饋組成" aria-label="查看回饋組成" data-comp="${comp}" onclick="toggleRateComposition(this)">${CALC_BREAKDOWN_ICON_SVG}</button>`;
 }
 
-// 詳情頁：逐筆渲染 cashbackRates（2026-07-09 起不再按 rate+cap 合併），
-// category 一律以藍色 chip 顯示在回饋率旁（與一般卡片一致），回饋率顯示
+// 詳情頁：逐筆整理 cashbackRates（2026-07-09 起不再按 rate+cap 合併），回饋率顯示
 // getDisplayRate 加總值（stacking 模型 = 指定+基本+加碼）。
-// 回傳 { html, upcoming }；upcoming 為 30 天內即將開始的活動（逐筆、含 category）。
+// 2026-11-17 起回傳 entry 清單、不再自己拼 HTML：每筆 entry 是「一列回饋」，
+// 由呼叫端交給 planCardsHtml()（js/card-detail.js）併成「同方案一張卡」
+// （標題、回饋消費上限、活動期間相同的併卡；卡片與卡內各列依回饋率由高到低）。
+// options.levelName＝目前級別名稱，rate 寫 {specialRate} 之類 placeholder 的槽會標「(分級: …)」。
+// 回傳 { entries, upcoming }；upcoming 為 30 天內即將開始的活動（逐筆、含 category）。
 async function renderCashbackRatesIndividually(card, levelData, options = {}) {
-    const { idPrefix = 'lv' } = options;
+    const { levelName = '' } = options;
     const activeRates = [];
     const upcoming = [];
 
@@ -749,31 +752,28 @@ async function renderCashbackRatesIndividually(card, levelData, options = {}) {
         activeRates.push({ rate, parsedRate, parsedCap, displayCap, displayRate });
     }
 
-    // 按顯示回饋率（加總後）由高到低排序
+    // 按顯示回饋率（加總後）由高到低排序（同分維持資料順序）
     activeRates.sort((a, b) => b.displayRate - a.displayRate);
 
-    let html = '';
-    activeRates.forEach((entry, index) => {
-        const { rate, parsedRate, parsedCap, displayCap, displayRate } = entry;
-        // 版面比照搜尋結果卡片，見 renderRateCard（js/cards-modals.js）
-        html += renderRateCard({
-            rate: displayRate,
-            // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
-            rateBtnHtml: rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData),
-            capText: formatRateCardCap(displayCap),
-            title: rate.category,
-            endingSoonEnd: rate.periodEnd,
-            // 滿額門檻；maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
-            minSpend: rate.minSpend,
-            merchants: { items: rate.items, id: `${card.id}-${idPrefix}-${index}` },
-            period: rate.period,
-            conditions: rate.conditions,
-            // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
-            registerLink: rate.registerLink
-        });
-    });
+    const entries = activeRates.map(({ rate, parsedRate, parsedCap, displayCap, displayRate }) => ({
+        rate: displayRate,
+        // 回饋率由級別決定的槽才標「(分級: …)」（見 cdRateUsesLevel／cdLevelLabel）
+        levelLabel: cdRateUsesLevel(rate) ? cdLevelLabel(card, levelName) : '',
+        // stacking 模型加上「回饋組成」按鈕，解釋加總的來源
+        rateBtnHtml: rateCompositionButtonHtml(card, rate, parsedRate, parsedCap, levelData),
+        capText: formatRateCardCap(displayCap),
+        title: rate.category,
+        endingSoonEnd: rate.periodEnd,
+        // 滿額門檻；maxSpend（未滿門檻）只影響匹配、不顯示標註（2026-07-17 用戶定案）
+        minSpend: rate.minSpend,
+        merchants: { items: rate.items },
+        period: rate.period,
+        conditions: rate.conditions,
+        // 銀行官方登錄連結（有 registerLink 才長出來；conditions 空的組別一樣要能顯示）
+        registerLink: rate.registerLink
+    }));
 
-    return { html, upcoming };
+    return { entries, upcoming };
 }
 
 /**

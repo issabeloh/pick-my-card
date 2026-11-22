@@ -68,7 +68,7 @@ function runQACheck() {
   const qaSheet = ss.getSheetByName('QA Check');
 
   if (!dataSheet || !qaSheet) {
-    SpreadsheetApp.getUi().alert('找不到必要的工作表！');
+    pmcUi_().alert('找不到必要的工作表！');
     return;
   }
 
@@ -320,7 +320,7 @@ function runQACheck() {
   const warningCount = issues.filter(issue => issue[5] === '⚠️').length;
 
   // 顯示結果
-  const ui = SpreadsheetApp.getUi();
+  const ui = pmcUi_();
   if (criticalCount === 0 && warningCount === 0) {
     ui.alert('✅ 資料品質檢查完成', '沒有發現任何問題！可以安全匯出 JSON。', ui.ButtonSet.OK);
   } else {
@@ -569,6 +569,41 @@ function normalizeMerchantKey_(name) {
 }
 
 // ==========================================
+// 手機匯出：沒有試算表畫面時的替身 UI（2026-11-18）
+// ==========================================
+// SpreadsheetApp.getUi() 只有從試算表選單執行時拿得到；在 Apps Script 編輯器按「執行」
+// （手機上只能這樣跑）會直接丟「Cannot call SpreadsheetApp.getUi() from this context」，
+// 匯出第一行就停。拿不到時改用這個替身：所有對話框改寫進「執行記錄」，
+// 需要回答「是／否」的一律當成「否」——也就是：
+//   ・QA 有 ❌ 嚴重問題 → 照樣擋下（跟電腦一樣）
+//   ・card_id 對不到／申辦連結網域不對 → 手機上沒辦法問你，**一律取消匯出**（電腦上可以選擇硬發布）
+//   ・只提醒不擋的（精選排序、寫法不一致）→ 寫進記錄、照常匯出
+// 從選單執行時拿得到真的 UI，行為跟以前完全一樣。
+// 用法：手機開 Apps Script → 上方函式選 exportToJSON → 執行 → 看下方「執行記錄」最後一行。
+function pmcUi_() {
+  try {
+    return SpreadsheetApp.getUi();
+  } catch (e) {
+    return PMC_HEADLESS_UI_;
+  }
+}
+const PMC_HEADLESS_UI_ = {
+  ButtonSet: { OK: 'OK', OK_CANCEL: 'OK_CANCEL', YES_NO: 'YES_NO', YES_NO_CANCEL: 'YES_NO_CANCEL' },
+  Button: { OK: 'OK', CANCEL: 'CANCEL', YES: 'YES', NO: 'NO', CLOSE: 'CLOSE' },
+  // ui.alert 有三種呼法：alert(訊息)／alert(訊息, 按鈕組)／alert(標題, 訊息, 按鈕組)
+  alert: function (a, b, c) {
+    const hasTitle = typeof b === 'string';
+    const buttons = hasTitle ? c : b;
+    console.log('【' + (hasTitle ? a : '訊息') + '】\n' + (hasTitle ? b : a));
+    if (buttons === 'YES_NO' || buttons === 'YES_NO_CANCEL' || buttons === 'OK_CANCEL') {
+      console.log('（手機模式沒辦法回答這個問題，一律當作「否」。要硬發布請用電腦從選單匯出）');
+      return buttons === 'OK_CANCEL' ? 'CANCEL' : 'NO';
+    }
+    return 'OK';
+  }
+};
+
+// ==========================================
 // 匯出 JSON 功能（新增 QuickSearch）
 // ==========================================
 
@@ -578,7 +613,7 @@ function exportToJSON() {
   const paymentsSheet = ss.getSheetByName('Payments');
   const quickSearchSheet = ss.getSheetByName('QuickSearch');
   const qaSheet = ss.getSheetByName('QA Check');
-  const ui = SpreadsheetApp.getUi();
+  const ui = pmcUi_();
 
   // 先執行 QA 檢查
   runQACheck();

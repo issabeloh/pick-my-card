@@ -6,8 +6,6 @@
 
 # ── 上游已 sanitizeUrl，當行只是使用已淨化變數（安全）──
 # card-detail.js:37 applyLink = sanitizeUrl(applyCta.link)
-SEC6|js/card-detail.js|applyBarBtn.href = applyLink;
-SEC6|js/card-detail.js|headerApplyBtn.href = applyLink;
 # home-ui.js modalLink：safeLink = sanitizeUrl(announcement.link)
 SEC6|js/home-ui.js|modalLink.href = safeLink;
 # home-ui.js Spotlight／results-display 申辦按鈕：applyLink = sanitizeUrl(applyCta.link)（緊鄰上一行）

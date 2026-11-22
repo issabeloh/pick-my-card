@@ -824,20 +824,14 @@ function renderSidebarChangelog() {
     section.style.display = list.children.length ? 'block' : 'none';
 }
 
-// 開卡片詳情頁並捲到「近期異動」區。
-// ⚠️ 捲動刻意「借用」詳情頁 sticky nav 那顆『近期異動』鈕的 onclick（由
-//    setupCardDetailNav 掛上），不要自己寫一份 scrollIntoView——nav 的版本會扣掉
-//    sticky nav 高度、把標題停在 nav 下方 8px，並同步點亮該顆按鈕；自己寫一份的
-//    下場是標題被 nav 蓋住、而且日後 nav 改高度時兩邊會各走各的。
-// ⚠️ 要等 showCardDetail() 把 modal 顯示出來（rAF 等一幀）才量得到位置，
-//    modal 還是 display:none 時 getBoundingClientRect 全是 0。
+// 開卡片詳情頁，落在「回饋」頁籤並展開「近期異動」清單。
+// ⚠️ 切頁籤與捲動一律走 cardDetailGoToSection()（js/results-display.js）：它會找出包含該區塊的頁籤、
+//    扣掉 sticky 頁首與頁籤列的高度——不要自己寫 scrollIntoView，日後頁首改高度時兩邊會各走各的。
+// ⚠️ showCardDetail() 是 async，要 await 它把內容畫完、modal 顯示出來（rAF 再等一幀）才量得到位置。
 async function openCardDetailAtChangelog(cardId) {
     if (typeof window.closeSidebarDrawer === 'function') window.closeSidebarDrawer();
     await showCardDetail(cardId);
     requestAnimationFrame(() => {
-        const navBtn = document.querySelector(
-            '#card-detail-nav .card-detail-nav-btn[data-section="card-changelog-section"]');
-        // hidden＝那張卡沒有異動區塊（理論上不會發生，資料就是從它來的），此時停在頁首即可
-        if (navBtn && !navBtn.hidden && typeof navBtn.onclick === 'function') navBtn.onclick();
+        if (typeof cardDetailGoToSection === 'function') cardDetailGoToSection('card-changelog-section');
     });
 }

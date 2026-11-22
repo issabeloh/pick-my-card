@@ -10,7 +10,7 @@
  *  - 停車折抵顯示              → "displayParkingBenefits"
  *  - 新戶活動顯示              → "displayCardholderPromos" / "createCardholderPromoElement"
  *  - HTML 轉義與連結防護（鐵則 3）→ "escapeHtml" / "sanitizeUrl"
- *  - 詳情頁導覽                → "setupCardDetailNav" / "renderCardDetailPromos"
+ *  - 詳情頁頁籤                → "setupCardDetailNav" / "renderCardDetailPromos"
  *  - 結果卡片元素              → "createCardResultElement" / "createCouponResultElement"
  *  - 回饋卡共用片段（搜尋結果＋詳情頁）→ "renderActivityInfo" / "renderUpcomingBadge" / "renderEndingSoonBadge" / "renderSpendThresholdNote"
  *  - 計算明細 popover           → "showCalcBreakdown"
@@ -895,6 +895,40 @@ function displayCardholderPromos(merchantValue, amount, quickKeywords) {
     section.style.display = 'block';
 }
 
+// 新戶活動的期間文字（搜尋結果的 createCardholderPromoElement 與詳情頁票券共用）：
+// 「開始~結束」、只有結束日＝「~結束」、都沒有＝「不限期」
+function formatPromoPeriod(promo) {
+    return (promo.period_start || promo.period_end)
+        ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? '~' : (promo.period_end ? '~' : '')}${promo.period_end || ''}`.trim()
+        : '不限期';
+}
+
+// 新戶活動的時間狀態（搜尋結果的 createCardholderPromoElement 與詳情頁票券 renderPromoTicket 共用）。
+// 回傳 { kind: 'upcoming' | 'ending' | '', days }：
+//   upcoming＝尚未開始（days＝幾天後開始，0＝今天）；ending＝進行中且 14 天內結束（days＝剩幾天，0＝今天截止）
+// promo 日期已是 ISO YYYY-MM-DD；舊格式（斜線）轉 ISO 後再比
+function getPromoTimeBadge(promo) {
+    const isoStart = promo.period_start
+        ? (promo.period_start.includes('-') ? promo.period_start : slashDateToISO(promo.period_start))
+        : '';
+    const isoEnd = promo.period_end
+        ? (promo.period_end.includes('-') ? promo.period_end : slashDateToISO(promo.period_end))
+        : '';
+    let promoStatus = getRateStatus(isoStart, isoEnd);
+    // getRateStatus 對「只有開始日、沒有結束日」回 'always'，這裡補判尚未開始的情況
+    if (promoStatus === 'always' && isoStart && isoStart > getTaiwanToday()) {
+        promoStatus = 'upcoming';
+    }
+    if (promoStatus === 'upcoming' && isoStart) {
+        const daysUntil = getDaysUntilStart(isoStart);
+        if (daysUntil != null) return { kind: 'upcoming', days: daysUntil };
+    } else if (promoStatus === 'active' && isoEnd && isEndingSoon(isoEnd, 14)) {
+        const daysUntil = getDaysUntilEnd(isoEnd);
+        if (daysUntil != null) return { kind: 'ending', days: daysUntil };
+    }
+    return { kind: '', days: null };
+}
+
 // Build the DOM element for a single cardholder promo result.
 // Display order:
 //   (卡名) → new_customer_summary → 重點 detail rows + 回饋消費上限(若有)
@@ -918,36 +952,18 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
 
     const summary = promo.new_customer_summary || '';
 
-    const period = (promo.period_start || promo.period_end)
-        ? `${promo.period_start || ''}${promo.period_start && promo.period_end ? '~' : (promo.period_end ? '~' : '')}${promo.period_end || ''}`.trim()
-        : '不限期';
+    const period = formatPromoPeriod(promo);
 
-    // Upcoming / ending-soon badges (same logic as card activities)
-    // promo dates are already ISO YYYY-MM-DD; fall back to slash-to-ISO conversion
+    // Upcoming / ending-soon badges (same logic as card activities)——判斷邏輯抽成 getPromoTimeBadge()，
+    // 詳情頁的票券（js/card-detail.js）共用同一份判斷；這裡的輸出文字不變
     let promoBadgeHtml = '';
-    const isoStart = promo.period_start
-        ? (promo.period_start.includes('-') ? promo.period_start : slashDateToISO(promo.period_start))
-        : '';
-    const isoEnd = promo.period_end
-        ? (promo.period_end.includes('-') ? promo.period_end : slashDateToISO(promo.period_end))
-        : '';
-    let promoStatus = getRateStatus(isoStart, isoEnd);
-    // getRateStatus 對「只有開始日、沒有結束日」回 'always'，這裡補判尚未開始的情況
-    if (promoStatus === 'always' && isoStart && isoStart > getTaiwanToday()) {
-        promoStatus = 'upcoming';
-    }
-    if (promoStatus === 'upcoming' && isoStart) {
-        const daysUntil = getDaysUntilStart(isoStart);
-        if (daysUntil != null) {
-            const daysText = daysUntil === 0 ? '今天開始' : `${daysUntil}天後`;
-            promoBadgeHtml = ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
-        }
-    } else if (promoStatus === 'active' && isoEnd && isEndingSoon(isoEnd, 14)) {
-        const daysUntil = getDaysUntilEnd(isoEnd);
-        if (daysUntil != null) {
-            const daysText = daysUntil === 0 ? '今天截止' : `剩 ${daysUntil} 天`;
-            promoBadgeHtml = ` <span class="ending-soon-badge">${daysText}</span>`;
-        }
+    const timeBadge = getPromoTimeBadge(promo);
+    if (timeBadge.kind === 'upcoming') {
+        const daysText = timeBadge.days === 0 ? '今天開始' : `${timeBadge.days}天後`;
+        promoBadgeHtml = ` <span class="upcoming-badge">即將開始 (${daysText})</span>`;
+    } else if (timeBadge.kind === 'ending') {
+        const daysText = timeBadge.days === 0 ? '今天截止' : `剩 ${timeBadge.days} 天`;
+        promoBadgeHtml = ` <span class="ending-soon-badge">${daysText}</span>`;
     }
 
     const merchantsText = matchedMerchants && matchedMerchants.length > 0
@@ -1094,147 +1110,189 @@ function sanitizeUrl(url) {
     return /^https?:\/\//i.test(trimmed) ? trimmed : '';
 }
 
-// Sticky nav inside the card detail modal: hide buttons whose section is
-// missing or empty, smooth-scroll on click, highlight active section.
-let _cardDetailNavObserver = null;
-let _cardDetailHeaderObserver = null;   // 標題列高度 → --pmc-detail-header-h（見下方 syncHeaderHeight）
-function setupCardDetailNav(modalContent) {
-    const nav = document.getElementById('card-detail-nav');
-    if (!nav || !modalContent) return;
+// 詳情頁頁籤（2026-11-17 取代原本的八顆錨點導覽 #card-detail-nav）：
+//   回饋（指定通路＋即將開始＋一般回饋）／領券・停車／新戶活動／個人設定（桌機常駐左欄，不顯示這個頁籤）。
+//   一次只顯示一個頁籤的內容；頁籤帶筆數（個人設定不帶）；該頁籤底下沒有任何內容就不顯示。
+//
+// ⚠️ 有沒有內容依各區 DOM 的狀態判斷（computed display ＋ textContent），不依賴版面尺寸——
+//    沒被選中的頁籤是 display:none，量到的尺寸一律是 0。需要量尺寸的（條件列「展開」鈕）
+//    在頁籤顯示出來之後才跑（selectCardDetailTab 裡的 initConditionClamps）。
+// ⚠️ 要「落在某區塊」的呼叫端（側欄最近異動、embed 的 section、搜尋提示）一律走
+//    cardDetailGoToSection(sectionId)：它找出「包含該區塊的頁籤」、切過去、再捲到位。
+//    不要再用 section id 去找導覽鈕（那些鈕已經不存在）。
+let _cardDetailHeaderObserver = null;   // 頁首／頁籤列高度 → CSS 變數（見 syncDetailBarHeights）
+let _cdFabScrollHandler = null;
+let _cdScrollEl = null;
+let _cdActiveTab = 'rates';
 
-    const buttons = Array.from(nav.querySelectorAll('.card-detail-nav-btn'));
+const CD_TAB_SECTIONS = {
+    rates: ['card-special-section', 'card-upcoming-section', 'card-basic-cashback-section'],
+    coupon: ['card-coupon-section', 'card-benefits-section'],
+    promo: ['card-promos-section'],
+    set: ['card-personal-section']
+};
+const CD_DESKTOP_MQ = '(min-width: 1025px)';
+const isCardDetailDesktop = () => window.matchMedia(CD_DESKTOP_MQ).matches;
 
-    // 捲動時「被黏住的那一塊」有多高。2026-09-18 起桌機把 .modal-header 也設成
-    // sticky（站長要求標題不要被捲走），2026-09-23 手機也跟上（精簡版標題列），
-    // 所以黏住的高度＝header＋nav。仍用 getComputedStyle 判斷而不是寫死斷點——
-    // 哪天又有某個斷點不釘標題，這裡不用跟著改。下面所有「讓區塊落在黏住區塊
-    // 下方」的計算都走這支。
-    const detailHeader = modalContent.querySelector('.modal-header');
-    const stickyOffset = () => {
-        const headerSticky = detailHeader && getComputedStyle(detailHeader).position === 'sticky';
-        return (headerSticky ? detailHeader.offsetHeight : 0) + nav.offsetHeight;
-    };
-    // nav 要黏在 header 底下而不是蓋住它——header 高度隨卡名長度變動，量完寫進
-    // CSS 變數給 .card-detail-nav 的 top 用（CSS 端有 fallback 值）。
-    // ⚠️ 開啟當下量一次不夠：卡圖是 height:36px/width:auto，圖片 load 完才開始佔
-    // 寬度，窄螢幕上會把卡名從一行擠成兩行，header 57px → 85px（iPhone SE 320px
-    // ×「中信 Uniopen 聯名卡」實測）。只量一次的話 nav 會蓋掉半條標題，所以改用
-    // ResizeObserver 持續同步，順便涵蓋轉向與視窗縮放。
+function cdSectionHasContent(id) {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    // 搜尋時被收起的區（_searchHidden）原本是有內容的
+    if (getComputedStyle(el).display === 'none' && !el._searchHidden) return false;
+    return el.textContent.trim().length > 0;
+}
+
+// 各頁籤的筆數：回饋＝三區的「回饋率列數」（2026-11-17 起一張卡可有好幾列，不是卡片數）；領券・停車＝領券卡＋停車折抵項目；新戶活動＝活動卡（不含申辦 CTA 盒）
+function cdTabCount(name) {
+    const count = (sel) => document.querySelectorAll(sel).length;
+    if (name === 'rates') {
+        return count('#card-special-cashback .cd-rr, #card-upcoming-cashback .cd-rr, #card-basic-cashback .cd-rr');
+    }
+    if (name === 'coupon') {
+        return count('#card-coupon-cashback .cashback-detail-item, #card-benefits-content .cashback-detail-item');
+    }
+    if (name === 'promo') {
+        return count('#card-promos-content > *:not(.card-apply-cta)');
+    }
+    return 0;
+}
+
+// 重算每個頁籤的筆數與顯示與否（渲染完、CUBE 切級別後都要跑）。目前選中的頁籤變得沒內容就退回「回饋」
+function refreshCardDetailTabs() {
+    const tabsEl = document.getElementById('card-detail-tabs');
+    if (!tabsEl) return;
+    const tabs = Array.from(tabsEl.querySelectorAll('.cd-tab'));
+    const visible = [];
+    tabs.forEach(btn => {
+        const name = btn.dataset.tab;
+        // 個人設定本身就是窗格（沒被選中時有 hidden），不能用 computed display 判斷；它一直有內容（額度、筆記）
+        const has = name === 'set' || (CD_TAB_SECTIONS[name] || []).some(cdSectionHasContent);
+        btn.hidden = !has;
+        const n = btn.querySelector('.cd-tab-n');
+        if (n) {
+            const c = has && name !== 'set' ? cdTabCount(name) : 0;
+            n.textContent = c > 0 ? String(c) : '';
+        }
+        btn.classList.remove('cd-tab-first', 'cd-tab-last');
+        // 桌機不顯示「個人設定」頁籤（CSS 隱藏），不算進首尾
+        if (has && !(name === 'set' && isCardDetailDesktop())) visible.push(btn);
+    });
+    if (visible.length) {
+        visible[0].classList.add('cd-tab-first');
+        visible[visible.length - 1].classList.add('cd-tab-last');
+    }
+    const active = tabs.find(b => b.dataset.tab === _cdActiveTab);
+    if (!active || active.hidden) selectCardDetailTab('rates', { noScroll: true });
+}
+
+// 切換頁籤：只顯示對應內容。桌機沒有「個人設定」頁籤（常駐左欄），選它等於選「回饋」
+function selectCardDetailTab(name, opts = {}) {
+    if (name === 'set' && isCardDetailDesktop()) name = 'rates';
+    _cdActiveTab = name;
+    const tabsEl = document.getElementById('card-detail-tabs');
+    if (tabsEl) {
+        tabsEl.querySelectorAll('.cd-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+    }
+    document.querySelectorAll('#card-detail-modal .cd-pan').forEach(p => { p.hidden = p.dataset.pan !== name; });
+
+    // 剛顯示出來的頁籤才量得到條件文字有沒有被截斷
+    const pan = document.querySelector(`#card-detail-modal .cd-pan[data-pan="${name}"]`);
+    if (pan && typeof initConditionClamps === 'function') {
+        pan.querySelectorAll('[id$="-cashback"]').forEach(c => initConditionClamps(c));
+        // 同方案卡：適用通路收三行、條件一行省略（這時才量得到寬度）
+        if (typeof cdFitAll === 'function') pan.querySelectorAll('[id$="-cashback"], #card-promos-content').forEach(c => cdFitAll(c));
+    }
+
+    // 手機：已經捲過摘要的話，讓新頁籤的內容從頁籤列正下方開始（不留在上一個頁籤的捲動位置）
+    if (!opts.noScroll && _cdScrollEl) {
+        const layout = document.querySelector('#card-detail-modal .cd-layout');
+        const stacked = layout && getComputedStyle(layout).display === 'contents';
+        const sum = document.getElementById('card-basic-info-section');
+        const limit = stacked && sum ? sum.offsetHeight : 0;
+        if (_cdScrollEl.scrollTop > limit) _cdScrollEl.scrollTop = limit;
+    }
+}
+window.selectCardDetailTab = selectCardDetailTab;
+
+// 落在某個區塊：切到包含它的頁籤，再捲到它在頁籤列下方的位置。
+// 側欄「最近異動」→ card-changelog-section（同時展開清單）；embed 的 section → card-special-section（捲到搜尋框）
+function cardDetailGoToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    const pane = section.closest('.cd-pan');
+    const name = pane ? pane.dataset.pan : 'rates';
+    const tabBtn = document.getElementById('cd-tab-' + name);
+    selectCardDetailTab(tabBtn && !tabBtn.hidden ? name : 'rates', { noScroll: true });
+    if (sectionId === 'card-changelog-section') setCardDetailChangelogOpen(true);
+
+    const scroller = _cdScrollEl || document.getElementById('card-detail-scroll');
+    if (!scroller || (name === 'set' && isCardDetailDesktop())) return;
+    const target = sectionId === 'card-special-section' ? (document.getElementById('cd-bar') || section) : section;
+    requestAnimationFrame(() => {
+        if (target.getBoundingClientRect().height === 0 && target.getClientRects().length === 0) return;
+        const top = document.querySelector('#card-detail-modal .cd-top');
+        const bar = document.querySelector('#card-detail-modal .cd-tabsbar');
+        const sticky = (top ? top.offsetHeight : 0) + (bar ? bar.offsetHeight : 0);
+        const delta = target.getBoundingClientRect().top - scroller.getBoundingClientRect().top - sticky - 8;
+        scroller.scrollTop = Math.max(0, scroller.scrollTop + delta);
+    });
+}
+window.cardDetailGoToSection = cardDetailGoToSection;
+
+function setupCardDetailNav(modalContent, opts = {}) {
+    const tabsEl = document.getElementById('card-detail-tabs');
+    if (!tabsEl || !modalContent) return;
+    _cdScrollEl = modalContent;
+
+    // 頁首／頁籤列的高度寫進 CSS 變數：頁籤列 sticky 的 top ＝ 頁首高度，桌機左欄 sticky 的 top ＝ 兩者相加。
+    // ⚠️ 頁首高度會變（長卡名換行、卡名行數、轉向、視窗縮放），只量開啟當下一次不夠——
+    //    用 ResizeObserver 持續同步（寫入前比對舊值，避免 observer 自己觸發自己；教訓見 ui-display.md 2026-09-23）
+    const topBar = modalContent.querySelector('.cd-top');
+    const tabsBar = modalContent.querySelector('.cd-tabsbar');
     if (_cardDetailHeaderObserver) {
         _cardDetailHeaderObserver.disconnect();
         _cardDetailHeaderObserver = null;
     }
-    if (detailHeader) {
-        const syncHeaderHeight = () => {
-            const px = detailHeader.offsetHeight + 'px';
-            // 只在真的變了才寫，避免 ResizeObserver 自己觸發自己
-            if (modalContent.style.getPropertyValue('--pmc-detail-header-h') !== px) {
-                modalContent.style.setProperty('--pmc-detail-header-h', px);
-            }
-        };
-        syncHeaderHeight();
-        if (typeof ResizeObserver === 'function') {
-            _cardDetailHeaderObserver = new ResizeObserver(syncHeaderHeight);
-            _cardDetailHeaderObserver.observe(detailHeader);
-        }
+    const syncBarHeights = () => {
+        [['--pmc-detail-header-h', topBar], ['--cd-tabs-h', tabsBar]].forEach(([name, el]) => {
+            if (!el) return;
+            const px = el.offsetHeight + 'px';
+            if (modalContent.style.getPropertyValue(name) !== px) modalContent.style.setProperty(name, px);
+        });
+    };
+    syncBarHeights();
+    if (typeof ResizeObserver === 'function') {
+        _cardDetailHeaderObserver = new ResizeObserver(syncBarHeights);
+        if (topBar) _cardDetailHeaderObserver.observe(topBar);
+        if (tabsBar) _cardDetailHeaderObserver.observe(tabsBar);
     }
 
-    // Disconnect any prior observer (modal opens once per card, but be safe)
-    if (_cardDetailNavObserver) {
-        _cardDetailNavObserver.disconnect();
-        _cardDetailNavObserver = null;
+    // 手機浮動申辦膠囊：捲動超過約 150px 縮成右下角，回到頂端再展開（桌機不顯示膠囊，class 照切無妨）
+    const fab = document.getElementById('card-detail-apply-bar');
+    if (_cdFabScrollHandler) modalContent.removeEventListener('scroll', _cdFabScrollHandler);
+    _cdFabScrollHandler = () => { if (fab) fab.classList.toggle('is-min', modalContent.scrollTop > 150); };
+    modalContent.addEventListener('scroll', _cdFabScrollHandler, { passive: true });
+    _cdFabScrollHandler();
+
+    tabsEl.querySelectorAll('.cd-tab').forEach(btn => {
+        btn.onclick = () => selectCardDetailTab(btn.dataset.tab);
+    });
+
+    // 視窗在桌機／手機之間切換（轉向、縮放）：「個人設定」頁籤的去留跟著變
+    if (!tabsEl._cdMq) {
+        tabsEl._cdMq = window.matchMedia(CD_DESKTOP_MQ);
+        const onChange = () => {
+            if (document.getElementById('card-detail-modal').style.display !== 'flex') return;
+            refreshCardDetailTabs();
+            selectCardDetailTab(_cdActiveTab, { noScroll: true });
+        };
+        if (tabsEl._cdMq.addEventListener) tabsEl._cdMq.addEventListener('change', onChange);
+        else if (tabsEl._cdMq.addListener) tabsEl._cdMq.addListener(onChange);
     }
 
-    // Hide buttons whose section is missing, has display:none, or has no real content
-    const visibleSections = [];
-    buttons.forEach(btn => {
-        const id = btn.dataset.section;
-        const section = id && document.getElementById(id);
-        const hasContent = section && section.offsetParent !== null && section.textContent.trim().length > 0;
-        btn.hidden = !hasContent;
-        btn.classList.remove('active');
-        // data-anchor：點按鈕要捲到的位置不是區塊本身時用（「指定通路回饋」→ 它上方的搜尋框，
-        // 2026-10-14 站長要求）。高亮判定也用同一個位置，捲到搜尋框時就點亮那顆
-        const anchor = (btn.dataset.anchor && document.getElementById(btn.dataset.anchor)) || section;
-        if (hasContent) visibleSections.push({ btn, section, anchor });
-    });
-
-    if (visibleSections.length === 0) return;
-
-    // While a click-initiated smooth scroll runs, scroll events must NOT
-    // recompute the highlight: the target lands 8px below the nav (or the
-    // scroll clamps at the bottom for short trailing sections), so a
-    // position-based recompute would light up the PREVIOUS section instead
-    // of the clicked one. The clicked button is highlighted immediately and
-    // suppression lifts shortly after scroll events stop arriving.
-    let suppressScrollHighlight = false;
-    let scrollSettleTimer = null;
-    const armScrollSettleTimer = (ms) => {
-        clearTimeout(scrollSettleTimer);
-        scrollSettleTimer = setTimeout(() => { suppressScrollHighlight = false; }, ms);
-    };
-
-    // Click → smooth-scroll the modal-content so section sits just under the sticky nav
-    buttons.forEach(btn => {
-        btn.onclick = () => {
-            const section = (btn.dataset.anchor && document.getElementById(btn.dataset.anchor))
-                || document.getElementById(btn.dataset.section);
-            if (!section) return;
-            buttons.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            suppressScrollHighlight = true;
-            // Fallback release in case no scroll event fires (already at target)
-            armScrollSettleTimer(400);
-            // Rect-based delta (same basis as updateActive) so the section's
-            // heading lands just below the sticky nav, not hidden under it.
-            // offsetTop was relative to the wrong offsetParent and overshot on mobile.
-            const navHeight = stickyOffset();
-            const containerTop = modalContent.getBoundingClientRect().top;
-            const sectionTop = section.getBoundingClientRect().top;
-            const delta = sectionTop - containerTop - navHeight - 8;
-            modalContent.scrollTo({ top: modalContent.scrollTop + delta, behavior: 'smooth' });
-        };
-    });
-
-    // Highlight the section currently in view (whichever is closest to the
-    // top of the scroll viewport, accounting for the sticky nav height).
-    // The detection line (nav + 12px) sits BELOW the click landing point
-    // (nav + 8px): a section a nav button just scrolled to must count as
-    // past the line, otherwise the previous section stays highlighted.
-    const updateActive = () => {
-        const navHeight = stickyOffset();
-        const containerTop = modalContent.getBoundingClientRect().top;
-        let current = visibleSections[0];
-        for (const s of visibleSections) {
-            const top = s.anchor.getBoundingClientRect().top - containerTop - navHeight - 12;
-            if (top <= 0) current = s;
-            else break;
-        }
-        // 捲到底時，尾端的短區塊永遠碰不到判定線——此時點亮最後一個可見區塊
-        if (modalContent.scrollTop + modalContent.clientHeight >= modalContent.scrollHeight - 2) {
-            current = visibleSections[visibleSections.length - 1];
-        }
-        buttons.forEach(b => b.classList.remove('active'));
-        if (current) current.btn.classList.add('active');
-    };
-
-    // Throttle scroll handler with rAF
-    let ticking = false;
-    const onScroll = () => {
-        if (suppressScrollHighlight) {
-            armScrollSettleTimer(150);
-            return;
-        }
-        if (ticking) return;
-        ticking = true;
-        requestAnimationFrame(() => { updateActive(); ticking = false; });
-    };
-    modalContent.removeEventListener('scroll', modalContent._cardDetailNavScroll || (() => {}));
-    modalContent._cardDetailNavScroll = onScroll;
-    modalContent.addEventListener('scroll', onScroll, { passive: true });
-
-    // Initial active state
-    updateActive();
+    if (!opts.keepTab) _cdActiveTab = 'rates';
+    refreshCardDetailTabs();
+    selectCardDetailTab(_cdActiveTab, { noScroll: true });
 }
 
 // Render new cardholder promos in the card detail modal.
@@ -1245,8 +1303,11 @@ function renderCardDetailPromos(card) {
     if (!section || !content) return;
 
     content.innerHTML = '';
+    const footEl = document.getElementById('card-promos-foot');   // 多筆活動共用的「新戶資格」（renderCardDetailPromoTickets 寫入）
+    if (footEl) footEl.innerHTML = '';
+    content.classList.remove('cd-promos-multi');
 
-    // Regulatory warning sits above the 新戶活動 heading; hidden until we
+    // Regulatory warning（謹慎理財、信用至上）；hidden until we
     // actually render promo cards below.
     const disclaimerEl = document.getElementById('card-promo-disclaimer');
     if (disclaimerEl) disclaimerEl.style.display = 'none';
@@ -1298,8 +1359,10 @@ function renderCardDetailPromos(card) {
     const amountInputEl = document.getElementById('amount-input');
     const amount = amountInputEl && amountInputEl.value !== '' ? parseFloat(amountInputEl.value) : 1000;
 
-    const fragment = document.createDocumentFragment();
-
+    // 2026-11-17 起詳情頁每筆活動畫成一張「票券」（renderCardDetailPromoTickets，js/card-detail.js），
+    // 不再借用搜尋結果的活動卡（createCardholderPromoElement 只剩搜尋結果在用，輸出不變）。
+    // 哪些活動會畫沿用舊規則：buildPromoDetailRows 沒有任何列（沒有首刷禮／定額回饋／回饋率）的整筆略過
+    const items = [];
     promos.forEach(promo => {
         // In detail page, no merchant search context — show bonus regardless.
         const bonusApplies = !!promo.bonus_rate;
@@ -1307,23 +1370,21 @@ function renderCardDetailPromos(card) {
         const rows = buildPromoDetailRows(promo, card, amount, bonusApplies);
         if (rows.length === 0) return;
 
-        // Show all bonus_merchants (or "本卡所有指定通路" for *all_items, "一般消費皆適用" for *general)
+        // Show all bonus_merchants (or "本卡所有指定通路" for *all_items, "一般消費" for *general)
         let merchantList = [];
         if (promo.bonus_merchants) {
             if (isGeneralSpendingMarker(promo.bonus_merchants)) {
-                merchantList = [GENERAL_SPENDING_LABEL];
+                merchantList = ['一般消費'];
             } else if (isAllItemsMarker(promo.bonus_merchants)) {
                 merchantList = ['本卡所有指定通路'];
             } else {
                 merchantList = expandPromoMerchants(promo, card);
             }
         }
-
-        const el = createCardholderPromoElement(card, promo, rows, merchantList, { hideCardName: true, showExtras: true });
-        fragment.appendChild(el);
+        items.push({ promo, merchantList });
     });
 
-    if (!fragment.hasChildNodes()) {
+    if (items.length === 0) {
         if (hasCta) {
             section.style.display = 'block';
         } else {
@@ -1332,10 +1393,10 @@ function renderCardDetailPromos(card) {
         return;
     }
 
-    // Promo cards exist → reveal the warning above the 新戶活動 heading.
+    // Promo cards exist → reveal the warning（謹慎理財、信用至上；2026-11-17 起在活動區最下面）
     if (disclaimerEl) disclaimerEl.style.display = 'block';
 
-    content.appendChild(fragment);
+    renderCardDetailPromoTickets(card, items);
     section.style.display = 'block';
 }
 
@@ -1451,7 +1512,7 @@ function renderCardThumb(cardId) {
 
 // Create card result element
 // ===== 回饋卡共用片段（2026-10-06）=====
-// 搜尋結果卡片（createCardResultElement）與詳情頁回饋卡（renderRateCard，js/card-detail.js）
+// 搜尋結果卡片（createCardResultElement）與詳情頁回饋卡（planCardsHtml／renderPlanCard，js/card-detail.js）
 // 長得一樣是產品要求（docs/project/ui-display.md 1h 節）。領券型卡片（createCouponResultElement）
 // 的下方資訊區也走這裡的 renderActivityInfo（行動支付 2026-11-16 改成清單列 renderPaymentRow，不再走這裡）。兩邊共同的部分——徽章文字、
 // 滿額門檻句、下方資訊區的行序——只寫在這裡，改一次兩邊一起變；不要在任一邊另外拼。
@@ -1869,9 +1930,10 @@ function toggleRateComposition(btn) {
     const popup = document.createElement('div');
     popup.className = 'calc-breakdown-popup';
     popup.innerHTML = `<table class="breakdown-table"><tbody>${rows}${totalRow}</tbody></table>`;
-    // 詳情頁回饋卡要放進 .rate-card-body：卡片本身是「標題列｜其餘」兩列的 subgrid，
-    // 直接掛在卡片底下會變成第三個格子、把版面擠亂
-    (item.querySelector('.rate-card-body') || item).appendChild(popup);
+    // 同方案卡（.cd-rc）：面板掛在這一列（.cd-rr，grid 跨滿兩欄）下方，不是整張卡的底部。
+    // 舊樣式的 .rate-card（一般消費排除卡）放進 .rate-card-body（卡片是「標題列｜其餘」兩列的 subgrid，
+    // 直接掛在卡片底下會變成第三個格子）
+    (btn.closest('.cd-rr') || item.querySelector('.rate-card-body') || item).appendChild(popup);
     btn.classList.add('active');
 }
 

@@ -190,6 +190,12 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 
 「變動紀錄」沒有頂層 key——它掛在每張卡身上：`card.changelog = [{ date, summary }, ...]`（最多 5 筆、由新到舊；**沒有異動的卡沒有這個欄位**，前端判斷要 `!card.changelog || card.changelog.length === 0`，鐵則 4）。
 
+**手機匯出**（2026-11-18）：`getUi()` 只有從試算表選單執行才拿得到，手機只能在 Apps Script 編輯器按「執行」，
+以前會在第一行丟 `Cannot call SpreadsheetApp.getUi() from this context`。現在 `exportToJSON`／`runQACheck`
+改用 `pmcUi_()`：拿不到真 UI 時換成 `PMC_HEADLESS_UI_`，對話框改寫進執行記錄、是／否一律當「否」——
+❌ 照樣擋、參照問題（card_id／申辦連結網域）**一律取消**、只提醒的照常匯出。從選單執行時行為不變。
+**新增會在匯出途中被呼叫、又直接用 `SpreadsheetApp.getUi()` 的函式，手機匯出就會再壞一次**——一律改用 `pmcUi_()`。
+
 **重要輔助函數**：`getValue(row, headers, fieldName)` 安全讀欄位；`addOptionalField(obj, row, headers, fieldName, type, targetName)`；`formatDateToSlash(dateValue)`（YYYY/M/D）；`generateSearchTerms(id, name)`。
 
 ## 4. 匯出 guard 鐵則（rate=0 陷阱，2026-07-09 血淚教訓）
