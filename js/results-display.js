@@ -1906,12 +1906,8 @@ document.addEventListener('click', (e) => {
     }
 }, true);
 
-// 鍵盤：回饋率按鈕按 Enter 要能開抽屜。全站有一個 document 的 keypress「Enter＝計算」（js/home-ui.js），
-// 按鈕被 Enter 啟動的同時它會重算、重畫整個結果區，剛開的抽屜就被洗掉（等於按了沒反應）。
-// 在 capture 階段攔下這顆按鈕的 Enter，不讓它往下傳到那個全站監聽（不影響按鈕自己的點擊啟動；空白鍵本來就不在那個監聽裡）。
-document.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && e.target && e.target.closest && e.target.closest('.calc-breakdown-btn')) e.stopPropagation();
-}, true);
+// 鍵盤：回饋率按鈕按 Enter 要能開抽屜——2026-11-23 起由 js/home-ui.js 的全站「Enter＝計算」監聽統一處理
+// （焦點在按鈕等可操作元素上時不計算），這裡不需要再另外攔。
 
 // 詳情頁「回饋組成」抽屜：展開/收合各成分的回饋率與上限（不含金額，
 // 與搜尋結果的計算明細不同——那個要有消費金額才算得出來）。

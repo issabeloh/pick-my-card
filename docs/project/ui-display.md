@@ -415,7 +415,7 @@ Grep `titleParts`）：
 - 詳情頁：`rateCompositionData()`（`js/cashback-engine.js`）回傳已 escape 的 `data-comp` JSON，成分不到兩層回 `''`；entry 欄位從 `rateBtnHtml` 改名 `rateComp`；`renderPlanRow`（`js/card-detail.js`）有 `rateComp` 才畫成按鈕、否則仍是 `<span class="cd-rate">`（沒有組成的列——例如 CUBE 秋日遊各列——沒有虛線、不可點）。`toggleRateComposition` 行為與面板內容不變
 - 搜尋結果：`calcRateHtml(rateText, hasLayers)`（`js/results-display.js`，緊接在 `showCalcBreakdown` 前）；有 `calculationLayers` 才是按鈕，點了展開同一個試算抽屜（`showCalcBreakdown`）。一般結果卡與領券卡（`createCouponResultElement`）兩處；「回饋金額」旁不再有按鈕。行動支付清單列（1i）本來就沒有計算機鈕
 - 無障礙：`aria-expanded`（`showCalcBreakdown`／`closeOpenBreakdown`／`toggleRateComposition` 同步維護）、`aria-label`「10%，查看回饋組成」／「2%，查看試算明細」、`:focus-visible` 2px 藍框
-- ⚠️ **鍵盤 Enter 要特別處理**：全站 `document` 的 `keypress`「Enter＝計算」（`js/home-ui.js`）會在按鈕被 Enter 啟動的同時重算、重畫整個結果區，剛開的抽屜立刻被洗掉（看起來按了沒反應，空白鍵不受影響）。`js/results-display.js` 在 capture 階段對 `.calc-breakdown-btn` 的 Enter keypress 做 `stopPropagation()`（不影響按鈕自己的點擊啟動）。其他結果區按鈕（釘選、詳情）的 Enter 仍會重算，那是既有行為，這次沒動
+- ⚠️ **鍵盤 Enter**：全站 `document` 的 `keypress`「Enter＝計算」（`js/home-ui.js`，`ENTER_OWN_ACTION`）2026-11-23 起在焦點位於按鈕、連結、下拉、多行文字框、`role=button/switch/tab` 時不計算，讓那個元素自己處理 Enter（原本會重算、重畫結果區，回饋率抽屜、「加到小抄」「詳情」都像按了沒反應）。在商家、金額輸入框裡按 Enter 照舊計算。新增會被 Enter 啟動的自訂元件時，用真的 `<button>` 或加上對應 role
 - GA4：原本計算機鈕就沒有送事件（`js/quick-options-misc.js` 的 GA4 選擇器沒有它），所以沒有要搬的事件
 - 首次引導（`js/home-ui.js`）不引用計算機鈕：第 3 步打亮的是整張 `#results-container > .card-result`，洞跟著卡的邊框走（拿掉圖示後卡高少 1–2px，洞跟著變）。`?ab=B` 清 localStorage 實測四步照常跑完
 
