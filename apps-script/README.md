@@ -12,7 +12,7 @@
 
 - 主選單／主函數：`exportToJSON`（含 `runQACheck` 資料品質檢查）
 - 2026-09-23 新增「站長推薦／行李箱專區」：New Cardholder Promos 多讀 `min_spend`、`luggage_inch`／`luggage_value`、
-  `pick_*` 共六欄（說明見 `docs/project/data-pipeline.md` 第 9b 節）。同專案另加
+  `pick_*` 共六欄（說明見 `docs/project/promos.md` 第 5 節）。同專案另加
   **`promo-picks-fill.gs`**（新檔，要在 Apps Script 編輯器「＋ 檔案」貼進去）：執行
   `fillPickSuggestions()` 會把目前上榜 5 檔的自動問句／理由填進空白格。
 - 2026-07-31 新增 `readChangelog()`（詳情頁「近期異動」）：讀資料檔的「變動紀錄」表，依 `id`
@@ -532,7 +532,7 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
 
 `exportToJSON()` 現在除了 `cards.data` / `cards.version`，還會多 commit 一個 `promos.html`
 （給 SEO／社群轉貼用的「新戶活動一覽」落地頁，糖果果凍風 UI）。生成邏輯與資料流細節見
-`docs/project/data-pipeline.md` 第 9 節，這裡只記站長要做的事與程式位置。
+`docs/project/promos.md`，這裡只記站長要做的事與程式位置。
 
 - **函數**：`generatePromosPageHtml(exportData)`（純函數，不呼叫任何 Sheets/Apps Script API），
   在 `exportToJSON()` 內讀完 `newCardholderPromos` / `cardApplyCtas` 後呼叫，回傳的 HTML

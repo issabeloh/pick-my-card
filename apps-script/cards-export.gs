@@ -1190,7 +1190,7 @@ if (faqSheet) {
   // 上次的指紋＋日期存在 Script Properties（Apps Script 端持久化，不佔 repo 檔案、不多一個
   // commit、維護者流程零改動）。首次執行或指紋不符 → 蓋今天並寫回。這個 promosUpdatedIso 之後
   // 同時餵給：generatePromosPageHtml（可見戳章＋JSON-LD dateModified）與 sitemap 的 promos
-  // lastmod，三處同源一致（見 data-pipeline.md 第 9 節）。
+  // lastmod，三處同源一致（見 promos.md 第 1 節）。
   // （2026-08-16 起共用 pmcStampedDate_，key 沿用 PROMOS_*，語義與存的屬性都不變）
   const promosUpdatedIso = pmcStampedDate_('PROMOS', pmcPromoSignature_(newCardholderPromos));
 
@@ -2333,7 +2333,7 @@ function generateSearchTerms(id, name) {
 // 回傳完整 HTML 字串。內部不得呼叫任何 Sheets/Apps Script API（連 Utilities 也不用），
 // 這樣同一份程式碼才能被 exportToJSON() 與 Node harness（repo 初版由
 // scratchpad 的臨時 harness 呼叫本函數，餵現有 cards.json 產生）共用、行為保證一致。
-// 詳見 docs/project/data-pipeline.md「promos.html 靜態生成」一節。
+// 詳見 docs/project/promos.md 第 1 節「promos.html 靜態生成」。
 
 const PMC_SITE_URL = 'https://pickmycard.app';
 const PMC_OG_IMAGE = 'https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2';
@@ -2483,7 +2483,7 @@ function generatePromosPageHtml(exportData) {
     '首刷禮、新戶回饋加碼、定額回饋活動，附達成條件與截止日，持續更新。';
   // 版本含台北時間的時分：同一天多次匯出／改版也能破 promos.css/js 快取
   // （2026-07-16 教訓：純日期版本讓當天稍早的舊 CSS/JS 被瀏覽器快取住）。
-  // 位元級重現驗證時用 exportData.versionTagOverride 固定值（見 data-pipeline.md 第 9 節）。
+  // 位元級重現驗證時用 exportData.versionTagOverride 固定值（見 promos.md 第 1 節）。
   const versionTag = (exportData && exportData.versionTagOverride) ||
     todayIso.replace(/-/g, '') + pmcTaipeiHm_();
 
@@ -2567,7 +2567,7 @@ function pmcStableStringify_(v) {
 // （把每一筆各自序列化成字串後排序——2026-08-15 移除 promo_id 之前是拿它當排序鍵，
 // 現在直接用內容本身排，同一張卡有多檔活動時也不會有排序歧義，比舊做法更穩）。
 // exportToJSON 拿它跟 Script Properties 存的上次指紋比對，用來
-// 決定 promos 頁「資料更新於」要不要蓋今天（見 data-pipeline.md 第 9 節）。純函數：
+// 決定 promos 頁「資料更新於」要不要蓋今天（見 promos.md 第 1 節）。純函數：
 // djb2 雜湊配 Math.imul 固定在 32-bit 無號，Node/Apps Script 結果一致，回傳十進位字串。
 function pmcPromoSignature_(promos) {
   const list = (promos || []).map(pmcStableStringify_).sort();
@@ -2802,7 +2802,7 @@ function pmcRewardSub_(promo) {
 
 // ---------- 站長推薦／行李箱專區（2026-09-23）----------
 // 兩個區塊都放在清單上方、不受篩選／搜尋／「隱藏我持有的卡片」影響（站長指定）。
-// 資料欄位見 pmcRowToPromo_ 的說明；規則的完整說明在 docs/project/data-pipeline.md 第 9b 節。
+// 資料欄位見 pmcRowToPromo_ 的說明；規則的完整說明在 docs/project/promos.md 第 5 節。
 //
 // 選榜規則（站長 2026-09-23 定案）：
 //   1. pick_rank 填 1–5 的活動，強制排在該位置；填 x 的永遠不自動選入
@@ -3609,7 +3609,7 @@ function pmcBuildJsonLd_(prepared) {
 // 頁面層級結構化資料（2026-07-23 新增）：帶 dateModified 的 CollectionPage，讓答案引擎
 // （AEO/GEO）與 Google 讀到「這份新戶活動清單最後更新日」。dateModified 用 updatedIso
 // ——只有 promo 內容真的變動時才前進的那個日期，與可見「資料更新於」戳章、sitemap 的
-// promos lastmod 同源，三處一致（見 data-pipeline.md 第 9 節）。與 ItemList／BreadcrumbList
+// promos lastmod 同源，三處一致（見 promos.md 第 1 節）。與 ItemList／BreadcrumbList
 // 三個 JSON-LD 並存（同頁多個 <script type="application/ld+json"> 是合法用法）。
 function pmcBuildWebPageJsonLd_(updatedIso, title, description) {
   const ld = {
@@ -3699,7 +3699,7 @@ pmcRenderTrust_() +
 o.filterChipsHtml + '\n' +
 '      </div>\n' +
 '    </div>\n' +
-    // 排序切換已移除（2026-09-17 站長裁定）：清單固定依「最高可拿」倒序，
+    // 排序切換已移除（2026-09-17 站長裁定）：清單固定依 pmcCompareSortKey_ 的順序（首刷禮→回饋率→金額，2026-09-21 改），
     // 不再讓使用者選排序方式。保留的是「類型」chips 與「隱藏我持有的卡片」。
 
     // 「隱藏我持有的卡片」篩選（2026-07-16 第四輪站長回饋）：讀主站
@@ -3803,7 +3803,7 @@ function pmcPageShell_(o) {
 // 同款結構——漢堡（手機）、logo＋站名整塊連回 `/`、導覽「新戶活動」（本頁，
 // aria-current）＋「常見問題」→ `/faq`、右側「返回首頁」鈕。跟 faq.html 一樣是
 // 手抄件，不是共用元件；faq.html 又是抄 index.html 的 header-top，三邊都要手動
-// 同步（見 FAQ-README.md／data-pipeline.md 第 9 節）。
+// 同步（見 FAQ-README.md／promos.md 第 1 節）。
 // 站名刻意用 <span> 而非 <h1>：這頁真正的 SEO H1 是下面 hero 區塊的
 // 「信用卡新戶活動一覽」，同頁兩個 h1 對文件結構不利。
 // 右側原本試過頭像＋精簡 dropdown，站長裁定「副頁頭像做不到主站完整功能
@@ -3870,7 +3870,7 @@ o.mainHtml +
 '\n' +
 // Footer：移除「用回饋計算機比比看」按鈕，改放主站的 footer（社群媒體/贊助區塊），
 // 複製自 index.html 的 .social-media-footer——主站改動這塊時，這裡要手動同步（同一句
-// 提醒也寫進了 docs/project/data-pipeline.md 第 9 節）。
+// 提醒也寫進了 docs/project/promos.md 第 1 節）。
 // 2026-10-21 隨主站重排：追蹤＋贊助併成一組；探索更多不列本頁（新戶活動）；
 // 隱私權／使用須知改成 .footer-legal 一行小字。樣式在 promos.css「抄自 styles.css」那段。
 '<footer class="social-media-footer">\n' +
@@ -3975,7 +3975,7 @@ o.mainHtml +
 // 放在這裡是為了跟清單頁共用 pmcPreparePromoGroups_／pmcRenderCardGroup_／pmcPageShell_，
 // 不另抄一份 header／footer／活動卡。Apps Script 端只負責兩件事：清單卡名的連結
 // （pmcRenderCardGroup_）與 sitemap／promoCardUpdatedIso（exportToJSON）。
-// 完整說明：docs/project/data-pipeline.md 第 9d 節。
+// 完整說明：docs/project/promos.md 第 7 節。
 
 // 卡片 id 只收小寫英數與連字號：它同時是網址與檔名，其他字元一律不出頁（也擋掉 ../ 之類的路徑）。
 const PMC_CARD_PAGE_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
