@@ -1406,12 +1406,32 @@
   }
 
   // ---------- 單卡頁 /promos/<id>（2026-11-18）----------
+  // 「查看卡片詳情」→ 卡片特色框框最下方的「看完整回饋與權益 ›」按鈕（站長 2026-11-23 選 mockup A2）。
+  // 用意：單卡頁講新戶活動，詳情頁講平常刷卡的回饋與權益——按鈕要讓人看出是「去另一個地方看完整的」。
+  // 跟清單頁 modal 同一招：搬**節點本身**（setupCardDetailOverlay 的 document 委派才收得到點擊），
+  // 注入器的輸出不必改。只有這裡改字，清單頁 modal 仍是「查看卡片詳情」。
+  function moveCardPageDetailLink(feat) {
+    var all = feat.querySelector('.promo-feat-all');
+    if (!all) return;
+    var foot = document.createElement('div');
+    foot.className = 'pmc-cp-feat-foot';
+    all.textContent = '看完整回饋與權益';
+    all.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M7.5 4.5L13 10l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
+    foot.appendChild(all);
+    feat.appendChild(foot);
+    // 抬頭剩下的 <b> 在單卡頁被 CSS 藏起來；沒有級別標籤時整列空了，藏掉免得多一段空白
+    // （.promo-feat-head 是 display:flex，CSS 已補 .promo-feat-head[hidden]{display:none}）
+    var head = feat.querySelector('.promo-feat-head');
+    if (head && !head.querySelector('.promo-feat-level')) head.hidden = true;
+  }
+
   function setupCardPage() {
     if (!document.querySelector('.pmc-cp')) return;
     // 卡片特色要等部署時注入；沒注入（本機、或注入器沒跑）就整節藏起來，不留空標題
     var featSec = document.getElementById('pmc-cp-feat-sec');
     var feat = featSec && featSec.querySelector('.promo-card-feat');
     if (featSec && (!feat || !feat.innerHTML.trim())) featSec.hidden = true;
+    else if (feat) moveCardPageDetailLink(feat);
     // 部署之後活動才到期：refreshBadgesAndExpiry 會把整張卡藏起來，這裡補一句話
     var card = document.querySelector('.pmc-cp .promo-card');
     var ended = document.getElementById('pmc-cp-ended');

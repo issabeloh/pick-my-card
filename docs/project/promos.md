@@ -491,6 +491,11 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
   愛心搬走後卡圖列的右欄變寬；窄手機另讓卡圖縮（`clamp(88px, 100% - 222px, 128px)`），「經 Money101 合作連結前往銀行官網」340px 以上不折行。
 - **卡片特色的「卡片用途」＝大師點評引言**（2026-11-22，比照詳情頁 1q 的 `.card-use-case` 桌機版）：注入器在 `.promo-feat-usage` 後面
   一律輸出 `.promo-feat-usage-cite`「— 大師點評」，`promos.css` 預設藏起來，只有 `.pmc-cp-feat-sec` 裡顯示並改成引號樣式。清單頁 modal 仍是色條樣式。
+- **詳情頁入口＝卡片特色框框最下方的「看完整回饋與權益 ›」**（2026-11-23 站長選 mockup A2，`docs/mockups/promo-detail-btn-mock-2026-11-23*.js`）：
+  單卡頁講新戶活動、詳情頁講平常刷卡的回饋與權益，按鈕要讓人看出是去看「完整的」。注入器照舊輸出抬頭裡的「查看卡片詳情」，
+  `promos.js` 的 `moveCardPageDetailLink()` 把**節點本身**搬到 `.pmc-cp-feat-foot`、改字、沒級別標籤時藏抬頭（同清單頁 modal 的作法）。
+  淡藍底按鈕（`#eff6ff`／`#1d4ed8`／hover `#dbeafe`）＝主站 Spotlight「活動詳情」那組次要按鈕的配色，不搶「立即申辦」；桌機限寬 340px 置中。
+  站長否決按鈕下方的說明灰字。清單頁 modal 仍是「查看卡片詳情」。
 - 樣式在 `promos.css` 檔尾（`.pmc-cp*`）。`.pmc-cp .promo-card[data-act-count]:not([hidden])` 要跟清單那條多檔 grid 規則同分、排在後面才蓋得過，別往前搬。
 - ⚠️ 特色容器的 class 只能寫 `promo-card-feat` 一個字：注入器比對的是 `class="promo-card-feat"` 整串（2026-11-18 多加一個 class 就 0 組命中）。
 - 本機看：`node tools/build-promo-card-pages.js && node tools/build-promos-features.js`，再開 `python3 -m http.server`
