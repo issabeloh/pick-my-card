@@ -1067,9 +1067,9 @@ function createCardholderPromoElement(card, promo, rows, matchedMerchants, opts 
             ${highlightRowsHtml}
             ${capRowHtml}
         </div>
-        ${promo.promo_condition ? `<div class="matched-merchant promo-condition"><div class="promo-condition-label">達成條件:</div><div class="promo-condition-text">${escapeHtmlMultiline(promo.promo_condition)}</div></div>` : ''}
-        <div class="matched-merchant">匹配項目: <strong>${escapeHtml(merchantsText)}</strong></div>
-        <div class="matched-merchant">活動期間: ${escapeHtml(period)}${promoBadgeHtml}</div>
+        ${promo.promo_condition ? `<div class="matched-merchant promo-condition"><div class="promo-condition-label">達成條件</div><div class="promo-condition-text">${escapeHtmlMultiline(promo.promo_condition)}</div></div>` : ''}
+        <div class="matched-merchant">${renderInfoRow('匹配通路', `<strong>${escapeHtml(merchantsText)}</strong>`)}</div>
+        <div class="matched-merchant">${renderInfoRow('活動期間', `${escapeHtml(period)}${promoBadgeHtml}`)}</div>
         ${notesHtml}
     `;
     return el;
@@ -1515,7 +1515,8 @@ function createCouponResultElement(coupon, amount) {
         ${renderActivityInfo({
             // 下方資訊區走共用的 renderActivityInfo，行序與搜尋結果卡片相同（2026-10-08 站長要求統一；
             // 以前是自己拼的「條件 → 匹配項目 → 活動期間」）。「即將結束」徽章也一併比照
-            matchHtml: `匹配項目: <strong>${escapeHtml(coupon.matchedMerchants ? coupon.matchedMerchants.join('、') : coupon.merchant)}</strong>`,
+            matchLabel: '匹配通路',
+            matchHtml: `<strong>${escapeHtml(coupon.matchedMerchants ? coupon.matchedMerchants.join('、') : coupon.merchant)}</strong>`,
             period: coupon.period || '',
             endingSoonBadge: renderEndingSoonBadge(coupon.periodEnd),
             conditions: coupon.conditions
@@ -1587,31 +1588,38 @@ function renderSpendUpgradeNotes(upgrades, amount) {
     }).join('');
 }
 
+// 資訊區的一行「標籤｜內容」（2026-11-23 2-5 文案，站長選 A 案）：標籤不帶冒號、自成一欄，
+// 內容起點對齊、換行也對齊內容（CSS .info-row）。label 是寫死的字（這裡 escape），valueHtml 由呼叫端負責 escape。
+function renderInfoRow(label, valueHtml) {
+    return `<div class="activity-info-line info-row"><span class="info-lb">${escapeHtml(label)}</span><span class="info-val">${valueHtml}</span></div>`;
+}
+
 // 卡片下方的資訊區 .matched-merchant。行序固定：
 //   活動（activityName：搜尋結果會傳；
 //         詳情頁回饋卡的類別已經是卡片標題，不重複）
-//   → 通路（呼叫端組好的 matchHtml，如「匹配項目: …」「適用通路: …」）→ 活動期間（＋即將結束）
+//   → 通路（matchLabel「匹配通路」＋呼叫端組好的 matchHtml）→ 活動期間（＋即將結束）
 //   → 條件 → 銀行官方登錄連結
 // activityName 是純文字，這裡負責 escape。
 // conditions 可以是字串或字串陣列。collapsibleConditions＝true 時條件用可收合的
 // renderConditionLine（詳情頁卡片多、條件長）；搜尋結果維持整段顯示。
 // ⚠️ 條件文字照舊原樣輸出、不 escape——兩條路徑一向如此，改了可能動到 Sheets 裡刻意的格式，
 //    要改請兩邊一起評估。matchHtml 由呼叫端負責 escape。
-function renderActivityInfo({ activityName = '', matchHtml = '', period = '', endingSoonBadge = '', conditions = null,
+function renderActivityInfo({ activityName = '', matchLabel = '', matchHtml = '', period = '', endingSoonBadge = '', conditions = null,
                               collapsibleConditions = false, registerLink = '', extraClass = '' } = {}) {
     const lines = [];
     // 活動類別（2026-10-08 站長選定）：原本塞在匹配項目尾巴的「(類別: …)」太不顯眼，
     // 抽成資訊區第一行、內容黑色粗體——同一張卡有兩個方案（如 Richart 數趣刷／Chill刷）時靠它分辨
-    if (activityName) lines.push(`<div class="activity-info-line">活動: <span class="activity-name">${escapeHtml(activityName)}</span></div>`);
-    if (matchHtml) lines.push(`<div class="activity-info-line">${matchHtml}</div>`);
+    if (activityName) lines.push(renderInfoRow('活動', `<span class="activity-name">${escapeHtml(activityName)}</span>`));
+    // matchLabel 有給＝「標籤＋內容」一行（匹配通路）；沒給＝整行就是 matchHtml（「一般消費回饋率」「此卡無此項目回饋」）
+    if (matchHtml) lines.push(matchLabel ? renderInfoRow(matchLabel, matchHtml) : `<div class="activity-info-line">${matchHtml}</div>`);
     if (period) {
-        lines.push(`<div class="activity-info-line">活動期間: ${escapeHtml(period)}${endingSoonBadge}</div>`);
+        lines.push(renderInfoRow('活動期間', `${escapeHtml(period)}${endingSoonBadge}`));
     } else if (endingSoonBadge) {
         lines.push(`<div class="activity-info-line">${endingSoonBadge.trim()}</div>`);
     }
     const conditionList = (Array.isArray(conditions) ? conditions : [conditions]).filter(Boolean);
     for (const c of conditionList) {
-        lines.push(collapsibleConditions ? renderConditionLine(c) : `<div class="activity-info-line">條件: ${c}</div>`);
+        lines.push(collapsibleConditions ? renderConditionLine(c) : renderInfoRow('條件', c));
     }
     // 銀行官方登錄連結（renderRegisterLinkLine 自帶 sanitizeUrl，沒有連結回空字串）
     lines.push(renderRegisterLinkLine(registerLink));
@@ -1741,9 +1749,11 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     ${cashbackText}
                 </div>
                 ${(() => {
-    if (result.card.basicCashbackType) {
-        const cashbackType = result.card.basicCashbackType;
-        return `<div class="cashback-type-label">(${cashbackType})</div>`;
+    // 回饋形式（現金積點、LINE POINTS…）。最普通的「現金回饋」不顯示（16 張卡都是它，標了等於沒標；
+    // 站長 2026-11-23 同意），只有點數類才是用戶要注意的。詳情頁的「回饋形式」列照舊全部顯示
+    const cashbackType = String(result.card.basicCashbackType || '').trim();
+    if (cashbackType && cashbackType !== '現金回饋') {
+        return `<div class="cashback-type-label">(${escapeHtml(cashbackType)})</div>`;
                     }
                     return '';
                 })()}
@@ -1809,7 +1819,8 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     : renderSpendThresholdNote(group && group.minSpend) + renderSpendUpgradeNotes(result.spendUpgrades, originalAmount);
                 return thresholdNote + renderActivityInfo({
                     activityName: result.matchedCategory ? getCategoryDisplayName(result.matchedCategory) : '',
-                    matchHtml: `匹配項目: <strong>${matchedItemsText}</strong>${exclusionNote}`,
+                    matchLabel: '匹配通路',
+                    matchHtml: `<strong>${matchedItemsText}</strong>${exclusionNote}`,
                     period: periodText,
                     endingSoonBadge: endingSoonInlineBadge,
                     conditions: group && group.conditions,

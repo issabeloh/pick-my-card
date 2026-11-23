@@ -1059,7 +1059,7 @@ header h1 {
     border: none;
     color: rgba(255, 255, 255, 0.7);
     padding: 6px;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -1085,8 +1085,8 @@ header h1 {
    讓它落在標題與膠囊的正中間（.cards-header 實際下緣間距為 10px）。 */
 .card-chips-count {
     margin-bottom: 10px;
-    font-size: 12px;
-    color: #9ca3af;
+    font-size: var(--ui-text-12);
+    color: var(--ui-ink-3);   /* 原 #9ca3af，白底上太淡（2026-11-23） */
 }
 
 /* 左右分割膠囊：左半銀行（深色底）、右半卡名，讓用戶先掃銀行再找卡。
@@ -1130,7 +1130,7 @@ header h1 {
     background: rgba(255, 255, 255, 0.2);
     color: white;
     padding: 4px 10px;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     font-size: 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
@@ -1756,7 +1756,7 @@ main {
     color: #64748b;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1772,7 +1772,7 @@ main {
 .quick-search-expand-btn.expanded {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     border-color: #93c5fd;
-    color: #2563eb;
+    color: var(--ui-brand-bright);
 }
 
 .quick-search-expand-btn.expanded svg {
@@ -1787,8 +1787,8 @@ main {
 .quick-search-dropdown {
     position: fixed;
     background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-lg);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
     z-index: 1000;
     opacity: 0;
@@ -1813,10 +1813,10 @@ main {
 }
 
 .quick-search-dropdown-footer {
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--ui-line);
     padding: 10px 12px;
-    background: #f8fafc;
-    border-radius: 0 0 12px 12px;
+    background: var(--ui-bg);
+    border-radius: 0 0 var(--ui-radius-lg) var(--ui-radius-lg);
 }
 
 .quick-search-dropdown-footer .manage-quick-options-btn {
@@ -1827,10 +1827,10 @@ main {
     gap: 6px;
     padding: 8px 12px;
     background: transparent;
-    border: 1px dashed #cbd5e1;
-    border-radius: 8px;
-    color: #64748b;
-    font-size: 13px;
+    border: 1px dashed #d1d5db;
+    border-radius: var(--ui-radius-md);
+    color: var(--ui-ink-3);
+    font-size: var(--ui-text-13);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -1865,10 +1865,10 @@ main {
     padding: 6px 12px;
     background: #fff;
     /* 2026-11-16：原本是天藍字＋天藍框的膠囊，改中性色。顏色留給「計算回饋」這種主要動作 */
-    color: #374151;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 13px;
+    color: var(--ui-ink-2);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
+    font-size: var(--ui-text-13);
     font-weight: 500;
     white-space: nowrap;
     cursor: pointer;
@@ -1887,7 +1887,7 @@ main {
 }
 
 .quick-search-btn .icon {
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     line-height: 1;
 }
 
@@ -1972,7 +1972,7 @@ input[type="number"]:focus {
     background: transparent;
     border: none;
     color: #059669;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     line-height: 1.5;
     display: inline-block;
     /* 無匹配時 displayResults() 會 scrollIntoView({block:'start'}) 把這行紅字捲到接近
@@ -2032,10 +2032,10 @@ input[type="number"]:focus {
 .calculate-btn {
     width: 100%;
     padding: 16px;
-    background: #1e40af;
+    background: var(--ui-brand);
     color: white;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
@@ -2046,7 +2046,7 @@ input[type="number"]:focus {
     width: auto;
     padding: 12px 20px;
     font-size: 15px;
-    border-radius: 10px;
+    border-radius: var(--ui-radius-lg);
     flex-shrink: 0;
     height: 53.5px;
 }
@@ -2268,8 +2268,8 @@ input[type="number"]:focus {
    「這是領券型」靠區塊標題（領券型活動）表達，不靠卡片顏色。
    同日刪掉沒有任何地方在用的 .coupon-rate／.coupon-details／.coupon-detail-*（舊版自拼模板的殘留）。 */
 .coupon-item {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     padding: 16px;
     background: #fff;
 }
@@ -2284,7 +2284,7 @@ input[type="number"]:focus {
 .coupon-merchant {
     font-size: 1.2rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 /* Parking Benefits Styles */
@@ -2397,8 +2397,8 @@ input[type="number"]:focus {
     position: relative; /* 「?」說明浮層的定位基準 */
     display: flex;
     gap: 12px; /* 與 .input-row-with-button 手機版 grid gap 一致，上下左右間距等距 */
-    font-size: 14px;
-    color: #6b7280;
+    font-size: var(--ui-text-14);
+    color: var(--ui-ink-3);
     user-select: none;
 }
 
@@ -2409,9 +2409,9 @@ input[type="number"]:focus {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
+    background: var(--ui-fill);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     padding: 4px 12px;
 }
 
@@ -2466,7 +2466,7 @@ input[type="number"]:focus {
     border-radius: 50%;
     width: 18px;
     height: 18px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: bold;
     cursor: pointer;
     display: inline-flex;
@@ -2520,7 +2520,7 @@ input[type="number"]:focus {
    桌機保持 display:none ⇒ 不會變成 .input-row-with-button 的 grid item。 */
 .mobile-comparison-hint {
     display: none;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.45;
     color: #9ca3af;      /* 備註灰：比 label 與 toggles 都淡，不跟主要操作搶注意力 */
     font-weight: 400;
@@ -2897,8 +2897,8 @@ input[type="number"]:focus {
 /* Card result styling */
 .card-result {
     position: relative;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     padding: 16px;
     transition: all 0.3s ease;
 }
@@ -2906,7 +2906,7 @@ input[type="number"]:focus {
 .card-result.best-card {
     /* 淺綠底色是站長指定保留的（2026-11-16：第一批曾改成白底綠框，站長看預覽後要求改回）。
        原本寫成 #f0fdf4 → #ecfdf5 的 135° 漸層，兩端幾乎同色，這裡直接用單色 */
-    border-color: #10b981;
+    border-color: var(--ui-green);
     background: #f0fdf4;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
@@ -2983,7 +2983,7 @@ input[type="number"]:focus {
 .card-name {
     font-size: 1.2rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3006,7 +3006,7 @@ input[type="number"]:focus {
 .card-name-with-pin .pin-btn {
     height: 26px;
     padding: 0 11px 0 9px;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
 }
 
 .badges-container {
@@ -3020,25 +3020,25 @@ input[type="number"]:focus {
 /* 基礎樣式：膠囊（供 .cashback-detail-item 內「卡名旁最優回饋」的行內徽章沿用，
    如 CUBE 級別／行動支付比較 modal）。搜尋結果卡另有角標覆蓋（見下） */
 .best-badge {
-    background: #10b981;
+    background: var(--ui-green);
     color: white;
     padding: 4px 12px;
     border-radius: 20px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 600;
     text-transform: uppercase;
 }
 
 /* 搜尋結果卡的「最優回饋」＝貼合右上框邊的角標（非膠囊，避免被誤認為可點）。
    絕對定位貼齊 .card-result（position:relative）右上角、壓住 1px 邊框；
-   外角沿用卡片 8px 圓角、內側下緣微圓；純標示、無 hover/點擊態。 */
+   外角沿用卡片 8px 圓角、內側下緣同樣 8px；純標示、無 hover/點擊態。 */
 .card-result .best-badge {
     position: absolute;
     top: -1px;
     right: -1px;
     z-index: 2;
     padding: 5px 12px 6px;
-    border-radius: 0 8px 0 10px;
+    border-radius: 0 var(--ui-radius-md) 0 var(--ui-radius-md);   /* 內側原本 10px，2026-11-23 站長同意併成 8px */
     letter-spacing: .03em;
     font-weight: 700;
     text-transform: none;
@@ -3112,7 +3112,7 @@ input[type="number"]:focus {
    （第一批曾給最優卡的回饋率深綠 #047857，站長指出那等於又多一種顏色，2026-11-16 拿掉）。 */
 .card-result .detail-value.rate-value,
 .coupon-item .detail-value.rate-value {
-    font-size: 28px;
+    font-size: var(--ui-text-28);
     font-weight: 800;
     line-height: 1.15;
     letter-spacing: -.01em;
@@ -3130,8 +3130,14 @@ input[type="number"]:focus {
 }
 .card-result .pin-btn:not(.pinned) {
     background: #fff;
-    border-color: #d1d5db;
-    color: #374151;
+    border-color: var(--ui-line);
+    color: var(--ui-ink-2);
+}
+/* 結果卡（含領券卡）的「詳情」鈕框線跟小抄鈕一樣用 --ui-line（2026-11-23 站長看對照圖同意，原本 #d1d5db）。
+   同一顆 .card-detail-peek-btn 也出現在選卡 modal 與推薦活動，那兩區還沒換，輪到時再一起看 */
+.card-result .card-detail-peek-btn,
+.coupon-item .card-detail-peek-btn {
+    border-color: var(--ui-line);
 }
 .card-result .pin-btn:not(.pinned):hover {
     background: #f3f4f6;
@@ -3152,22 +3158,22 @@ input[type="number"]:focus {
 }
 
 .detail-label {
-    font-size: 12px;
-    color: #6b7280;
+    font-size: var(--ui-text-12);
+    color: var(--ui-ink-3);
     font-weight: 500;
     text-transform: uppercase;
     margin-bottom: 2px;
 }
 
 .detail-value {
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 600;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 .cashback-amount {
-    color: #10b981;
-    font-size: 16px;
+    color: var(--ui-green);
+    font-size: var(--ui-text-16);
 }
 
 .no-cashback-text {
@@ -3184,8 +3190,8 @@ input[type="number"]:focus {
 
 .matched-merchant {
     margin-top: 6px;
-    font-size: 12px;
-    color: #6b7280;
+    font-size: var(--ui-text-12);
+    color: var(--ui-ink-3);
 }
 
 .matched-merchant strong {
@@ -3194,8 +3200,17 @@ input[type="number"]:focus {
 
 /* 資訊區第一行「活動: ○○」的內容：黑色粗體，比照 .spend-threshold-note 的強調（2026-10-08） */
 .matched-merchant .activity-name {
-    color: #111827;
+    color: var(--ui-ink-1);
     font-weight: 700;
+}
+
+/* 資訊區的「標籤｜內容」行（renderInfoRow，2026-11-23 2-5 文案，站長從 A／B 兩案選 A）：
+   標籤不帶冒號、自成一欄，內容起點對齊，條件很長換行時第二行也對齊內容、不會跑到標籤底下。
+   欄寬 4.6em＝放得下四個字（匹配通路／活動期間）再留一點空。標籤與內容同色，靠對齊分開 */
+.matched-merchant .info-row {
+    display: grid;
+    grid-template-columns: 4.6em minmax(0, 1fr);
+    column-gap: 4px;
 }
 
 /* 回饋率下方的「(分級: Level 1)」：兩段各自不折行，避免只剩「1)」掉到下一行 */
@@ -3213,9 +3228,9 @@ input[type="number"]:focus {
    緊貼回饋數字。黑色粗體、字級與 .matched-merchant 一致（2026-07-17 用戶定案） */
 .spend-threshold-note {
     margin-top: 6px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 /* Multi-line condition / gift text: keep manual line breaks readable */
@@ -3364,16 +3379,16 @@ input[type="number"]:focus {
     }
 
     .card-details .detail-value {
-        font-size: 13px;
+        font-size: var(--ui-text-13);
     }
 
     /* 「回饋消費上限」欄（第 3 欄）的數字略縮，替最寬的上限值換取單行空間 */
     .card-details .detail-item:nth-child(3) .detail-value {
-        font-size: 12px;
+        font-size: var(--ui-text-12);
     }
 
     .card-details .cashback-amount {
-        font-size: 14px;
+        font-size: var(--ui-text-14);
     }
 
     /* 手機版卡名太長時換到第二行（不再用 … 截斷；overflow-wrap 由 .card-result 繼承） */
@@ -3734,12 +3749,12 @@ input[type="number"]:focus {
     padding: 0 11px 0 9px;
     border: 1px solid #d1d5db;
     background: #fff;
-    color: #374151;
-    font-size: 13px;
+    color: var(--ui-ink-2);
+    font-size: var(--ui-text-13);
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 .card-detail-peek-btn::after {
@@ -6035,6 +6050,14 @@ mark.cashback-search-hl {
 .cd-ch strong {
     color: #3b82f6;
     font-weight: 700;
+}
+
+/* 詳情頁回饋卡的「適用通路」「條件」標籤（2026-11-23 2-5 文案，站長選 B 案：不帶冒號、標籤淺灰、與內容空 8px、不對齊）。
+   搜尋結果卡用的是 A 案（一欄對齊，.info-row），兩邊刻意不同：詳情頁條件預設一行省略、通路是長清單，對齊欄會吃掉寬度 */
+.cd-ch-lb,
+.cd-cond-lb {
+    color: #9ca3af;
+    margin-right: 8px;
 }
 
 /* 條件：預設一行省略，旁邊「展開」；展開後顯示全文、按鈕變「收起」 */
@@ -8751,13 +8774,13 @@ mark.cashback-search-hl {
 /* Sidebar */
 .sidebar {
     background: #ffffff;
-    color: #374151;
+    color: var(--ui-ink-2);
     padding: 0;
     overflow: visible;
     position: sticky;
     top: 20px;
     align-self: start;
-    border-right: 1px solid #e5e7eb;
+    border-right: 1px solid var(--ui-line);
 }
 
 .sidebar-header {
@@ -8765,16 +8788,16 @@ mark.cashback-search-hl {
     justify-content: flex-end;
     align-items: center;
     padding: 16px 20px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ui-line);
 }
 
 .sidebar-close-btn {
     background: transparent;
     border: none;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     padding: 4px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -8802,7 +8825,7 @@ mark.cashback-search-hl {
 .sidebar .cards-header p {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     opacity: 1;
 }
 
@@ -8816,28 +8839,28 @@ mark.cashback-search-hl {
 .sidebar-changelog {
     padding-top: 14px;
     margin-bottom: 16px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
 }
 
 .sidebar-changelog-title {
     margin: 0 0 8px;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .sidebar-changelog-list {
     list-style: none;
     margin: 0;
     padding: 0;
-    background: #f9fafb;
-    border: 1px solid #edeff2;
-    border-radius: 10px;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-line);   /* 原 #edeff2，2026-11-23 站長看圖同意 */
+    border-radius: var(--ui-radius-lg);   /* 原 10px，和 FAQ 卡同款；縮圖的 4px 站長決定不改 */
     overflow: hidden;
 }
 
 .sidebar-changelog-list li + li {
-    border-top: 1px solid #edeff2;
+    border-top: 1px solid var(--ui-line);
 }
 
 .sidebar-changelog-item {
@@ -8894,14 +8917,14 @@ mark.cashback-search-hl {
 .sidebar-changelog-card {
     font-size: 0.78rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .sidebar-changelog-summary {
     margin-top: 2px;
     font-size: 0.72rem;
     line-height: 1.4;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 /* 側選單底部的站內頁面連結：新戶活動＝吸睛好康 banner；FAQ＝低調工具連結
@@ -8912,7 +8935,7 @@ mark.cashback-search-hl {
     flex-direction: column;
     gap: 10px;
     padding-top: 14px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
 }
 
 @media (min-width: 769px) {
@@ -9016,9 +9039,9 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    border-radius: 12px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    border-radius: var(--ui-radius-lg);
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-line);
     text-decoration: none;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -9042,16 +9065,16 @@ mark.cashback-search-hl {
 
 .sidebar-faq-card-text strong {
     font-size: 0.85rem;
-    color: #4b5563;
+    color: var(--ui-ink-2);   /* 原 #4b5563（2026-11-23） */
 }
 
 .sidebar-faq-card-text small {
     font-size: 0.7rem;
-    color: #9ca3af;
+    color: var(--ui-ink-3);   /* 原 #9ca3af（2026-11-23） */
 }
 
 .sidebar-faq-card-arrow {
-    color: #9ca3af;
+    color: var(--ui-ink-3);
     font-weight: 700;
 }
 
@@ -9068,9 +9091,9 @@ mark.cashback-search-hl {
 .sidebar .card-chip {
     font-size: 0.7rem;
     padding: 3px 8px;
-    background: #f9fafb;
-    color: #111827;
-    border-color: #e5e7eb;
+    background: var(--ui-bg);
+    color: var(--ui-ink-1);
+    border-color: var(--ui-line);
 }
 
 .sidebar .card-chip:hover {
@@ -9079,7 +9102,7 @@ mark.cashback-search-hl {
 }
 
 .sidebar .card-chip-name {
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 #my-payments-modal {
@@ -9140,7 +9163,7 @@ mark.cashback-search-hl {
 
 /* Sidebar still uses the same card chip overrides (cards only) */
 .sidebar .manage-cards-btn {
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .sidebar .manage-cards-btn:hover {
@@ -9812,13 +9835,13 @@ html.pmc-onboard #search-hints-container {
 /* 信任列（2026-11-16）：搜尋區最下面一行小字，講資料有多深、多新 */
 .trust-line {
     margin: 14px 0 0;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.5;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 .trust-line b {
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .spotlight-header {
@@ -10262,8 +10285,8 @@ html.pmc-onboard #search-hints-container {
 /* 合併框：上半部商家輸入、下半部快捷選項（淺灰背景）；外層粗框。
    「快捷搜尋」標題列已從 DOM 移除——chips 就是這個輸入框的建議選項 */
 .merchant-search-box {
-    border: 3px solid #dbe1ea;
-    border-radius: 14px;
+    border: 3px solid var(--ui-line);   /* 原 #dbe1ea，2026-11-23 站長看圖同意 */
+    border-radius: var(--ui-radius-lg);   /* 原 14px；內層 9px＝12 − 3px 框 */
     background: #fff;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
@@ -10278,7 +10301,7 @@ html.pmc-onboard #search-hints-container {
     appearance: none;
     background: #fff; /* 部分行動瀏覽器給 type=search 灰色 UA 底色，明確蓋掉 */
     border: none;
-    border-radius: 11px 11px 0 0;
+    border-radius: 9px 9px 0 0;
     box-shadow: none;
     width: 100%;
 }
@@ -10309,8 +10332,8 @@ html.pmc-onboard #search-hints-container {
     padding: 4px 0;
     list-style: none;
     background: #fff;
-    border: 1px solid #dbe1ea;
-    border-radius: 10px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
     max-height: 320px;
     overflow-y: auto;
@@ -10332,16 +10355,16 @@ html.pmc-onboard #search-hints-container {
 }
 /* 第一行「搜尋「用戶打的字」」：跟下面的建議用細線隔開，打的字粗體 */
 .merchant-suggest-query {
-    color: #374151;
-    border-bottom: 1px solid #eef2f7;
+    color: var(--ui-ink-2);
+    border-bottom: 1px solid var(--ui-fill);
 }
 .merchant-suggest-query strong {
-    color: #111827;
+    color: var(--ui-ink-1);
     font-weight: 700;
 }
 .merchant-suggest-item mark {
     background: none;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-weight: 700;
 }
 
@@ -10372,9 +10395,9 @@ html.pmc-onboard #search-hints-container {
 
 .merchant-search-box .quick-search-wrapper {
     margin-top: 0;
-    background: #f3f4f6;
-    border-top: 1px solid #e5e7eb;
-    border-radius: 0 0 11px 11px;
+    background: var(--ui-fill);
+    border-top: 1px solid var(--ui-line);
+    border-radius: 0 0 9px 9px;
     padding: 10px 12px;
 }
 
@@ -10382,8 +10405,8 @@ html.pmc-onboard #search-hints-container {
 .amount-input-wrap {
     display: flex;
     align-items: center;
-    border: 3px solid #dbe1ea;
-    border-radius: 14px;
+    border: 3px solid var(--ui-line);
+    border-radius: var(--ui-radius-lg);
     background: #fff;
     padding-left: 9px;   /* 原 14px：NT$ 往左靠，把寬度讓給金額（要放得下 6 位數） */
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -10395,7 +10418,7 @@ html.pmc-onboard #search-hints-container {
 }
 
 .amount-input-wrap .amount-prefix {
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
     color: #9ca3af;   /* 比金額本身淡：它是單位不是數值 */
     flex-shrink: 0;
@@ -10414,7 +10437,7 @@ html.pmc-onboard #search-hints-container {
     min-width: 0;
     width: auto;
     border: none;
-    border-radius: 0 11px 11px 0;
+    border-radius: 0 9px 9px 0;
     box-shadow: none;
 }
 
@@ -10422,6 +10445,14 @@ html.pmc-onboard #search-hints-container {
     border: none;
     box-shadow: none;
     outline: none;
+}
+
+/* 點進搜尋框／金額框時只留外框（:focus-within 的淡天藍框），框內不再出現第二圈藍框（2026-11-23 站長看圖同意）。
+   第二圈是全站的 :focus-visible 外框——文字輸入框不論滑鼠、觸控或鍵盤點進去都算 focus-visible，所以每個人都看得到，
+   還會壓到「NT$」。外框本身已經表示「正在輸入」，鍵盤使用者一樣看得到；要用 !important 才贏得過全站那條 */
+.merchant-search-box #merchant-input:focus-visible,
+.amount-input-wrap input:focus-visible {
+    outline: none !important;
 }
 
 @media (max-width: 768px) {
