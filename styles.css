@@ -9910,7 +9910,7 @@ html.pmc-onboard #search-hints-container {
     min-width: 0;
     background: #ffffff;
     border: 1px solid var(--ui-line);
-    border-radius: 14px;
+    border-radius: var(--ui-radius-lg);   /* 原 14px，2026-11-23 站長看圖同意 */
     padding: 12px 12px 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     transition: box-shadow .25s, border-color .25s;
@@ -9928,8 +9928,8 @@ html.pmc-onboard #search-hints-container {
     position: relative;
     aspect-ratio: 8 / 5;
     background: #ffffff;
-    border: 1px solid #eef0f4;
-    border-radius: 10px;
+    border: 1px solid var(--ui-line);   /* 原 #eef0f4（2026-11-23） */
+    border-radius: var(--ui-radius-md);   /* 原 10px */
     padding: 6px;
     margin-bottom: 10px;
     overflow: hidden;
@@ -9987,11 +9987,11 @@ html.pmc-onboard #search-hints-container {
     font-size: 0.7rem;
     font-weight: 600;
     line-height: 1.4;
-    color: #1f2937;
+    color: var(--ui-ink-1);   /* 原 #1f2937（2026-11-23） */
     background: rgba(255, 255, 255, 0.92);
     -webkit-backdrop-filter: blur(3px);
     backdrop-filter: blur(3px);
-    border-radius: 5px;
+    border-radius: var(--ui-radius-sm);   /* 原 5px */
     padding: 2px 6px;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -10008,7 +10008,7 @@ html.pmc-onboard #search-hints-container {
     white-space: nowrap;
     gap: 6px;
     font-size: 0.72rem;
-    color: #9ca3af;
+    color: var(--ui-ink-3);   /* 原 #9ca3af，白底上太淡（2026-11-23） */
     margin: 7px 0 10px;
     min-height: 18px;
 }
