@@ -478,7 +478,19 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
   `<title>`＝「<卡名>新戶<主獎勵>[等 N 檔]｜YYYY年M月新戶活動 - Pick My Card」（月份同上）（2026-11-22：主獎勵放前面，Google 截斷前就看得到；
   主獎勵超過 20 字：首刷禮只寫「首刷禮」、金額只寫「NT$X 回饋」，`pmcCardPageTitleReward_`）；description 帶逐檔獎勵＋截止日。
   **活動結構不同時的退路**（2026-11-22 壓力測試過：抽獎類、長用途、沒摘要、沒截止日、8 檔同獎勵）：沒金額／回饋率／贈品的活動用 `promo_types[0]` 稱呼（不再一律叫「首刷禮」）；`voucher_usage` 只取括號前；1 檔卡沒摘要時引言退回獎勵本身。
-  **分享圖（待做）**：站長選定的設計在 `docs/mockups/promo-og-mock-2026-11-22.js` 的 B3b，目前仍用全站預設分享圖。
+  **分享圖 og:image**（2026-11-23 上線，設計＝站長選定的 `docs/mockups/promo-og-mock-2026-11-22.js` B3b）：
+  - `tools/build-promo-og.js` 在**本機**用 Playwright 畫 `assets/images/promo-og/<id>.jpg`（1200×630，JPEG q88，一張約 70KB）＋ `manifest.json`，**結果 commit**。
+    不在部署時畫：Cloudflare Pages 的 build 環境沒有瀏覽器。字型抓 Google Fonts 的 Noto Sans TC，沒載到就整支失敗（不輸出退成文泉驛的走樣圖）。
+  - 部署時 `build-promo-card-pages.js` 掃這個資料夾，把 `{ id: 圖檔內容雜湊 }` 傳給 `generatePromoCardPages`（`promoOgImages`），
+    `pmcCardPageHtml_` 經 `ctx.ogImageFor` 傳給 `pmcPageShell_` 的 `ogImage`／`ogImageAlt`。**有圖才換、沒圖退回全站預設圖**；
+    「活動已結束」頁與清單頁一律預設圖。`?v=` 帶**內容雜湊**（不是 dev 佔位、`deploy-version.sh` 也不碰圖片的 `?v=`）：換圖後網址變，Facebook／LINE 的分享快取才會重抓。
+  - **不用重貼 Apps Script**：清單頁不傳 `ogImage`，輸出逐字不變（`build-promos-page.js` 重生比對過）；單卡頁本來就只在部署端生成。
+  - 範圍＝會產生**進行中**單卡頁的卡。7 張直式卡圖（200×320）另有站姿版位（`.c.portrait`），B3b 原稿只設計過橫式、直式會掉出畫面。
+    卡名超過 14 字縮成 64px。
+  - **何時要重畫**：`manifest.json` 記每張圖當時的卡名、卡圖雜湊、版型版本。preflight（4c2）跑 `--check`，**缺圖或過期只警告**
+    （新卡上了新戶活動、改卡名、換卡圖都會觸發）→ 跑 `node tools/build-promo-og.js`（只畫缺的／過期的）一起 commit。
+    **改了版型就把檔頭 `TEMPLATE_VERSION` +1**，再 `--all` 全部重畫。沒有卡圖的卡畫不出來，列為 ℹ️、用預設圖。
+    活動下架的卡圖不會自動刪（可能再上架），`--check` 以 ℹ️ 列出。
 - **活動全部到期、但還在 cards.data 裡的卡**：輸出一頁「目前沒有進行中的新戶活動」＋`noindex`，免得 sitemap／外部連結在下次匯出前 404。
   部署之後才到期的：`promos.js` 的 `setupCardPage()` 在整張卡被藏起來時顯示 `#pmc-cp-ended` 那一句。
 - **入口**：清單卡名 `<a class="promo-card-name-link" href="/promos/<id>">`（卡名後面 CSS 加藍色「›」，站長 2026-11-22：只有滑過才出底線，手機看不出能點）（`pmcRenderCardGroup_`）＋ sitemap。這兩樣在 Apps Script 端，

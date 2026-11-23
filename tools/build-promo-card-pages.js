@@ -19,9 +19,22 @@
  * ============================================================ */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { REPO, readCardsData, loadGenerator, reusePromosStamps, exportDataFrom } = require('./lib/promos-generator');
 
 const OUT_DIR = path.join(REPO, 'promos');
+const OG_DIR = path.join(REPO, 'assets', 'images', 'promo-og');
+
+// 有分享圖的卡 → 圖檔內容雜湊（og:image 的 ?v=）。圖由 tools/build-promo-og.js 在本機畫好 commit；
+// 這裡只看檔案在不在，缺圖的卡由生成器退回全站預設分享圖，不擋部署
+function promoOgImages() {
+  if (!fs.existsSync(OG_DIR)) return {};
+  const out = {};
+  fs.readdirSync(OG_DIR).filter(f => /^[a-z0-9][a-z0-9-]*\.jpg$/.test(f)).forEach(f => {
+    out[f.slice(0, -4)] = crypto.createHash('sha1').update(fs.readFileSync(path.join(OG_DIR, f))).digest('hex').slice(0, 10);
+  });
+  return out;
+}
 
 try {
   const cardsData = readCardsData();
@@ -29,7 +42,8 @@ try {
   const exportData = Object.assign(exportDataFrom(cardsData), {
     promoCardUpdatedIso: cardsData.promoCardUpdatedIso || {},   // Apps Script 貼新版之前沒有這欄
     promosUpdatedIso: stamps.promosUpdatedIso,                  // 沒有個別日期時退回清單頁的日期
-    versionTagOverride: 'dev'                                   // deploy-version.sh 之後換成 commit hash
+    versionTagOverride: 'dev',                                  // deploy-version.sh 之後換成 commit hash
+    promoOgImages: promoOgImages()                              // 有分享圖的卡（2026-11-23）
   });
   const pages = loadGenerator()('generatePromoCardPages', exportData);
   if (!Array.isArray(pages) || !pages.length) throw new Error('generatePromoCardPages 一頁都沒有產生');
@@ -45,7 +59,9 @@ try {
     fs.writeFileSync(path.join(OUT_DIR, p.cardId + '.html'), p.html);
     if (p.ended) ended++;
   });
-  console.log('✅ 單卡頁已生成：' + (pages.length - ended) + ' 頁' + (ended ? '（另有 ' + ended + ' 頁活動已結束、noindex）' : ''));
+  const withOg = pages.filter(p => !p.ended && p.html.indexOf('/assets/images/promo-og/') !== -1).length;
+  console.log('✅ 單卡頁已生成：' + (pages.length - ended) + ' 頁' + (ended ? '（另有 ' + ended + ' 頁活動已結束、noindex）' : '') +
+    '；專屬分享圖 ' + withOg + ' 頁' + (withOg < pages.length - ended ? '（其餘用全站預設圖）' : ''));
 } catch (err) {
   console.error('❌ 單卡頁生成失敗：' + err.message);
   process.exit(1);

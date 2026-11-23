@@ -1,5 +1,6 @@
 // 單卡頁分享圖示意（2026-11-22）。站長選定 B3b（深色格線＋藍光暈＋3D 斜放真卡圖＋大字卡名＋毛玻璃「新戶活動」＋底部品牌藍細條重複 pickmycard.app）；其他是被否決的版本。
 // 用法：node docs/mockups/promo-og-mock-2026-11-22.js <輸出資料夾> B3b
+// ⚠️ 這是示意稿。正式版型在 tools/build-promo-og.js（2026-11-23；多了直式卡圖版位、長卡名縮字），改樣式改那邊。
 const { chromium } = require('playwright');
 const fs = require('fs');
 const S = process.argv[2];

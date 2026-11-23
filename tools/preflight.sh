@@ -130,6 +130,14 @@ if command -v node >/dev/null 2>&1 && [ -f tools/check-spotlights.js ]; then
   case "$out" in *"⚠️"*) warn=1;; esac
 fi
 
+# ---- 4c2) 單卡頁分享圖（og:image）缺圖／過期提醒（2026-11-23；只警告，缺圖的頁用全站預設圖照常上線）----
+# 新卡上了新戶活動、改了卡名或卡圖之後會出現；補圖：node tools/build-promo-og.js（本機用 Playwright 畫，結果 commit）
+if command -v node >/dev/null 2>&1 && [ -f tools/build-promo-og.js ]; then
+  out=$(node tools/build-promo-og.js --check) || true
+  echo "$out"
+  case "$out" in *"⚠️"*) warn=1;; esac
+fi
+
 # ---- 4d) 教訓記錄區上限（docs/ops/maintenance.md 第 4 節：任一區 > 15 條就該精簡；只警告）----
 # 2026-11-22 加：ui-display.md 長到 46 條才被發現，因為這條門檻原本沒有機械檢查。
 for doc in $(git ls-files 'docs/*.md' | grep -v '^docs/archive/'); do

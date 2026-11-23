@@ -3751,8 +3751,11 @@ function pmcPageTemplate_(o) {
 //   o.robots     有值才輸出 <meta name="robots">（單卡頁的「活動已結束」用 noindex）
 //   o.navCurrent header「新戶活動」的 aria-current：清單頁 page、單卡頁 true
 //   o.mainClass／o.mainHtml  <main> 的 class 與內容
+//   o.ogImage／o.ogImageAlt  分享圖（絕對網址）與替代文字；沒給就用全站預設 PMC_OG_IMAGE（清單頁一律沒給）
 // ⚠️ 站內資源一律寫絕對路徑（/promos.css、/assets/…）：單卡頁在 /promos/<id>，相對路徑會落空。
 function pmcPageShell_(o) {
+  const ogImage = o.ogImage || PMC_OG_IMAGE;
+  const ogAlt = pmcEscapeHtml_(o.ogImageAlt || 'Pick My Card 信用卡回饋大師 — pickmycard.app');
   return '<!DOCTYPE html>\n' +
 '<html lang="zh-Hant">\n' +
 '<head>\n' +
@@ -3768,10 +3771,10 @@ function pmcPageShell_(o) {
 '<meta property="og:url" content="' + PMC_SITE_URL + o.path + '">\n' +
 '<meta property="og:title" content="' + pmcEscapeHtml_(o.title) + '">\n' +
 '<meta property="og:description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
-'<meta property="og:image" content="' + PMC_OG_IMAGE + '">\n' +
+'<meta property="og:image" content="' + pmcEscapeHtml_(ogImage) + '">\n' +
 '<meta property="og:image:width" content="1200">\n' +
 '<meta property="og:image:height" content="630">\n' +
-'<meta property="og:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">\n' +
+'<meta property="og:image:alt" content="' + ogAlt + '">\n' +
 '<meta property="og:locale" content="zh_TW">\n' +
 '<meta property="og:site_name" content="信用卡回饋大師">\n' +
 '\n' +
@@ -3779,8 +3782,8 @@ function pmcPageShell_(o) {
 '<meta name="twitter:url" content="' + PMC_SITE_URL + o.path + '">\n' +
 '<meta name="twitter:title" content="' + pmcEscapeHtml_(o.title) + '">\n' +
 '<meta name="twitter:description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
-'<meta name="twitter:image" content="' + PMC_OG_IMAGE + '">\n' +
-'<meta name="twitter:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">\n' +
+'<meta name="twitter:image" content="' + pmcEscapeHtml_(ogImage) + '">\n' +
+'<meta name="twitter:image:alt" content="' + ogAlt + '">\n' +
 '\n' +
 '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
 '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
@@ -4211,7 +4214,10 @@ function pmcCardPageHtml_(g, groups, ctx) {
     navCurrent: 'true',
     versionTag: ctx.versionTag,
     mainClass: 'promos-main pmc-cp',
-    mainHtml: main
+    mainHtml: main,
+    // 分享圖（2026-11-23）：有 assets/images/promo-og/<id>.jpg 才換，沒有就是全站預設圖（見 ctx.ogImageFor）
+    ogImage: ctx.ogImageFor ? ctx.ogImageFor(cardId) : '',
+    ogImageAlt: name + '新戶活動 — Pick My Card'
   });
 }
 
@@ -4246,18 +4252,26 @@ function pmcCardPageEndedHtml_(cardId, name, groups, ctx) {
 //   promoCardUpdatedIso  { 卡片 id: 'YYYY-MM-DD' }（exportToJSON 算好放進 cards.data）
 //   promosUpdatedIso     沒有個別日期時的退路；再沒有就今天
 //   versionTagOverride   ?v= 佔位（部署端傳 'dev'，之後由 deploy-version.sh 換成 commit hash）
+//   promoOgImages        { 卡片 id: 圖檔內容雜湊 }：有 assets/images/promo-og/<id>.jpg 的卡（tools/build-promo-og.js 畫、
+//                        commit 進 repo；tools/build-promo-card-pages.js 掃檔填這欄）。沒列到的卡用全站預設分享圖。
+//                        ?v= 帶內容雜湊：換圖後網址跟著變，Facebook／LINE 的分享快取才會重抓
 function generatePromoCardPages(exportData) {
   const todayIso = pmcTodayISO_();
   const pg = pmcPreparePromoGroups_(exportData, todayIso);
   const perCard = (exportData && exportData.promoCardUpdatedIso) || {};
   const fallbackIso = (exportData && exportData.promosUpdatedIso) || todayIso;
+  const ogImages = (exportData && exportData.promoOgImages) || {};
   // 月份跟著「這張卡自己的資料更新日」走，不跟部署日（站長 2026-11-22 選 a）：
   // 活動沒更新、月份卻每月自動往前跳＝假的新鮮度，而且跟頁面上的「資料更新於」對不起來
   const ctx = {
     monthLabelFor: function (iso) { return iso.slice(0, 4) + ' 年 ' + parseInt(iso.slice(5, 7), 10) + ' 月'; },
     yearMonthLabelFor: function (iso) { return iso.slice(0, 4) + '年' + parseInt(iso.slice(5, 7), 10) + '月'; },
     versionTag: (exportData && exportData.versionTagOverride) || 'dev',
-    updatedFor: function (id) { return perCard[id] || fallbackIso; }
+    updatedFor: function (id) { return perCard[id] || fallbackIso; },
+    ogImageFor: function (id) {
+      const v = ogImages[id];
+      return v ? PMC_SITE_URL + '/assets/images/promo-og/' + encodeURIComponent(id) + '.jpg?v=' + encodeURIComponent(v) : '';
+    }
   };
   const out = [];
   const seen = {};
