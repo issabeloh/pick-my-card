@@ -1146,9 +1146,9 @@ function updateGA4Pages() {
 // 前端早就在送這些事件（Firebase Analytics → GA4）：
 //   button_click            js/quick-options-misc.js「GA4 Button Click Tracking」＋ promos.js
 //                           參數：button_type / card_id / card_name / merchant
-//     button_type 取值：spotlight_compare｜spotlight_info｜spotlight_apply｜
+//     button_type 取值：spotlight_compare｜spotlight_info｜spotlight_promo｜spotlight_apply（2026/11 停用）｜
 //                       detail_header_apply｜detail_sticky_apply｜card_apply｜
-//                       search_result_apply｜promos_page_apply（promos.js）
+//                       search_result_apply｜detail_official_site｜promos_page_apply（promos.js）
 //   view_card_detail        js/card-detail.js
 //   calculate_cashback      js/cashback-engine.js（＝核心功能使用量）
 //   pin_card / unpin_card / remove_mapping / clear_expired_mappings
@@ -1452,6 +1452,8 @@ const BUTTON_TYPE_LABELS = {
   spotlight_compare: '首頁 Spotlight「比較」',
   spotlight_info: '首頁 Spotlight「詳情」',
   spotlight_apply: '首頁 Spotlight「申辦」',
+  spotlight_promo: '首頁 Spotlight modal「新戶活動」膠囊（→ 單卡頁）',
+  detail_official_site: '卡片詳情頁「官網」連結',
   detail_header_apply: '卡片詳情頁頂部申辦',
   detail_sticky_apply: '卡片詳情頁浮動列申辦',
   card_apply: '卡片列表申辦',
@@ -1506,13 +1508,15 @@ const GA4_BUTTON_DAILY_ROW_LIMIT = 10000;
 // 已停止發送、但歷史資料要保留的 button_type：填 { 類型: '停用年月' }，
 // 表上的「按鈕位置說明」就會加註「（已停用 YYYY/MM，保留歷史）」，
 // 免得日後有人看到那個類型的量歸零，以為是追蹤壞掉。
-// ⚠️ 目前刻意留空：search_result_apply **還在發送中**，不能標成已停用。
+// spotlight_apply：2026-11-23 拿掉推薦活動 modal 的「立即申辦」（168 天只有 15 次點擊）。
+//    改由 modal 最下面的新戶膠囊承接，類型是 spotlight_promo（連到站內 /promos/<id>，不是申辦）。
+// ⚠️ search_result_apply **還在發送中**，不能標成已停用。
 //    查證（2026/09/03）：js/results-display.js 在搜尋結果列產出 class 只有
 //    `.promo-apply-cta-btn` 的「立即申辦」pill（`if (!opts.showExtras)` 那段），
 //    而 js/quick-options-misc.js 的 button_type 判斷鏈最後一支 else 就是
 //    search_result_apply——沒有其他 class 的 promo-apply-cta-btn 一律落到這裡。
 //    真的停用那顆按鈕之後，再回來填上停用年月即可。
-const BUTTON_TYPE_RETIRED = {};
+const BUTTON_TYPE_RETIRED = { spotlight_apply: '2026/11' };
 
 // GA4 Data API 偶發 502（Google 後端暫時性錯誤）。這支是全檔最重的查詢
 // （3 個維度 × 數個月區間），2026/09/03 第一次跑 updateAllReports() 就中了一次，
@@ -1543,8 +1547,9 @@ function atMidnight_(date) {
 
 // ---------- GA4：按鈕點擊逐日趨勢（2026/06/07 起，日期 × 按鈕類型）----------
 // 需求涵蓋的 button_type（皆已在 BUTTON_TYPE_LABELS 有中文對照）：
-//   spotlight_compare／spotlight_info／spotlight_apply／detail_sticky_apply／
-//   detail_header_apply／card_apply／promos_page_apply／search_result_apply
+//   spotlight_compare／spotlight_info／spotlight_promo／spotlight_apply（2026/11 停用）／
+//   detail_sticky_apply／detail_header_apply／detail_official_site／card_apply／
+//   promos_page_apply／search_result_apply
 // ⚠️ 刻意**不**用 inListFilter 把查詢限制在上面這 8 個值：那樣前端日後新增按鈕類型時，
 //    新類型會被靜默丟掉、沒有人會發現。這裡只用 eventName=button_click 過濾，
 //    取回全部類型，未知類型在「按鈕位置說明」欄留白（一眼看得出「有新東西要補對照」）。
