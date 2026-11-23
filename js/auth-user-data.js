@@ -7,6 +7,7 @@
  *  - 登出個資清理（鐵則 9）      → "clearPersonalLocalDataOnSignOut"
  *  - Firebase 認證訂閱           → "ensureAuthSubscribed" / "onAuthStateChanged"
  *  - 用戶資料載入                → "loadUserData"
+ *  - 登入時先問訪客資料（共用電腦防線） → "resolveGuestDataOnLogin" / "collectGuestPersonalData" / "askGuestDataImport"
  *  - 訪客資料吸收                → "absorbGuestPersonalData"
  *  - 比較卡/持有卡載存           → "loadCardsInComparison" / "loadMyOwnedCards"
  *  - 管理比較卡 modal            → "setupManageCardsModal"
@@ -126,6 +127,31 @@ function setupAvatarDropdown() {
     }
 }
 
+// ========== 訪客的個人資料 key（登出清理與「登入時先問」共用同一份清單） ==========
+// 非 uid 區分的個人 key＝訪客（未登入）時寫下的資料。新增任何訪客可寫的個人 key 時，加在這裡，
+// 並在 absorbGuestPersonalData（或對應的 load 函數）處理帶入、在 collectGuestPersonalData 補上給用戶看的說明。
+const GUEST_EXACT_KEYS = [
+    'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs', 'mappingsPrefs_guest',
+    'merchantAliases_guest', 'mappingsTitle_guest',
+    'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest', 'childrenEligible_guest'
+];
+const GUEST_KEY_PREFIXES = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
+
+function listLocalStorageKeys() {
+    const keys = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
+    } catch (e) { /* 讀不到 localStorage＝沒有訪客資料 */ }
+    return keys;
+}
+
+// 這個 key 是不是訪客的個人資料。訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
+function isGuestPersonalKey(key, knownCardIds) {
+    return GUEST_EXACT_KEYS.includes(key) ||
+        GUEST_KEY_PREFIXES.some(p => key.startsWith(p)) ||
+        (key.startsWith('notes_') && knownCardIds.has(key.slice('notes_'.length)));
+}
+
 // 登出時清理本機的個人資料：所有帶 uid 的鏡像 + 未帶 uid 區分的個人 key，
 // 防止共用電腦上洩漏給下一位使用者。
 // ⚠️ 只能在「用戶親自按登出」時呼叫 —— 不能放進 onAuthStateChanged 的登出分支，
@@ -145,24 +171,15 @@ function clearPersonalLocalDataOnSignOut(uid) {
         `feeWaiver_${uid}_`, `billingDates_${uid}_`, `notes_${uid}_`, `cardLevel_${uid}_`,
         `creditLimit_${uid}_`
     ] : [];
-    // 非 uid 區分的個人 key（訪客資料多半已在登入時被 absorbGuestPersonalData 消化，
-    // 這裡清掉的是殘留值）
-    const guestExact = [
-        'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs', 'mappingsPrefs_guest',
-        'merchantAliases_guest', 'mappingsTitle_guest',
-        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest', 'childrenEligible_guest'
-    ];
-    const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
-    // 訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
+    // 非 uid 區分的個人 key（GUEST_EXACT_KEYS／GUEST_KEY_PREFIXES；訪客資料多半已在登入時
+    // 被帶入或清掉，這裡清掉的是殘留值）
     const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
 
     for (const key of allKeys) {
         const isPersonal =
             uidExact.includes(key) ||
             uidPrefixes.some(p => key.startsWith(p)) ||
-            guestExact.includes(key) ||
-            guestPrefixes.some(p => key.startsWith(p)) ||
-            (key.startsWith('notes_') && knownCardIds.has(key.slice('notes_'.length)));
+            isGuestPersonalKey(key, knownCardIds);
         if (isPersonal) {
             try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
         }
@@ -383,6 +400,10 @@ function ensureAuthSubscribed() {
             // ✨ Load ALL user data in ONE Firestore call (optimized!)
             const userData = await loadUserData();
 
+            // 這台裝置上有訪客資料 → 先問要不要帶進帳號（共用電腦防線，見 resolveGuestDataOnLogin）。
+            // 一定要在下面任何帶入動作（cubeIssuer、各 load 函數、absorbGuestPersonalData）之前
+            await resolveGuestDataOnLogin();
+
             // Load birthday month and pre-compute flag (O(1) for all subsequent searches)
             userBirthdayMonth = (userData && userData.birthdayMonth != null) ? userData.birthdayMonth : null;
             isBirthdayMonth = userBirthdayMonth !== null && userBirthdayMonth === getTaiwanMonth();
@@ -397,8 +418,9 @@ function ensureAuthSubscribed() {
             }
 
             // Load user's selected cards and payments using unified data.
-            // 訪客資料的處理原則（2026-07 統一）：雲端有值 → 雲端為準；
-            // 雲端沒值 → 靜默帶入訪客值並上傳；訪客 key 兩種情況都會被消化移除。
+            // 訪客資料的處理原則：登入時已先問過用戶（resolveGuestDataOnLogin）；選「不是，清掉」的話
+            // 訪客 key 已清掉，下面什麼都帶不進去。選「是，存進我的帳號」才會走到：雲端有值 → 雲端為準；
+            // 雲端沒值 → 帶入訪客值並上傳；訪客 key 兩種情況都會被消化移除。
             await loadCardsInComparison(userData);
             await loadMyOwnedCards(userData);
             if (typeof refreshCardDetailApply === 'function') refreshCardDetailApply();   // 詳情頁開著時，持卡人要收起申辦鈕
@@ -504,9 +526,98 @@ async function loadUserData() {
     return null;
 }
 
+// ========== 登入時先問：這台裝置上的訪客資料要不要帶進帳號（2026-11-23） ==========
+// 以前是靜默帶入：共用電腦上，前一位訪客留下的額度、級別、刷卡小抄會被寫進下一位登入者的帳號，
+// 站長認定不可接受。現在登入時只要這台裝置上有訪客資料，就先跳一次確認：
+//   「是，存進我的帳號」→ 照舊走各 load 函數與 absorbGuestPersonalData 的帶入規則（雲端有值仍以雲端為準）
+//   「不是，清掉」→ 先把訪客 key 全刪，後面的帶入程式自然什麼都找不到
+// 沒有訪客資料就不問（大部分登入都是這樣）。對話框沒有關閉鈕，一定要二選一，免得「關掉」被誤當成同意。
+
+// 掃這台裝置上的訪客資料。回傳 { keys: 要清掉的 key, parts: 給用戶看的項目（如「我的信用卡 3 張」） }。
+// parts 只算「真的有內容」的；keys 則包含空值與偏好設定，選「清掉」時一起刪乾淨。
+function collectGuestPersonalData() {
+    const allKeys = listLocalStorageKeys();
+    const knownCardIds = new Set(((cardsData && cardsData.cards) || []).map(c => c.id));
+    const keys = allKeys.filter(k => isGuestPersonalKey(k, knownCardIds));
+    const raw = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+    const arrLen = k => keys.includes(k) ? readLocalJSONArray(k, []).length : 0;
+    const perCard = (prefix, hasValue) => keys.filter(k => k.startsWith(prefix) &&
+        knownCardIds.has(k.slice(prefix.length)) && hasValue(k)).length;
+
+    const parts = [];
+    const add = (n, text) => { if (n > 0) parts.push(text.replace('{n}', n)); };
+    add(arrLen('myOwnedCards_guest'), '我的信用卡 {n} 張');
+    add(arrLen('cardsInComparison_guest'), '比較清單 {n} 張卡');
+    add(arrLen('selectedPayments_guest'), '行動支付 {n} 種');
+    const mappings = arrLen('spendingMappings');
+    add(mappings, '刷卡小抄 {n} 筆');
+    if (!mappings && (keys.includes('merchantAliases_guest') || keys.includes('mappingsTitle_guest'))) parts.push('刷卡小抄的名稱設定');
+    add(perCard('cardLevel-', k => !!raw(k)), '卡片級別 {n} 張');
+    add(keys.filter(k => k.startsWith('notes_') && !!raw(k)).length, '筆記 {n} 張卡');
+    add(perCard('feeWaiver_local_', k => raw(k) === 'true'), '免年費 {n} 張');
+    add(perCard('creditLimit_local_', k => parseCreditLimit(raw(k)) !== null), '我的額度 {n} 張');
+    add(perCard('billingDates_local_', k => { const d = readLocalJSON(k, null); return !!(d && (d.billingDate || d.statementDate)); }), '結帳日 {n} 張');
+    if (keys.includes('childrenEligible_guest')) parts.push('童樂匯設定');
+    if (keys.includes('cubeIssuer') && raw('cubeIssuer') && raw('cubeIssuer') !== 'Visa') parts.push('CUBE 發卡組織');
+    return { keys, parts };
+}
+
+function discardGuestPersonalData(keys) {
+    keys.forEach(k => { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } });
+    console.log('🧹 用戶選擇不帶入，已清掉這台裝置上的訪客資料:', keys.length, '個 key');
+}
+
+// 顯示確認對話框，回傳 Promise<'import'|'discard'>。DOM 動態建立（不改 index.html，商家頁不必重生）
+function askGuestDataImport(parts) {
+    return new Promise(resolve => {
+        const wrap = document.createElement('div');
+        wrap.className = 'modal gi-modal';
+        wrap.id = 'guest-import-modal';
+        wrap.setAttribute('role', 'dialog');
+        wrap.setAttribute('aria-modal', 'true');
+        wrap.setAttribute('aria-labelledby', 'gi-title');
+        wrap.innerHTML =
+            '<div class="gi-box">' +
+                '<div class="gi-title" id="gi-title">這些設定是你的嗎？</div>' +
+                '<p class="gi-lead">這台裝置上有未登入時留下的設定：</p>' +
+                '<p class="gi-items">' + escapeHtml(parts.join('、')) + '</p>' +
+                '<div class="gi-actions">' +
+                    '<button type="button" class="gi-btn gi-btn-primary" id="gi-import">是，存進我的帳號</button>' +
+                    '<button type="button" class="gi-btn" id="gi-discard">不是，清掉</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(wrap);
+        if (typeof disableBodyScroll === 'function') disableBodyScroll();
+        const done = choice => {
+            wrap.remove();
+            if (typeof enableBodyScroll === 'function') enableBodyScroll();
+            if (window.logEvent && window.firebaseAnalytics) {
+                window.logEvent(window.firebaseAnalytics, 'guest_data_prompt', { choice, items: parts.length });
+            }
+            resolve(choice);
+        };
+        wrap.querySelector('#gi-import').onclick = () => done('import');
+        wrap.querySelector('#gi-discard').onclick = () => done('discard');
+        wrap.querySelector('#gi-import').focus();
+    });
+}
+
+// 登入流程呼叫：有訪客資料就問，選「不要」就先清掉。回傳用戶的選擇（沒問就是 'none'）
+async function resolveGuestDataOnLogin() {
+    const { keys, parts } = collectGuestPersonalData();
+    if (parts.length === 0) {
+        // 只剩空值或偏好設定（沒有用戶看得懂的內容）：不打擾，照舊交給後面的流程消化
+        return 'none';
+    }
+    const choice = await askGuestDataImport(parts);
+    if (choice === 'discard') discardGuestPersonalData(keys);
+    return choice;
+}
+
 // 登入時消化「訪客期間留下的其餘個人資料」：消費配卡表、卡片級別、筆記、
 // 免年費、我的額度、結帳日、CUBE 發卡組織。（信用卡/行動支付在各自的 load 函數內處理。）
-// 原則：雲端有值 → 雲端為準；雲端沒值 → 靜默帶入訪客值並上傳（不彈窗）。
+// 原則：登入時已先問過用戶要不要帶入（resolveGuestDataOnLogin）；同意後才走到這裡：
+// 雲端有值 → 雲端為準；雲端沒值 → 帶入訪客值並上傳。
 // 訪客 key 處理完即移除，避免留在共用電腦上被下一位使用者「繼承」——
 // 這正是過去卡片級別跨用戶洩漏的根源。
 // 高價值資料（級別、筆記）在上傳失敗時保留 key，下次登入重試。
@@ -771,7 +882,7 @@ async function loadCardsInComparison(userData = null) {
             return;
         }
 
-        // 雲端沒有設定：若訪客期間有儲存過選擇 → 靜默帶入並上傳（不彈窗）
+        // 雲端沒有設定：若訪客期間有儲存過選擇 → 帶入並上傳（用戶已在登入時同意，見 resolveGuestDataOnLogin）
         const guestCards = readLocalJSON('cardsInComparison_guest', null);
         if (guestCards !== null) localStorage.removeItem('cardsInComparison_guest');
         if (Array.isArray(guestCards) && guestCards.length > 0) {
@@ -833,7 +944,7 @@ async function loadMyOwnedCards(userData = null) {
             return;
         }
 
-        // 雲端沒有設定：若訪客期間有儲存過 → 靜默帶入並上傳（不彈窗）
+        // 雲端沒有設定：若訪客期間有儲存過 → 帶入並上傳（用戶已在登入時同意，見 resolveGuestDataOnLogin）
         const guestCards = readLocalJSON('myOwnedCards_guest', null);
         if (guestCards !== null) localStorage.removeItem('myOwnedCards_guest');
         if (Array.isArray(guestCards) && guestCards.length > 0) {

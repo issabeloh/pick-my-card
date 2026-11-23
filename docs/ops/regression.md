@@ -26,7 +26,7 @@ node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組
 | `js/search-match.js` 的一般消費排除項目（`basicExclusions`、NCCC 小額支付） | `node tools/regression/basic-exclusions-test.js` | 凍結資料沒有該欄，測試臨時塞名單 |
 | 詳情頁回饋卡（`renderRateCard()`、`js/card-detail.js`、`js/results-display.js` 的「回饋卡共用片段」） | `node tools/regression/card-detail-test.js` | 基準是 `card-detail-baseline.json`，預期內改變才 `--update-baseline` |
 | 配卡組合頁（`js/mappings-page.js`、`js/spending-mappings.js`、配卡載存） | `node tools/regression/mappings-page-test.js` | |
-| 登入／登出／刪除帳號（`js/auth-user-data.js`）、`index.html` 的 Firebase import 清單 | `node tools/regression/delete-account-test.js`（另跑 `mappings-page-test.js`） | 這兩支自帶「已登入用戶」替身；搜尋回歸是訪客，跑不到登入路徑 |
+| 登入／登出／刪除帳號（`js/auth-user-data.js`）、`index.html` 的 Firebase import 清單 | `node tools/regression/delete-account-test.js`、`guest-import-prompt-test.js`（登入時訪客資料的確認對話框：選「不要」一筆都不能進帳號）（另跑 `mappings-page-test.js`） | 這兩支自帶「已登入用戶」替身；搜尋回歸是訪客，跑不到登入路徑 |
 | `firestore.rules`、`storage.rules`、前端新增寫入 Firestore 的欄位 | `tools/firestore-rules-test.js`（Firestore／Storage 模擬器，需 Java）；改前端寫入包裝另跑 `tools/rate-limit-client-test.js` | 用法在各檔檔頭 |
 | `functions/`（`dailyFeedbackDigest`、`sendLoginLink`、`guardSignup`／`guardEmails`） | `tools/feedback-digest-test.js`、`tools/login-link-test.js`、`tools/signup-guard-test.js` | 都用模擬器，不寄真信；用法看檔頭與 `functions/README.md` |
 | `apps-script/card-editor.gs`／`CardEditor.html`、`promo-editor.gs`、`activity-writer.gs`、`cards-export.gs` 的 `runQACheck` | `node tools/apps-script-tests/card-editor-test.js`、`card-editor-ui-test.js`、`promo-editor-test.js`、`activity-writer-test.js` | 假試算表在 Node vm 裡跑；不模擬自動轉型與插列繼承格式，那部分上線後在真的表上確認 |
