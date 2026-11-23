@@ -1787,7 +1787,7 @@ main {
 .quick-search-dropdown {
     position: fixed;
     background: white;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-lg);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
     z-index: 1000;
@@ -1813,9 +1813,9 @@ main {
 }
 
 .quick-search-dropdown-footer {
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--ui-line);
     padding: 10px 12px;
-    background: #f8fafc;
+    background: var(--ui-bg);
     border-radius: 0 0 var(--ui-radius-lg) var(--ui-radius-lg);
 }
 
@@ -1827,9 +1827,9 @@ main {
     gap: 6px;
     padding: 8px 12px;
     background: transparent;
-    border: 1px dashed #cbd5e1;
+    border: 1px dashed #d1d5db;
     border-radius: var(--ui-radius-md);
-    color: #64748b;
+    color: var(--ui-ink-3);
     font-size: var(--ui-text-13);
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1866,7 +1866,7 @@ main {
     background: #fff;
     /* 2026-11-16：原本是天藍字＋天藍框的膠囊，改中性色。顏色留給「計算回饋」這種主要動作 */
     color: var(--ui-ink-2);
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-md);
     font-size: var(--ui-text-13);
     font-weight: 500;
@@ -2046,7 +2046,7 @@ input[type="number"]:focus {
     width: auto;
     padding: 12px 20px;
     font-size: 15px;
-    border-radius: 10px;
+    border-radius: var(--ui-radius-lg);
     flex-shrink: 0;
     height: 53.5px;
 }
@@ -2411,7 +2411,7 @@ input[type="number"]:focus {
     gap: 6px;
     background: var(--ui-fill);
     border: 1px solid var(--ui-line);
-    border-radius: 10px;
+    border-radius: var(--ui-radius-md);
     padding: 4px 12px;
 }
 
@@ -10285,8 +10285,8 @@ html.pmc-onboard #search-hints-container {
 /* 合併框：上半部商家輸入、下半部快捷選項（淺灰背景）；外層粗框。
    「快捷搜尋」標題列已從 DOM 移除——chips 就是這個輸入框的建議選項 */
 .merchant-search-box {
-    border: 3px solid #dbe1ea;
-    border-radius: 14px;
+    border: 3px solid var(--ui-line);   /* 原 #dbe1ea，2026-11-23 站長看圖同意 */
+    border-radius: var(--ui-radius-lg);   /* 原 14px；內層 9px＝12 − 3px 框 */
     background: #fff;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
@@ -10301,7 +10301,7 @@ html.pmc-onboard #search-hints-container {
     appearance: none;
     background: #fff; /* 部分行動瀏覽器給 type=search 灰色 UA 底色，明確蓋掉 */
     border: none;
-    border-radius: 11px 11px 0 0;
+    border-radius: 9px 9px 0 0;
     box-shadow: none;
     width: 100%;
 }
@@ -10332,8 +10332,8 @@ html.pmc-onboard #search-hints-container {
     padding: 4px 0;
     list-style: none;
     background: #fff;
-    border: 1px solid #dbe1ea;
-    border-radius: 10px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
     max-height: 320px;
     overflow-y: auto;
@@ -10356,7 +10356,7 @@ html.pmc-onboard #search-hints-container {
 /* 第一行「搜尋「用戶打的字」」：跟下面的建議用細線隔開，打的字粗體 */
 .merchant-suggest-query {
     color: var(--ui-ink-2);
-    border-bottom: 1px solid #eef2f7;
+    border-bottom: 1px solid var(--ui-fill);
 }
 .merchant-suggest-query strong {
     color: var(--ui-ink-1);
@@ -10397,7 +10397,7 @@ html.pmc-onboard #search-hints-container {
     margin-top: 0;
     background: var(--ui-fill);
     border-top: 1px solid var(--ui-line);
-    border-radius: 0 0 11px 11px;
+    border-radius: 0 0 9px 9px;
     padding: 10px 12px;
 }
 
@@ -10405,8 +10405,8 @@ html.pmc-onboard #search-hints-container {
 .amount-input-wrap {
     display: flex;
     align-items: center;
-    border: 3px solid #dbe1ea;
-    border-radius: 14px;
+    border: 3px solid var(--ui-line);
+    border-radius: var(--ui-radius-lg);
     background: #fff;
     padding-left: 9px;   /* 原 14px：NT$ 往左靠，把寬度讓給金額（要放得下 6 位數） */
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
@@ -10437,7 +10437,7 @@ html.pmc-onboard #search-hints-container {
     min-width: 0;
     width: auto;
     border: none;
-    border-radius: 0 11px 11px 0;
+    border-radius: 0 9px 9px 0;
     box-shadow: none;
 }
 
@@ -10445,6 +10445,14 @@ html.pmc-onboard #search-hints-container {
     border: none;
     box-shadow: none;
     outline: none;
+}
+
+/* 點進搜尋框／金額框時只留外框（:focus-within 的淡天藍框），框內不再出現第二圈藍框（2026-11-23 站長看圖同意）。
+   第二圈是全站的 :focus-visible 外框——文字輸入框不論滑鼠、觸控或鍵盤點進去都算 focus-visible，所以每個人都看得到，
+   還會壓到「NT$」。外框本身已經表示「正在輸入」，鍵盤使用者一樣看得到；要用 !important 才贏得過全站那條 */
+.merchant-search-box #merchant-input:focus-visible,
+.amount-input-wrap input:focus-visible {
+    outline: none !important;
 }
 
 @media (max-width: 768px) {
