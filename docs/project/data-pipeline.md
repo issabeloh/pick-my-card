@@ -17,7 +17,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 
 1. **Cards Data** —— 信用卡基本資料和回饋規則
    - 必填：`id, name, fullName, basicCashback, annualFee, feeWaiver, website, tags`
-   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N, registerLink_N`（**N 沒有固定上限**——匯出迴圈用 `maxSlotIndex()` 依表頭自動偵測，加新欄不用改程式；2026-09-29 站長已加到 26。骨幹槽 14/21/22 的慣例見 `docs/project/cashbackmodel-fill-guide.md` 第 4 節）
+   - 回饋欄位：`rate_N, items_N, cap_N, category_N, conditions_N, periodStart_N, periodEnd_N, hideInDisplay_N, registerLink_N`（**N 沒有固定上限**——匯出迴圈用 `maxSlotIndex()` 依表頭自動偵測，加新欄不用改程式；2026-09-29 站長已加到 26。`register-link-finder.gs` 同理用 `regLinkMaxSlot_()`：凡是照 `欄名_N` 橫向展開的迴圈，上限一律依表頭偵測、禁止寫死數字；加槽位時順手 `grep -rn 'maxSlots\|<= 2[0-9]' apps-script/` 確認沒有漏網的寫死上限（2026-09-29 slot 23–26 的「需登錄」活動靜默漏抓登錄連結）。骨幹槽 14/21/22 的慣例見 `docs/project/cashbackmodel-fill-guide.md` 第 4 節）
    - 計算模型：`cashbackModel_N`（選填，只加用到的槽位；語義見 `docs/project/cashback-engine.md` 第 6 節）
    - 領券活動：`couponMerchant_N, couponRate_N, couponConditions_N, couponPeriod_N, couponCap_N`（N=1-10）
    - 分級卡：`hasLevels`, `levelSettings`（JSON 格式）
@@ -54,7 +54,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     - **`featured`（2026-09-03 新增，TRUE/FALSE）—— 前端已不讀**。原本把勾選的活動排進「主打卡」版位；主打卡 2026-09-03 停用、2026-10-02 前端程式全部移除（見 `ui-display.md` 第 4 節）。Apps Script 仍照常匯出這欄、無害；要清掉得同時改 Sheets 上的執行版與 `apps-script/cards-export.gs` 備份。
     - 目前每頁張數：手機 4（2 欄 x 2 列）、平板 3、桌機 4（4 欄 x 1 列）。版位配置寫在 `spotlightLayout()`，欄數在 `styles.css` 的 `.spotlight-track`，**兩邊的斷點（768 / 1024）必須一致**，否則會出現填不滿的半排。
     - **2026-09-17 起這張表同時餵 /promos 的「卡片特色」**：命中的通路保證入列並帶
-      hype 字眼（見第 9a 節）。因此往 Highlights 加一列會同時改善首頁推薦活動與新戶活動頁。
+      hype 字眼（見 `docs/project/promos.md` 第 4 節）。因此往 Highlights 加一列會同時改善首頁推薦活動與新戶活動頁。
 11. ~~**Watchlist**~~ —— 已於 2026-07-17 搬到「PMC 資料自動化」自動化檔並改名 `1-監控清單`（見 `apps-script/README.md` 的「選單 ↔ 分頁對照表」，與 cards.data 匯出無關）
 12. **searchExclusions** —— 搜尋排除規則（term, excludedItems 逗號分隔, active）。前端載入時由
     `mergeDataSearchExclusions()`（`js/search-match.js`）併入 `searchExclusionMap`（程式內只留兜底預設）。
@@ -118,59 +118,7 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
     - ⚠️ **工作表不存在時安全降級**：整段跳過、不丟例外（可以先貼程式、之後再建表）
     - `runQACheck` 檢查 10 會列出對不到 `Cards Data` 的 `id`（⚠️ 警告，不擋匯出）
 
-15. **單卡編輯器**（2026-11-11）—— 不是工作表，是 Cards Data 的直式操作介面（大視窗）（`apps-script/card-editor.gs` ＋
-    `CardEditor.html`，選單「🎯 卡片管理 ▸ 📝 單卡編輯器」）。依標題名稱動態對應欄位、只寫改過的格子、公式欄唯讀、
-    存檔前跑 `pmcValidateCardRow_`（`cards-export.gs`，與 `runQACheck` 檢查 12 共用）、級別改名／刪除／預設級別換人要確認。
-    **改 Cards Data 的欄位命名規則（如新增 `xxx_N` 槽位欄）時**：編輯器自動吃新欄，但若新欄是數字／日期／勾選框，
-    要把它加進 `card-editor.gs` 頂部的 `CE_NUMERIC_*`／`CE_DATE_RE_`／`CE_BOOL_RE_`，否則會被當成文字寫入。
-    2026-11-15 加槽位工具列：複製到空槽位／清空／還原這個槽位（純畫面操作，存檔路徑不變）。**刻意不做槽位搬移**——
-    槽位編號被 `cashbackModel` 的 `rate_N` 與 `levelSettings` 的 `onlySlots`／`keepSlots` 引用，搬了會悄悄錯位。
-    改 `CardEditor.html` 後跑 `node tools/apps-script-tests/card-editor-ui-test.js`。
-    安裝與保護機制見 `apps-script/README.md`「單卡編輯器」
-16. **新戶活動編輯器**（2026-11-11）—— New Cardholder Promos 的「一張卡一頁」介面（`apps-script/promo-editor.gs` ＋
-    `PromoEditor.html`，選單「🎁 新戶活動編輯器」）。申辦按鈕視為卡片層級（改了寫到原本有填的每一列）、新增活動插在同卡最後一列下、
-    不提供刪除（下架＝取消 active）、存檔前跑 `pmcValidatePromoRow_`（與 `runQACheck` 檢查 13 共用，一律 ⚠️）。
-    改這張表的欄位時：數字欄要加進 `promo-editor.gs` 的 `PE_NUMERIC_FIELDS_`、日期欄加進 `PE_DATE_FIELDS_`，
-    想在畫面上分到某組就加進 `PE_GROUPS_`（沒加的欄位自動出現在「其他欄位」）。說明見 `apps-script/README.md`「新戶活動編輯器」
-17. **活動快寫**（2026-11-12；11-13 搬進試算表）—— 不是工作表，是「貼一段活動原文 → 解析 → 寫進表」的工具，
-    選單「🎯 卡片管理 ▸ ✍️ 活動快寫」（少量活動用，批量仍走自動化檔的 3-貼上原文 → 4-待審核）。
-    - **三層檔案**：來源在 `tools/activity-writer/`（`index.html`＋`parser.js`＋`app.js`）→ `build-apps-script.js` 併成
-      **生成檔 `apps-script/ActivityWriter.html`（禁止手改，preflight 會擋不一致）**；試算表端是 `apps-script/activity-writer.gs`
-    - **改了 `tools/activity-writer/` 任何一支 → 跑 `node tools/activity-writer/build-apps-script.js`、生成檔一起 commit**；
-      合併進 main 後 GitHub 自動部署到「PMC 管理系統」（`deploy.json` 第二個專案，**只列這兩支**；`cards-export.gs` 等仍手動貼）
-    - **三種活動**：一般活動（`rate_N` 那組）、領券活動（`couponMerchant_N` 那組，2026-11-13 加入，只有規則解析、沒有 AI）、新戶活動。
-      自動判斷順序：有新戶字樣 → 新戶；否則有領券／優惠券 → 領券；其餘一般
-    - 寫入不自己做，交給兩個編輯器：一般／領券活動 → `cardEditorSave`（寫進選定的 `rate_N` 或 `couponMerchant_N`，有內容的槽要按兩次才覆蓋，
-      空的 `daysRemaining_N`／`period_N` 補公式）；新戶活動 → `promoEditorSave`（插在同卡最後一列下面）。
-      **依欄名寫入**，所以欄位順序變動不影響寫入（只影響「複製一列」→ 那個要改 `parser.js` 的 `RATE_COLS`／`PROMO_COLS`）
-    - 資料讀**表上現況**（`activityWriterInit`）；只有快捷搜尋／統一詞表／行動支付別名沿用線上 `cards.data`，讀不到照樣能用
-    - **規則解析為主、不需要 AI**；「用 AI 重新解析」是選用的（Gemini，金鑰＝該專案的指令碼屬性 `GEMINI_API_KEY`）
-    - `tools/activity-writer/index.html` 直接開是**本機開發／測試版**（讀 `cards.data`、只能複製、不能寫入）。
-      **正式網址 `/tools/activity-writer/` 已於 2026-11-14 下架**：`tools/deploy-version.sh` 在 Cloudflare Pages 部署時（`CF_PAGES=1`）
-      把整個 `tools/activity-writer/` 從部署內容刪掉；repo 裡的檔照留（生成檔的來源＋測試）
-    - **審核區**（2026-11-14）：黃色（`notes[欄].level === 'check'`）的格子集中在「需要你審核」，每格一個勾選框；
-      `conditions`／`promo_condition`／`couponConditions` 不論信心一律進審核區。**寫入與複製只出綠色＋有勾的，沒勾的那格送空值**
-      （`app.js` 的 `outFields()`；覆蓋既有槽時空值會把那格清掉）。親手改過的格子自動打勾；原文變了重新解析，勾選重來。
-      率、通路與新戶必填（`MUST_CONFIRM`：rate／items／couponRate／couponMerchant／bonus_rate／bonus_merchants／promo_types／new_customer_summary）
-      在審核區沒勾 → 擋下不寫。要讓某欄「預設就要審核」→ 在 `parser.js` 把它的 note 設成 `check`，或加進 `app.js` 的 `ALWAYS_REVIEW`
-    - **一次貼進多個活動**（2026-11-14，`parser.js` 的 `splitActivities()`）：只有**行首、【】、帶編號**的標題（【活動1】【活動2：…】，
-      也收「優惠／方案」＋數字）出現兩個以上才提供「拆成 N 個分頁」——一頁一個活動、各自判斷類型、各自寫入，不同畫面顯示；
-      標題前的共用段（活動期間）與最後的注意事項每頁都帶，內文點名「活動N」的句子只給被點名的那幾頁。
-      其餘情況（只在內文提到活動2、幾個【】段落的回饋率不同）**只提示不拆**——拆錯比不拆糟，別放寬成自動拆
-    - 解析規則在 `parser.js`（與 `card-benefits-parser.gs`／`benefits-parser.gs` 的 prompt 規則同調，**改一邊的欄位寫法規則要看另一邊**）
-    - 新戶活動的幾條判讀規則（2026-11-13 依站長實測調整，樣本是 `samples.js` 的 `promoInsurance`）：
-      **特定族群新戶**（原文有「保險新戶定義：」這種帶族群名的定義）用原文的定義、不沿用同卡現有的全行新戶定義；
-      **`bonus_rate` 只填這檔活動自己加碼的部分**（最高 8% ＝ 加碼 6% ＋ 原權益 2% → 0.06，合計數字只放摘要）；
-      **`bonus_merchants`** 有具體商家用商家、沒有就用類別詞（保費），付款方式／被排除的支付工具／時段（假日）不算通路；
-      **`promo_condition`** 本文有條列用條列，沒有就從本文挑句子拼草稿，「注意事項」之後的 (1)(2)(3) 是細則、最後才用；
-      **領券≠登錄**，且只抄原文寫出來的限制（不自己補「與其他新戶活動擇一」）；`priority` 欄 2026-11-13 已刪（全表都是 99；匯出找不到這欄一樣當 99，前端排序不受影響）
-    - 一般／領券共用的判讀規則（2026-11-13 第二個實測樣本 `cubeCoupon`）：**`category` 只在原文整個出現既有分類名、或有短的【】標題時才填，
-      其餘留空**（不取第一行、不猜）；排除條款只取到逗號、去重、最多 3 條，不收「等排除商品」這種形容詞用法、括號內補充、分期利率樣板；
-      「本活動限…」整句照抄成條件；有具體商家時支付工具與時段（假日）不進通路；認卡看別名出現次數與後面有沒有接「卡」
-    - 版面是 12 欄格線（`app.js` 的 `RATE_FIELDS`／`PROMO_FIELDS` 第 4 個值＝佔幾格），說明文字預設收成一行、點一下展開；
-      `ui-test.js` 會擋「新戶 26 欄排不進一個畫面」
-    - 測試：`node tools/activity-writer/parser-test.js`（解析）、`node tools/activity-writer/ui-test.js`（介面：本機版＋試算表視窗版，伺服器與 AI 用假回應）、
-      `node tools/apps-script-tests/activity-writer-test.js`（試算表端寫入＋自動部署，假試算表）
+（單卡編輯器、新戶活動編輯器、活動快寫不是工作表，2026-11-22 移到第 13 節。）
 
 ## 3. exportToJSON() 匯出流程
 
@@ -189,6 +137,12 @@ bash tools/cards-query.sh '.cards[] | select(.id=="dbs-eco")'   # 自動解碼�
 ```
 
 「變動紀錄」沒有頂層 key——它掛在每張卡身上：`card.changelog = [{ date, summary }, ...]`（最多 5 筆、由新到舊；**沒有異動的卡沒有這個欄位**，前端判斷要 `!card.changelog || card.changelog.length === 0`，鐵則 4）。
+
+**手機匯出**（2026-11-18）：`getUi()` 只有從試算表選單執行才拿得到，手機只能在 Apps Script 編輯器按「執行」，
+以前會在第一行丟 `Cannot call SpreadsheetApp.getUi() from this context`。現在 `exportToJSON`／`runQACheck`
+改用 `pmcUi_()`：拿不到真 UI 時換成 `PMC_HEADLESS_UI_`，對話框改寫進執行記錄、是／否一律當「否」——
+❌ 照樣擋、參照問題（card_id／申辦連結網域）**一律取消**、只提醒的照常匯出。從選單執行時行為不變。
+**新增會在匯出途中被呼叫、又直接用 `SpreadsheetApp.getUi()` 的函式，手機匯出就會再壞一次**——一律改用 `pmcUi_()`。
 
 **重要輔助函數**：`getValue(row, headers, fieldName)` 安全讀欄位；`addOptionalField(obj, row, headers, fieldName, type, targetName)`；`formatDateToSlash(dateValue)`（YYYY/M/D）；`generateSearchTerms(id, name)`。
 
@@ -247,367 +201,9 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 **規則**：前端任何日期比較/解析，一律走 `taiwanDaysUntil()`（天數差）／ `getRateStatus()`（是否進行中）（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。
 
-## 9. promos.html 靜態生成（新戶活動一覽頁，2026-07-15 新增）
+## 9. promos.html 靜態生成 → 已搬到 `docs/project/promos.md`
 
-`promos.html`（＋獨立的 `promos.css` / `promos.js`）是給 SEO／社群轉貼用的「新戶活動一覽」
-落地頁，內容**不是手寫、也不是前端 fetch cards.data 動態組出來**——是 Apps Script 匯出時
-用純函數把 HTML 字串直接生成好，跟 cards.data 一起 commit 進 repo。
-
-- **生成邏輯的唯一事實來源**：`apps-script/cards-export.gs` 內的 `generatePromosPageHtml(exportData)`。
-  它是純函數（吃組好的 `{ cards, newCardholderPromos, cardApplyCtas }` 物件、回傳完整 HTML
-  字串），內部**不呼叫任何 Sheets/Apps Script API**（連 `Utilities.formatDate` 都不用，改用
-  自己的 `pmcTodayISO_()`），所以同一份程式碼可以直接被 Node 的 `vm` 載入執行——這是刻意設計，
-  避免「Apps Script 版」和「repo 初版」各寫一份生成邏輯而分岔。
-- **呼叫點**：`exportToJSON()` 讀完 `newCardholderPromos` / `cardApplyCtas` 後立刻呼叫
-  `generatePromosPageHtml()`，產出的 HTML 字串跟著 `cards.data` / `cards.version` 一起
-  丟進 `publishToGitHub(encoded, promosPageHtml)` → 同一次 commit 三個檔案。
-- **repo 初版怎麼來的**：用臨時 Node harness（放 scratchpad，不留在 repo）以 `vm.runInContext`
-  載入 `cards-export.gs`、餵 cards.data 解碼後的 JSON（跑過 `tools/cards-query.sh` 後快取在 `$TMPDIR/cards-decoded.json`），呼叫
-  `generatePromosPageHtml()` 產生 `promos.html`。之後每次 Apps Script 端跑 `exportToJSON()`
-  都會用真正的 Sheets 資料重新生成、覆蓋這份檔案——**repo 裡的版本只是初版備份，最新內容以
-  GitHub 上次 commit 的為準**。
-- **⚠️ 改生成邏輯務必兩邊同步**：跟其他 `apps-script/*.gs` 一樣，實際執行的版本在 Google
-  Sheets 的 Apps Script 專案裡；改了 `generatePromosPageHtml` 或它的小工具函數，要把整份
-  `cards-export.gs` 貼回 Sheets（見 `apps-script/README.md`），否則下次匯出還是跑舊邏輯、
-  repo 的新版程式碼形同沒生效。
-- **`<!-- PROMOS:START -->` / `<!-- PROMOS:END -->`**：包住 `promo-grid` 那塊卡片列表，
-  方便日後對 diff／除錯（一眼看出「這次匯出改了哪些活動」，不用整份 HTML 比對）。
-- **過期過濾＋排序**：生成時只保留 `period_end` 未到期（或無 `period_end`＝不限期）的活動，
-  依 `period_end` 升冪排序（無截止日排最後）；日期解析走生成器自帶的 `pmcNormalizeDate_()`，
-  同樣容忍第 8 節說的 ISO／台式雙格式，不假設只有一種。
-- **versionTag 含台北時分**（2026-07-16 起）：promos.css/js 的 `?v=` 為 `YYYYMMDDHHmm`，同日多次匯出也能破快取。代價是重生成不再天然位元級一致——**做位元級重現驗證時，exportData 傳 `versionTagOverride: '<repo 版的 tag>'` 固定它**再比對。
-- **「資料更新於」戳章只在活動內容真的變動時前進**（2026-07-23 起，`promosUpdatedIso`）：頁腳
-  `<time datetime>` 戳章、`sitemap.xml` 的 promos `lastmod`、`<head>` 的 `CollectionPage`
-  JSON-LD `dateModified` 三處**同源**，都用這個日期（可見戳章 `.promos-data-update` 2026-07-23 起
-  放在 `.promos-controls` 下方、`.promo-grid` 上方，不再在頁尾）。它**不是每次匯出的今天**——`exportToJSON`
-  先用 `pmcPromoSignature_(newCardholderPromos)`（每筆各自序列化後排序的內容指紋，djb2/`Math.imul`
-  純函數，不受 sheet 列序影響）跟 Script Properties 的 `PROMOS_LAST_SIG` / `PROMOS_LAST_DATE`
-  比對：指紋相同就沿用上次日期，不同（或首次）才蓋 `pmcTodayISO_()` 並寫回。**為什麼不每次蓋今天**：
-  對 Google 天天喊 `lastmod` 更新但內容沒動會反被降低重爬信任（狼來了）；只在真的更新時前進才誠實。
-  **注意別跟 `todayIso` 混用**：過期過濾與 versionTag 快取破壞仍必須用「實際今天」（`todayIso`），
-  只有這三個對外「新鮮度信號」才用 `updatedIso`。生成器是純函數、拿 `exportData.promosUpdatedIso`
-  當參數（沒傳退回今天，供 Node 初版 harness 用）；比對狀態存 Script Properties 是刻意選的——
-  Apps Script 端持久化、不佔 repo 檔案、不多一個 commit、維護者流程零改動（代價：repo 看不到、
-  Node harness 重現不了，但初版本來就以 GitHub 上次 commit 為準）。
-- **前端 `promos.js` 只做「已經是資料」之上的互動**：剩幾天徽章即時重算（避免生成當下算好的
-  天數過幾天就過時）、篩選 chips、排序切換（deadline / 依卡片）、「立即申辦」點擊送 GA4——
-  不 fetch 任何東西，頁面本身就是完整資料。
-- **⚠️ header／footer 是從 `index.html` 手動複製過來的**：
-  `pmcPageTemplate_()` 裡的 `<header class="promos-header">`、
-  `.promos-warning-row`（謹慎理財警語）、`.social-media-footer`（探索更多／追蹤我們／
-  支持我們）三段，內容與樣式都是照 `index.html` 對應區塊（`header`／`.finance-warning-row`／
-  `.social-media-footer`）手動抄的，**不是共用元件**。主站改這幾塊時（換連結、改文案、換
-  社群帳號），這裡要記得手動同步，否則 promos 頁會悄悄跟主站不一致。`promos.css` 裡對應的
-  樣式規則也在同一段加了「抄自 styles.css」的註解，方便對照。
-  **2026-07-16 header 一致化改版**：header 現在不只是 logo＋站名＋深藍 bar，還含桌機導覽
-  （新戶活動／常見問題，本頁帶 `aria-current="page"`）與手機漢堡抽屜（兩張卡片連回 `/`
-  工具頁與 `/faq`）。互動邏輯（抽屜開合）寫在 `promos.js` 開頭「手機漢堡側選單開合」一段，
-  介面與 `faq.js` 同款。**`faq.html` 的 header 也是同一份 `index.html header-top` 的
-  手抄件**（見 `FAQ-README.md`）——這下有三份手抄件互相要對齊：`index.html` 改動時，
-  `promos.html` 的生成器（本節）與 `faq.html`／`faq.css`／`faq.js` 都要跟著手動同步，缺一邊
-  就會悄悄跟另外兩邊不一致。
-  **同日二輪回饋**：header 右側原本試過頭像＋精簡 dropdown（訪客「註冊／登入」、登入者
-  「前往主站管理」），站長裁定「副頁頭像做不到主站完整功能（無法登出/管理），意義不大」，
-  已撤回改為「返回首頁」鈕（`promos-back-home-btn`，連回 `/`；faq.html 對應 `.back-home-btn`
-  連回 `index.html`）——**header 不含任何登入/頭像狀態**，也不再 import firebase-auth。
-  同一輪還加了：可見麵包屑（hero 上方一行小字，`.promos-breadcrumb`／`.faq-breadcrumb`）＋
-  `<head>` 內的 BreadcrumbList JSON-LD（`pmcBuildBreadcrumbJsonLd_()`，與既有 ItemList/FAQPage
-  JSON-LD 並存）、浮動「回到頂部」鈕（`.promos-back-to-top-btn`／faq 重用 styles.css 既有
-  `.back-to-top-btn`，手機限定、捲動 >300px 顯示，行為同主站）、手機抽屜工具卡改色（promos
-  側 `.promos-sidebar-tool-card` 改糖果薄荷色＋💳 emoji，與 FAQ 卡區隔）、FAQ 側手機抽屜的
-  「新戶活動一覽」卡（`.sidebar-promos-banner`）在 `faq.css` override 壓平立體感（不改
-  `styles.css`，`index.html` 自己的抽屜不受影響）。
-  > 註（2026-07-17 本輪移植）：舊分支同一次改版另外文件化了 `.promo-card-info-btn`
-  > 深連結（`/?start&card=<id>`）的設計，但 main 分支同期已把 ⓘ 按鈕升級成 iframe 內嵌
-  > 詳情彈窗（方案 A，深連結只當攔截失敗的 fallback）——那段說明已過時，**不portover**；
-  > 完整、與現狀一致的說明在 `docs/project/ui-display.md` 第 1 節「Embed 模式」。
-
-### 9a. 2026-09-17 改版：一張卡一組 ＋ 卡片特色
-
-站長回報「資訊層級不對：應該馬上看到獎勵，被吸引後才看到是哪張卡送的」。改版後：
-
-**版面**（`pmcRenderCardGroup_` 取代舊的 `pmcRenderPromoCard_`）
-
-- **一張卡一組**，不再一檔活動一張卡片（iLEO 4 檔、遠東快樂卡 4 檔、中信 uniopen 4 檔
-  以前會出現 4 次）。主活動在白卡 `.promo-card-main` 裡，同卡其餘活動以「卡疊卡」
-  堆在下面（`.promo-card-stack`，上緣方角、只留下方兩個圓角、逐層內縮）
-- **多檔活動的卡＝「左側品牌欄」骨架**（做法 A，2026-09-21 站長定案；參考
-  Booking.com「一間飯店、多種房型」與 MoneySuperMarket 商品列）。
-  `pmcRenderCardGroup_` 依 `acts.length` 走兩條路：
-  - `=== 1`：**同樣有身分區塊**（2026-09-21 站長：單檔卡要更像多檔卡）——
-    `.promo-card-rail--solo`＝**橫向身分列**：小卡圖（84px）在左、卡名在右，
-    **兩顆按鈕跟多檔卡一樣住在 rail 裡**（2026-09-21）：桌機與手機都是
-    「卡片圖＋名稱 → 按鈕 → 分割線 → 活動內容」。放進 rail 才會在分割線**上方**——
-    rail 的 `border-bottom` 就是那條線，按鈕留在 `.promo-card-main` 裡怎麼排都在線下。
-    刻意與多檔卡**在手機上**的身分區塊長得一模一樣，零件／尺寸／間距全部共用
-    （站長從三案中選定「方案 3 橫向身分列」，實測比較原放在 docs/mockups，已於 2026-11-17 刪除，見 git 歷史）。
-    **不放「1 檔新戶活動」那一行**（站長指定）：只有一檔時它跟正下方的獎勵數字重複
-  - `> 1`：`.promo-card-rail`（卡圖／卡名／「N 檔新戶活動・最多可拿 …（需分別達成）」／立即申辦／
-    卡片特色）＋ `.promo-card-main`（最高那一檔的完整卡）＋ `.promo-card-stack`
-    （第 2 檔起的附屬列）。桌機 `grid-template-areas` 是
-    `"rail main" / "rail side" / "feat feat"`，品牌欄跨兩列；手機品牌欄橫在最上面。
-    白卡表面移到 `<article>` 本身，main／stack 只是它的分區
-- **左欄那句「N 檔新戶活動・最多可拿 NT$X（需分別達成）」**（`pmcRailCount_`）：
-  金額是同卡多檔**相加**出來的，所以「（需分別達成）」不能省——每一檔的達成條件都不同，
-  少了這句會被讀成「刷一次就拿得到」。首刷禮沒有現金價值，改成「＋N 項首刷禮」分開講。
-  2026-09-21 從「最高可拿」改成現在的寫法
-- **左欄那句是「N 檔活動・最多可拿 …・需分別達成」**（站長 2026-09-22 定稿）：
-  不寫「新戶活動」——整頁都在講新戶活動（title／h1／description／每張卡的「新戶定義」
-  都有），這句是版面標籤不是內文；「需分別達成」也不再自己佔一行，改用「・」接在後面
-  （`.promo-rail-caveat` 只保留小一階字級＋`nowrap`，不再 `display: block`）。
-  SEO 實測：可見文字裡「新戶活動」17 → 10 次，但 title／h1／description／canonical／
-  三段 JSON-LD **逐字未變**，h1/h2/h3 數量也未變
-- **首刷禮的主活動不再重複印「首刷禮」**（2026-09-22）：大字已經是獎品全名、上方又有
-  類型徽章，`pmcRewardSub_` 原本再回一次「首刷禮」給 `<small>`，同一張卡上出現兩遍。
-  改成回空字串，並讓 `pmcRenderPromoAct_` 在空字串時**整個 `<small>` 不輸出**——
-  留一個空標籤會被 `.promo-act-reward small` 的 `margin-top` 撐出一條沒有東西的空白
-- **附屬列上方沒有標題**：曾經有一行「這張卡的其他 N 檔活動」，2026-09-21 站長認為
-  多餘而移除——附屬列的形狀已經說明歸屬，檔數在左欄也講過一次了
-- **兩種骨架共用 `.promo-card-rail`**，差別只在修飾字：`--solo`（單檔卡，永遠是橫幅）
-  與 `--side`（多檔卡，桌機時變成左邊那一直欄）。因此 2026-09-21 收掉了三組
-  「單檔／多檔各一份」的 CSS：白卡表面（改掛在 `.promo-card` 本身）、卡名樣式
-  （不再是自帶框線的白色橫幅）、主活動藏卡片圖（改成對所有卡生效）
-  - **`.promo-card-name` 沒有任何覆寫規則**：單檔／多檔、手機／桌機四種情況同一個
-    字級與零內距（白卡表面掛 `<article>`、內距由 rail 給）。2026-09-21 清掉兩條遺留——
-    多檔卡專屬的「取消橫幅樣式」與桌機的 `padding: 12px 16px 9px`（後者讓卡名平白
-    高了 21px、又右移 16px）
-  - **主活動的卡片圖一律藏起來**（`.promo-card-main .promo-act-thumb:not(--gift)`）——
-    身分區塊已經有一張，藏掉它活動摘要才用得到整列寬度。
-    獎品自己的活動宣傳圖仍然顯示，那是該檔活動獨有的資訊
-- **手機專屬的版面調整一律寫進 `@media (max-width: 1024px)`**（2026-09-21 立）：
-  這支 CSS 是 mobile-first，base 規則會一路套到桌機，**只有寫進 max-width 才保證
-  不影響桌機**。收到「只改手機」的需求時不要去動 base。
-  驗收方式：改動前先用 Playwright 對桌機（1440／1280）拍一份幾何快照
-  （每張卡的 x/y/w/h、附屬列各欄寬高、摘要行數），改完再比對——2026-09-21 那批
-  五項手機調整就是這樣證明「桌機幾何零差異」的。
-  - 目前這段裡只剩兩件事：附屬列收掉沒有圖片時的空位與金額欄寬、摘要與附屬列標題
-    多顯示一行。⚠️ **手機規則會過期**：單檔卡按鈕那條 `order: -1` 在按鈕搬進
-    `.promo-card-rail--solo` 之後就失效了，卻還留著一個 `margin-top: 0`，害按鈕
-    貼死在卡片圖下緣（2026-09-21 站長回報）。改了標記結構，要回頭掃這一段
-  - **顏色與字級是例外**：同一個東西在手機與桌機不同色／不同大小，那是 bug 不是設計
-- **第 2 檔起是「附屬列」不是卡片**（取代原本的卡疊卡），2026-09-21 晚上再從「三欄一排」
-  改成**一列兩排**（方案 B，站長在三案 mockup 中選定）：
-
-  ```
-  ┌ 上排：[類型 chip] 這一檔的「值」        ┐  [獎品圖] 詳情 ▾
-  └ 下排：活動摘要（灰色小字）              ┘
-  ```
-
-  - **值＝這一檔能拿到什麼**，三種類型共用同一個起點，這就是「對齊」：
-    首刷禮→獎品全名、回饋加碼→回饋率、定額回饋→金額
-  - 🔴 **為什麼不能用「欄」對齊**：桌機一條附屬列的內容寬只有 **426px**，而現行最長的
-    獎品名 43 字、17px 排一行要 **731px**——比整列還寬。用欄位對齊就一定得截斷獎品名
-    或把摘要欄壓到 194px；讓值自己佔一排，寬度限制整個消失（實測三列整疊 206px、
-    摘要欄 374px）。日後有人想「把值欄撐寬就好」，先回來看這段
-  - **類型 chip 在上排最左**，包在固定寬度的槽 `.promo-sub-types`（`min-width: 62px`
-    ＝最寬的單一 chip「定額回饋」），右邊的值才對得到同一條線。少數活動有兩個類型
-    （61 檔中 5 檔、附屬列 16 條中 1 條），那幾列的槽會被撐開、值跟著右移——
-    **刻意用 15/16 的對齊換「不丟掉任何一個類型」**
-  - **chip 的顏色 token 與主活動的 `.promo-type-badge` 共用**（`--pmc-candy-*`）。
-    2026-09-21 就是因為附屬列自己硬寫顏色，同一張卡上「首刷禮」出現兩種顏色。
-    **形狀不共用**：主活動那顆是「從卡框長出來的 label」（只有右下圓角），
-    放進列裡要用一般 pill
-  - 🔴 **類型徽章的選色有兩個禁區**（2026-09-21 晚上站長回報後定案）：
-    **紅／粉**會跟「最後 N 天」倒數徽章（`#dc2626` 紅字紅框）混淆、**綠**會跟獎勵數值的
-    文字色（`--pmc-hero-green` `#10b981`）撞在一起。現行配色＝首刷禮**紫**
-    `--pmc-candy-purple-*`、回饋加碼**黃** `--pmc-candy-yellow-*`、定額回饋**棕**
-    `--pmc-candy-brown-*`（站長指定；棕與黃是鄰近色，分辨靠的是**底色飽和度**——
-    黃底 `#fff3c4` 是鮮明糖果黃、棕底 `#ece0d6` 是去飽和米灰，只改文字色會分不出來），
-    未知類型 fallback＝灰 `--pmc-candy-slate-*`。四組的文字／底色對比都在 5.2:1 以上。
-    **篩選 chip 也用同一組色**（`.promo-chip--gift/--bonus/--voucher`，站長 2026-09-21：
-    「讓用戶更容易連結」）：收起＝白底＋淺框＋深字，**選取＝徽章本人的淺底＋深字**
-    ＋外框加粗成 2px（`inset 0 0 0 1px` 疊第二圈，不改 `border-width` 才不會位移）。
-    ⚠️ 選取態**不能**用深色實心底＋白字——那等於把徽章的顏色整個換掉，反而連不回去
-    （2026-09-21 先做了深色版，站長當天回報）。
-    ⚠️ 那幾條 CSS **必須排在 `.promo-chip.is-active` 之後**——
-    兩者 specificity 打平，靠後定義才蓋得過主站藍。
-    ⚠️ **未解**：`全部` 與 `即將結束` 的選取態仍是深色實心底＋白字，跟三顆類型 chip
-    不同語言（頁面預設就停在「全部」，所以一進站看到的就是深色那顆）。等站長決定。
-    ⚠️ `--pmc-candy-pink-*` 與 `--pmc-candy-mint-*` 沒有類型徽章在用，**但別刪**：
-    pink 給 `.promo-feat-hype`（四種誇飾詞 2026-09-21 起統一用它，原本一種一色——
-    那四個詞跟「類型」是兩套不相干的分類，共用色盤只會讓人以為有對應關係，而且
-    「無腦刷」的薄荷就貼著同一列的綠色回饋率）、mint 給側欄工具卡
-    （`.promos-sidebar-tool-card`，**與類型完全無關**，純粹是側欄那張卡自己的底色）。
-    ⚠️ token 一律用**顏色**命名不是角色命名——原本的 `--pmc-candy-default-*` 已改名為
-    `--pmc-candy-purple-*`，因為「哪個類型用哪個顏色」本來就會變
-  - **獎品圖在右側、「詳情」的左邊，42px＝上下兩排文字的高度**（站長 2026-09-21 指定）。
-    點了開 lightbox（沿用 `setupGiftLightbox`，`stopPropagation` 擋掉展開詳情）；
-    同組只要有一列有圖，沒圖的列補 `.promo-sub-thumb.is-empty` 等寬空位，「詳情」才對齊
-  - 🔴 **`.promo-sub-meta` 跨兩排、垂直置中**，所以獎品圖與「詳情」的位置**與文字行數無關**，
-    展開收合都不動。改成 grid 之前這裡靠 `[aria-expanded="true"]` 切 `align-items`
-    再補 `margin-top: 1px`，結果每一列點開瞬間整排跳位（見教訓記錄）。
-    **別再把排版綁回互動狀態**
-  - 下排摘要兩行封頂（最長一筆 79 字），展開後整段攤開；兩個寬度共用同一組規則
-  - 收合那行的右側固定是「詳情 ▾」（主活動那顆維持全稱「活動詳情 ▾」）。補充說明
-    只出現在展開後：回饋加碼是「最多可拿…・上限消費…」的段落，定額回饋是 `<dl>`
-    第一列的「回饋類型：OPENPOINT」，**首刷禮沒有**——它的摘要就在下排，再放一次會重複。
-    `pmcRenderPromoDetail_()` 因此有 `leadHtml`（段落）與 `leadRowHtml`（`<dl>` 第一列）兩個鉤子
-- ⚠️ 歸屬提示改過三版，別再走回頭路：①「第 2 檔向右延伸＋第 3 檔以後向下逐層內縮」
-  （太亂、越縮越小）②「等寬卡＋欄間一支淺藍箭頭」（要求拿掉箭頭）
-  ③「卡名橫跨兩欄的白色橫幅」（橫幅七成是空的、底下兩根柱子長度差很多，看起來怪）。
-  現在身分整個收進左欄，不需要任何額外符號
-- **回饋加碼的大字是「回饋率」不是金額**（2026-09-21 站長）：`pmcRewardBig_` 對
-  `pmcIsBonus_()` 為真的活動輸出 `pmcRateDisplay_()`（「10%」），金額退到小字
-  `pmcRewardSub_`＝「最多可拿 NT$2,000・上限消費 NT$20,000」。附屬列的金額欄同理。
-  - **金額放小字的前面**：它是結果、上限是條件，而附屬列的 meta 會被寬度截斷，
-    截掉條件比截掉結果好
-  - `pmcIsBonus_()` 抽成一支給三個呼叫端（大字／小字／附屬列）共用，判斷順序與
-    `pmcPromoValue_` 一致：**voucher_amount 優先**，一列同時有兩種欄位時當定額回饋
-  - ⚠️ **排序仍然依金額**（`pmcPromoValue_` ＝ rate × cap），所以清單上會出現
-    「2% 排在 10% 前面」——因為 2%×上限 100,000 ＝ NT$2,000 跟 10%×上限 20,000 一樣多。
-    這是刻意的：排序要比的是「實際能拿多少」，不是百分比大小。小字的「最多可拿」
-    就是給這個落差的解釋，別為了讓數字看起來遞減而去改排序
-- **排序：首刷禮優先 → 回饋率大到小 → 回饋金額大到小**（2026-09-21 站長定序；
-  `pmcPromoSortKey_` 回傳 `{tier, primary}`，比較規則是 tier 升冪、primary 降冪）：
-  - tier 0 首刷禮（沒有現金定價）／tier 1 回饋加碼（比 `bonus_rate`）／
-    tier 2 定額回饋（比 `voucher_amount`）
-  - **組內與組間同一套**：組間用「該組最前面那一檔」的鍵（`g.sortKey`）
-  - 為什麼改：大字改顯示回饋率之後，舊的「一律依金額」會讓清單看起來沒有規律
-    （2% 排在 10% 前面）。⚠️ 排序用的一律是**單檔**數字，不相加
-  - ⚠️ `pmcRateNumber_` 是排序專用的數值版——`pmcRateDisplay_` 回傳的是給人看的
-    字串（「10%」），不能拿來比大小。Sheets 可能存 0.1 也可能存 10，一律正規化
-- ~~排序固定依「最高可拿」倒序~~（2026-09-21 改為上述規則），排序切換 UI 已移除（保留類型 chips 與
-  「隱藏我持有的卡片」）。換算：定額回饋＝`voucher_amount`；
-  回饋加碼＝`bonus_rate × bonus_cap`（`bonus_cap` 是消費上限，相乘即回饋天花板）；
-  首刷禮沒有現金定價，大字改放贈品全名。**⚠️ 同一張卡的多檔活動各自獨立、不相加**
-  （各有不同達成條件），排序只看單檔最大值
-- **每檔活動各有自己的詳情**（`pmcRenderPromoDetail_`：適用通路／達成條件／活動期間／
-  新戶定義／備註）。同卡多檔的條件不同，所以詳情掛在活動上、不是卡片上。
-  同組內一次只開一個
-- **卡片特色 modal 的「查看卡片詳情」是 footer CTA**（2026-09-21 站長；原本是抬頭右邊的
-  小連結「查看全部 ›」）。`tools/build-promos-features.js` 仍然把 `<a class="promo-feat-all">`
-  輸出在 `.promo-feat-head` 裡，由 `promos.js` 的 `openFeatModal()` 把**節點本身**搬到
-  `.promo-feat-modal-foot`（搬節點而不是複製字串，`setupCardDetailOverlay` 的 document
-  委派才收得到點擊）。連結搬走後抬頭可能整列空掉，所以會 `head.hidden = true`——
-  ⚠️ `.promo-feat-head` 是 `display:flex`，CSS 必須補
-  `.promo-feat-head[hidden]{display:none}`（這頁第五次踩同一個坑）
-- **同一列的卡片等高 ＋ 空白遞補**（2026-09-21 站長）：
-  - `.promo-card` 不再 `align-self: start`，改成直向 flex＋`align-self: stretch`；
-    單檔卡的 `.promo-card-main` `flex: 1`、按鈕列 `margin-top: auto`，所以同一列的
-    「立即申辦」會對齊成一條線。多檔卡的 `grid-template-rows: auto 1fr auto` 讓
-    **附屬列那一格**吸收多出來的高度（原本 `align-content: start` 會把它留在整組下方
-    變成白色空帶）。混合列時多檔卡通常就是最高的那張，實務上等於「只調整單檔卡」
-  - `.promo-grid` 加 `grid-auto-flow: dense`：多檔卡跨 2 欄、塞不進列尾剩下 1 欄時會整欄
-    空著，dense 讓後面較窄的卡回填。代價是視覺順序不再嚴格遞減（站長同意「順序有點
-    交錯 ok」）；**DOM 順序仍然是遞減的**，JSON-LD／螢幕閱讀器／SEO 不受影響
-  - 實測 23 張卡：1280px 三欄 填滿率 100%、空欄 0、高度不齊的列 0、grid 高 4188 → 3555；
-    1440px 四欄 填滿率 95%、grid 高 2847
-- **首刷禮大字是深橘 `#c2410c`**（2026-09-21 站長選的「燒橘」，原本 `#8a5c00` 深金褐）。
-  白底對比 4.9:1 過 AA。⚠️ 它跟「最後 N 天」徽章的紅 `#dc2626` 是相鄰色相，
-  同一張卡上兩個都會出現，別再把任何一邊往對方推
-- **寬螢幕（≥1400px）一列 4 張卡**（2026-09-21 站長）：容器 `max-width` 放寬到 1440px、
-  `.promo-grid` 改 4 欄、品牌欄縮到 208px。⚠️ 這個 media block 必須排在
-  `@media (min-width: 1025px)` 那段**之後**——品牌欄寬度等規則同分，後定義的才會贏。
-  `.social-media-footer` 的 `max-width` 要一起改，否則頁尾比主體窄一截
-- **卡片特色一律開 modal**（桌機 2026-09-18、手機 2026-09-20；站長：「目前要展開的
-  東西太多了」）。特色有 5~7 列加國內／國外基準列，就地展開會多出一整屏高度、
-  把後面的卡全部推走，手機尤其嚴重。`promos.js` 的 `openFeatModal()` 懶建立一層
-  `.promo-feat-modal`（比照 `setupGiftLightbox` 的作法，**不需要動 Apps Script 模板**），
-  把 `.promo-card-feat` 的 innerHTML 複製進去——那段是注入的靜態片段，沒有 id、
-  沒有綁在節點上的事件（「查看全部」走 document 委派），所以複製即可，不必搬節點。
-  `.promo-card-feat` 抽屜因此永遠 `hidden`，只當內容來源與退路
-- **「即將結束」篩選 chip**（2026-09-20）：篩出有「最後 N 天／今天截止！」徽章的卡片。
-  ⚠️ **數量只能在前端算**——徽章是 `promos.js` 拿「今天」逐檔比 `period_end` 比出來的，
-  靜態生成當下寫死的數字隔天就錯（一次匯出可能掛好幾週）。`pmcBuildFilterChips_()`
-  只輸出一顆 `hidden` 的骨架 chip（`#promos-chip-ending`），數字與顯示與否由
-  `refreshEndingChip()` 決定，一張都沒有時整顆不出現、並把停在該篩選的狀態退回「全部」。
-  卡片上的 `data-has-ending` 也是它寫的
-- **搜尋框與「資料更新於」同一列**（2026-09-20 站長：桌機搜尋框不必佔整行）。
-  `.promos-search-row` 是 `flex-wrap: wrap`＋戳章 `margin-left: auto`：寬螢幕一左一右，
-  窄到放不下自然換成兩列、戳章仍靠右，不需要為手機另寫一組規則
-- 「查看全部 ›」取代舊的卡名旁 ⓘ 鈕，`data-section="card-special-section"`
-  讓內嵌詳情開完直接捲到「指定通路回饋」（`promos.js` 的 `pmc-open-card` 多帶一個
-  `section` 欄位，`js/home-ui.js` 收到後點一下對應的導覽鈕）
-
-**卡片特色的內容是部署時注入的，不是 Apps Script 生成的**
-
-`generatePromosPageHtml()` 只輸出空容器
-`<div class="promo-card-feat" data-feat-for="<card id>"></div>`，內容由
-`tools/build-promos-features.js` 在 Cloudflare Pages build 時填入（接在
-`tools/deploy-version.sh` 裡，跟商家頁生成器同一段、都在注入 `?v=` 之前）。
-
-**為什麼不在 Apps Script 算**：卡片特色的回饋率必須跟主站搜尋結果是同一個數字，
-而那份邏輯住在 `js/cashback-engine.js` 的 `getDisplayRate()`（stacking 加總、跨槽引用
-`rate_N`、級別 placeholder 都在裡面），Apps Script 讀不到 `js/`。抄進 `cards-export.gs`
-就會變成同一段邏輯的**第四份副本**——`cashback-engine.md` 第 6 節已明文警告
-「三處實作必須一致」。所以照 `tools/lib/merchant-cards.js` 的成例把 `js/` 載進 Node 的 vm 跑。
-
-**這個分工是自癒的**：Apps Script 下次匯出會把 `promos.html` 蓋掉、容器變回空的，
-部署時再注入一次。沒跑注入器時容器是空的，`promos.js` 會把「卡片特色」按鈕一起藏起來，
-頁面其餘部分照常可用——所以 preflight **不檢查**這個區塊（匯出的 commit 本來就沒有它）。
-
-🔴 **repo 一律 commit「空容器」版**（＝`tools/build-promos-page.js` 的原樣輸出），
-注入只發生在部署時。本機注入過要驗畫面沒問題，但 commit 前要用
-`node tools/build-promos-page.js` 還原。理由見下方教訓記錄 2026-09-18。
-
-**卡片特色的選題規則**（全部在 `tools/build-promos-features.js`，逐條有註解）
-
-| 規則 | 內容 |
-|---|---|
-| 標籤 | 一律顯示商家（`items` 前 3 個），**不顯示 `category`**；`category` 只在它描述達成條件（`/方案\|切換\|任務\|首次\|綁定\|登錄\|滿額\|滿千/`）時留成灰色後綴 |
-| 去重 | 同一個顯示標籤只留回饋率最高的那個（聯邦 LINE Bank 卡「萊爾富門市」有 10% 與 5% 兩槽）。**必須在挑前 5 名之前去重**，否則重複那行會佔掉名額 |
-| 固定行 | 「國內一般消費」讀骨幹槽 21（23/23 張都有）；「國外消費」讀 slot22，**沒有 slot22 就是沒有國外回饋，整行不顯示**（不推算） |
-| 分級卡 | 取**最高級別**。⚠️ 不能用 `levelSettings` 鍵順序——玉山 Uni／國泰 CUBE 由低到高，永豐大戶／凱基誠品由高到低。改成實算每個級別的最高回饋率再取最大 |
-| Highlights | 命中的槽**保證入列**，但跟其他槽一起依回饋率倒序（固定顯示 ≠ 排最前面）。merchant 可能是快捷搜尋 displayName（「所有計程車」），要先展開再比對；一卡一通路命中多組時**取回饋率最高**的那組 |
-| 卡片用途 | Sheets 的 `cardUseCase` 欄（選填）。**沒填就整行不出現**，可以慢慢填 |
-
-**本機重生 promos.html**：`node tools/build-promos-page.js` —— 用 vm 載入
-`cards-export.gs` 呼叫同一支純函數，沿用現有的 versionTag 與「資料更新於」日期，
-所以差異只會是生成邏輯本身的差異。⚠️ 這不改變「實際執行版在 Sheets」：
-改了 `cards-export.gs` 仍然必須把整份貼回 Sheets，否則下次匯出會用舊邏輯蓋掉。
-
-**已完成**：`promos.css` 舊卡片版型的死碼（`.promo-card-toggle`／`.promo-card-detail` 等）已於
-2026-09-21 清完（見本檔教訓記錄 2026-09-21 條與 `promos.css` 內的記錄），不用再處理。
-
-### 9b. 站長推薦＋行李箱專區（2026-09-23）
-
-promos.html 在 hero 與搜尋列之間多了兩區，都由 `generatePromosPageHtml()` 生成
-（`pmcSelectPicks_`／`pmcRenderPicks_`／`pmcSelectLuggage_`／`pmcRenderLuggage_`），
-**不受篩選、搜尋、「隱藏我持有的卡片」影響**（站長指定）。按鈕沿用清單的 `.promo-apply-btn`，
-GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期隱藏由 promos.js 的
-`refreshSectionBadges()` 處理。
-
-**New Cardholder Promos 新欄位**（依表頭名稱讀取，位置不拘，只是別插在 A 欄前）：
-
-| 欄位 | 填法 |
-|---|---|
-| `min_spend` | 拿到獎勵的最低消費，純數字。多段門檻填第一段最低的。**空白＝不限金額** |
-| `luggage_inch` | 行李箱吋數，純數字。有填＝這檔進行李箱專區 |
-| `luggage_value` | 參考價（官網公告價值或市售估價），純數字；空白顯示「—」 |
-| `pick_rank` | 1–5＝強制排在該位置；`x`＝不要自動選入；空白＝交給自動 |
-| `pick_question`／`pick_reason` | 手動情境問句／推薦理由；空白＝用自動產生的 |
-
-數字欄由 `pmcParseNumber_()` 讀，文字格式的 "3,280"、"NT$3,280" 也讀得對。
-
-**自動選榜規則**（`pmcSelectPicks_`）：
-1. `pick_rank` 1–5 先就位；同一張卡只出現一次
-2. 首刷禮／定額回饋／回饋加碼三類各至少 1 名（手動已涵蓋的類型不再補）
-3. 剩下的位置由定額回饋與回饋加碼比分數：定額＝`voucher_amount ÷ max(min_spend, 1000)`
-   （下限 1,000 是為了不讓「不限金額送 100 元」變成無限大）；加碼＝`bonus_rate`，通路含熱門
-   行動支付（`PMC_HOT_PAY`）×1.2。首刷禮沒有價值欄位（站長不做 gift_value），只比門檻低，
-   第 2 檔以後的首刷禮要靠 `pick_rank`
-4. 同分時截止日近的在前
-5. 只送行李箱的活動不進推薦區；多選一含行李箱的，推薦區只顯示非行李箱選項並附「另有行李箱選項」
-
-**行李箱專區**：依吋數大到小、同吋數門檻低的在前；少於 2 檔整區不出現。圖示高度＝吋數×倍率，
-所以大小差異是真比例。底部固定小字說明參考價來源（站長指定文案）。
-
-**舊資料保護**：`min_spend`／`pick_rank`／`luggage_inch` 三欄在整份資料裡都不存在時（Sheets 還沒貼
-新版程式），兩區都不輸出——免得用缺欄位的資料自動上榜。
-
-**2026-09-23 第二輪**：hero 下方加頁內索引列（`pmcJumpNav_`：站長推薦／行李箱專區／新戶活動，後者錨點是清單上方新增的「新戶活動」標題 `#all-promos`）；推薦區手機橫滑有分頁點（promos.js `setupPicksDots`）；行李箱專區附贈品圖（`gift_image_url`，點擊走同一個 lightbox）與「卡片特色」鈕（`data-feat-card` 指向清單同一張卡的 `.promo-card-feat`，開同一個 modal）；手機的「立即申辦」縮成「申辦」。**第三輪**：行李箱專區改成淡底獨立區塊、一檔一張白卡（桌機兩欄），贈品圖佔右欄，倒數徽章移到參考價／門檻那行尾，卡片特色＋申辦在卡片底部一列；`luggage_open` 欄位整個移除（站長評估開法不必獨立顯示）。
-
-**2026-10-04**：推薦卡片在申辦鈕上方加一列「活動詳情 ↓」（同行李箱專區的 `.pmc-lg-jump`，跳到清單裡那一檔並展開）＋「卡片特色」（`data-feat-card`，原地開 modal）；刻意不做「幫用戶填搜尋框」（會篩掉其他卡、要自己清掉才回得去）。推薦有一檔過期被藏時，promos.js 把標題改成實際張數（Top 4…），下次匯出才會從未過期的活動補滿。同日：附屬列的「活動詳情 ▾」改到摘要下一行（獎品圖仍在右側），摘要用 `pmcNoOrphanHtml_()` 把最後 3 字包成不換行，最後一行不會只剩 1 個字；`bonus_merchants` 的萬用標記不再原樣印出（見下方填法）。
-
-**`bonus_merchants` 填法**（2026-10-04 站長定義）：匯出只用**半形逗號 `,`** 切（`pmcRowToPromo_` 附近），全形「，」「、」不會切開。萬用標記要整格只填它一個，不跟通路名稱混填。
-- **`*general`**＝一般消費都算（不限通路；繳稅、預借現金等排除項寫在 `promo_condition`／備註）。主站：任何搜尋都會列出這檔，「匹配項目」顯示「一般消費皆適用」；新戶活動頁顯示「一般消費皆適用」
-- **`*all_items`**＝只加碼在這張卡原本的回饋通路上（省得手動列通路）。主站：展開成該卡 cashbackRates 的 items 來比對搜尋，詳情頁顯示「本卡所有指定通路」；新戶活動頁顯示「本卡所有指定通路（見卡片特色）」
-- 指定通路 → 逐一列名稱、用 `,` 隔開，名稱盡量跟該卡 cashbackRates 的 items 寫法一致（主站搜尋靠子字串比對）
-- 程式位置：主站 `isGeneralSpendingMarker()`／`isAllItemsMarker()`（core-utils）；生成器 `pmcIsGeneral_`／`pmcIsAllItems_`／`pmcMerchantsDisplay_`；AI 填表說明在 `benefits-parser.gs` 的 bonus_merchants description
-
-**`apps-script/promo-picks-fill.gs`**：`fillPickSuggestions()` 把「現在會上榜的 5 檔」的自動問句／理由
-寫進空白的 `pick_question`／`pick_reason`，給站長一個可改的起點。只填空格、不動 `pick_rank`。
-寫進去就變手動，之後數字改了不會跟著變，清空即恢復自動。需與 cards-export.gs 同一個專案。
+2026-11-22 整節（含 9a–9f）搬成獨立檔，舊編號對照在該檔開頭。這裡保留節號，讓第 10 節以後的編號不位移。
 
 ## 10. sitemap.xml 生成與 lastmod 原則（2026-08-16 補完）
 
@@ -616,7 +212,7 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 **改生成邏輯要把整份 `cards-export.gs` 貼回 Google Sheets**，否則下次匯出照樣蓋回舊格式。
 `robots.txt` 指向它，不需另外維護。
 
-**收錄的頁**：`/`（首頁）、`/landing`、`/faq`、`/promos`、`/merchant/<slug>`（URL 用 `encodeURIComponent`，中文 slug 是百分比編碼）。
+**收錄的頁**：`/`（首頁）、`/landing`、`/faq`、`/promos`、`/promos/<card id>`（2026-11-18）、`/merchant/<slug>`（URL 用 `encodeURIComponent`，中文 slug 是百分比編碼）。
 首頁 2026-08-16 才補進去——它是全站最重要的頁、`index.html` 本來就 self-canonical 到 `https://pickmycard.app/`，
 先前漏收純粹是疏忽（漏收不會讓 Google 不索引首頁，但少一個明確信號）。
 
@@ -628,8 +224,9 @@ GA4 事件多帶 `section`（picks／luggage／list）。倒數徽章與過期�
 |---|---|
 | `/` | `homeUpdatedIso`＝`cards.data` 內容指紋（首頁內容整份由 cards.data 前端渲染）。**指紋刻意排除 `lastUpdated` 欄位**——那是匯出當下的時間戳，每次必變，含進去指紋就永遠不相等 |
 | `/landing` `/faq` | 寫死的常數（不隨匯出變動；改版時手動更新 `generateSitemapXml_` 裡的日期） |
-| `/promos` | `promosUpdatedIso`（見第 9 節，與可見戳章／JSON-LD `dateModified` 同源） |
+| `/promos` | `promosUpdatedIso`（見 `docs/project/promos.md` 第 1 節，與可見戳章／JSON-LD `dateModified` 同源） |
 | `/merchant/<slug>` | 同 `homeUpdatedIso`——商家頁＝index.html 版面 ＋ cards.data 算出的卡片清單，會變的來源就是 cards.data，與首頁同一個訊號 |
+| `/promos/<card id>` | `promoCardUpdatedIso[id]`＝該卡自己的指紋（2026-11-18，見 `docs/project/promos.md` 第 7 節）。只收今天還有進行中活動的卡 |
 
 **`homeUpdatedIso` 也寫進 `cards.data`（欄位 `contentUpdatedIso`，2026-10-30）**：商家頁生成器把它烤進 HTML
 （頁尾可見日期＋JSON-LD `dateModified`），前端頁尾也優先顯示它——頁面上看到的日期、`dateModified`、
@@ -800,77 +397,72 @@ node tools/build-merchant-pages.js --verify   # 用 Playwright 開真頁，逐�
 
 ## 12. Apps Script 相關的既有文件
 
-- `apps-script/README.md`：權益監控（checkWatchlist、Watchlist 工作表、MONITOR_CONFIG）
+- `apps-script/README.md`：權益監控（checkWatchlist、Watchlist 工作表、MONITOR_CONFIG）。2026-08-16 監控摘要「假新增」的修法（`refineDiff_` 比詞、prompt 規則 D1–D4：要說新增，該詞必須在程式算出的新詞清單裡）與 6 分鐘執行上限的接力設計都在那裡
+- **凡是「每列都打外部 API」的 Apps Script 迴圈**，一律照 `checkWatchlist` 加「開跑前看錶」煞車（`maxRunSeconds`）＋指令碼屬性進度游標（要設過期時間）＋一次性觸發器接續。Apps Script 單次 6 分鐘硬上限是直接砍掉，收尾的寄信會無聲消失；清接力觸發器只能比對 `uniqueId`，掃著刪會把週期觸發器一起刪掉（2026-09-11）
 - `BENEFITS-AUTOMATION-PLAN.md`：權益自動化整體規劃
 - `CARDS-DATA-CACHE-README.md`：快取機制教學
 - `FIRESTORE-RULES-README.md`：Firestore 規則套用教學（規則本體在 repo 的 `firestore.rules`，唯一正確版本）
 
+## 13. Sheets 內的編輯工具（不是工作表）
+
+（2026-11-22 從第 2 節第 15–17 項搬來，那一節只放工作表本身。）
+
+1. **單卡編輯器**（2026-11-11）—— 不是工作表，是 Cards Data 的直式操作介面（大視窗）（`apps-script/card-editor.gs` ＋
+    `CardEditor.html`，選單「🎯 卡片管理 ▸ 📝 單卡編輯器」）。依標題名稱動態對應欄位、只寫改過的格子、公式欄唯讀、
+    存檔前跑 `pmcValidateCardRow_`（`cards-export.gs`，與 `runQACheck` 檢查 12 共用）、級別改名／刪除／預設級別換人要確認。
+    **改 Cards Data 的欄位命名規則（如新增 `xxx_N` 槽位欄）時**：編輯器自動吃新欄，但若新欄是數字／日期／勾選框，
+    要把它加進 `card-editor.gs` 頂部的 `CE_NUMERIC_*`／`CE_DATE_RE_`／`CE_BOOL_RE_`，否則會被當成文字寫入。
+    2026-11-15 加槽位工具列：複製到空槽位／清空／還原這個槽位（純畫面操作，存檔路徑不變）。**刻意不做槽位搬移**——
+    槽位編號被 `cashbackModel` 的 `rate_N` 與 `levelSettings` 的 `onlySlots`／`keepSlots` 引用，搬了會悄悄錯位。
+    改 `CardEditor.html` 後跑 `node tools/apps-script-tests/card-editor-ui-test.js`。
+    安裝與保護機制見 `apps-script/README.md`「單卡編輯器」
+2. **新戶活動編輯器**（2026-11-11）—— New Cardholder Promos 的「一張卡一頁」介面（`apps-script/promo-editor.gs` ＋
+    `PromoEditor.html`，選單「🎁 新戶活動編輯器」）。申辦按鈕視為卡片層級（改了寫到原本有填的每一列）、新增活動插在同卡最後一列下、
+    不提供刪除（下架＝取消 active）、存檔前跑 `pmcValidatePromoRow_`（與 `runQACheck` 檢查 13 共用，一律 ⚠️）。
+    改這張表的欄位時：數字欄要加進 `promo-editor.gs` 的 `PE_NUMERIC_FIELDS_`、日期欄加進 `PE_DATE_FIELDS_`，
+    想在畫面上分到某組就加進 `PE_GROUPS_`（沒加的欄位自動出現在「其他欄位」）。說明見 `apps-script/README.md`「新戶活動編輯器」
+3. **活動快寫**（2026-11-12；11-13 搬進試算表）—— 不是工作表，是「貼一段活動原文 → 解析 → 寫進表」的工具，
+    選單「🎯 卡片管理 ▸ ✍️ 活動快寫」（少量活動用，批量仍走自動化檔的 3-貼上原文 → 4-待審核）。
+    - **三層檔案**：來源在 `tools/activity-writer/`（`index.html`＋`parser.js`＋`app.js`）→ `build-apps-script.js` 併成
+      **生成檔 `apps-script/ActivityWriter.html`（禁止手改，preflight 會擋不一致）**；試算表端是 `apps-script/activity-writer.gs`
+    - **改了 `tools/activity-writer/` 任何一支 → 跑 `node tools/activity-writer/build-apps-script.js`、生成檔一起 commit**；
+      合併進 main 後 GitHub 自動部署到「PMC 管理系統」（`deploy.json` 第二個專案，**只列這兩支**；`cards-export.gs` 等仍手動貼）
+    - **三種活動**：一般活動（`rate_N` 那組）、領券活動（`couponMerchant_N` 那組，2026-11-13 加入，只有規則解析、沒有 AI）、新戶活動。
+      自動判斷順序：有新戶字樣 → 新戶；否則有領券／優惠券 → 領券；其餘一般
+    - 寫入不自己做，交給兩個編輯器：一般／領券活動 → `cardEditorSave`（寫進選定的 `rate_N` 或 `couponMerchant_N`，有內容的槽要按兩次才覆蓋，
+      空的 `daysRemaining_N`／`period_N` 補公式）；新戶活動 → `promoEditorSave`（插在同卡最後一列下面）。
+      **依欄名寫入**，所以欄位順序變動不影響寫入（只影響「複製一列」→ 那個要改 `parser.js` 的 `RATE_COLS`／`PROMO_COLS`）
+    - 資料讀**表上現況**（`activityWriterInit`）；只有快捷搜尋／統一詞表／行動支付別名沿用線上 `cards.data`，讀不到照樣能用
+    - **規則解析為主、不需要 AI**；「用 AI 重新解析」是選用的（Gemini，金鑰＝該專案的指令碼屬性 `GEMINI_API_KEY`）
+    - `tools/activity-writer/index.html` 直接開是**本機開發／測試版**（讀 `cards.data`、只能複製、不能寫入）。
+      **正式網址 `/tools/activity-writer/` 已於 2026-11-14 下架**：`tools/deploy-version.sh` 在 Cloudflare Pages 部署時（`CF_PAGES=1`）
+      把整個 `tools/activity-writer/` 從部署內容刪掉；repo 裡的檔照留（生成檔的來源＋測試）
+    - **審核區**（2026-11-14）：黃色（`notes[欄].level === 'check'`）的格子集中在「需要你審核」，每格一個勾選框；
+      `conditions`／`promo_condition`／`couponConditions` 不論信心一律進審核區。**寫入與複製只出綠色＋有勾的，沒勾的那格送空值**
+      （`app.js` 的 `outFields()`；覆蓋既有槽時空值會把那格清掉）。親手改過的格子自動打勾；原文變了重新解析，勾選重來。
+      率、通路與新戶必填（`MUST_CONFIRM`：rate／items／couponRate／couponMerchant／bonus_rate／bonus_merchants／promo_types／new_customer_summary）
+      在審核區沒勾 → 擋下不寫。要讓某欄「預設就要審核」→ 在 `parser.js` 把它的 note 設成 `check`，或加進 `app.js` 的 `ALWAYS_REVIEW`
+    - **一次貼進多個活動**（2026-11-14，`parser.js` 的 `splitActivities()`）：只有**行首、【】、帶編號**的標題（【活動1】【活動2：…】，
+      也收「優惠／方案」＋數字）出現兩個以上才提供「拆成 N 個分頁」——一頁一個活動、各自判斷類型、各自寫入，不同畫面顯示；
+      標題前的共用段（活動期間）與最後的注意事項每頁都帶，內文點名「活動N」的句子只給被點名的那幾頁。
+      其餘情況（只在內文提到活動2、幾個【】段落的回饋率不同）**只提示不拆**——拆錯比不拆糟，別放寬成自動拆
+    - 解析規則在 `parser.js`（與 `card-benefits-parser.gs`／`benefits-parser.gs` 的 prompt 規則同調，**改一邊的欄位寫法規則要看另一邊**）
+    - 新戶活動的幾條判讀規則（2026-11-13 依站長實測調整，樣本是 `samples.js` 的 `promoInsurance`）：
+      **特定族群新戶**（原文有「保險新戶定義：」這種帶族群名的定義）用原文的定義、不沿用同卡現有的全行新戶定義；
+      **`bonus_rate` 只填這檔活動自己加碼的部分**（最高 8% ＝ 加碼 6% ＋ 原權益 2% → 0.06，合計數字只放摘要）；
+      **`bonus_merchants`** 有具體商家用商家、沒有就用類別詞（保費），付款方式／被排除的支付工具／時段（假日）不算通路；
+      **`promo_condition`** 本文有條列用條列，沒有就從本文挑句子拼草稿，「注意事項」之後的 (1)(2)(3) 是細則、最後才用；
+      **領券≠登錄**，且只抄原文寫出來的限制（不自己補「與其他新戶活動擇一」）；`priority` 欄 2026-11-13 已刪（全表都是 99；匯出找不到這欄一樣當 99，前端排序不受影響）
+    - 一般／領券共用的判讀規則（2026-11-13 第二個實測樣本 `cubeCoupon`）：**`category` 只在原文整個出現既有分類名、或有短的【】標題時才填，
+      其餘留空**（不取第一行、不猜）；排除條款只取到逗號、去重、最多 3 條，不收「等排除商品」這種形容詞用法、括號內補充、分期利率樣板；
+      「本活動限…」整句照抄成條件；有具體商家時支付工具與時段（假日）不進通路；認卡看別名出現次數與後面有沒有接「卡」
+    - 版面是 12 欄格線（`app.js` 的 `RATE_FIELDS`／`PROMO_FIELDS` 第 4 個值＝佔幾格），說明文字預設收成一行、點一下展開；
+      `ui-test.js` 會擋「新戶 26 欄排不進一個畫面」
+    - 測試：`node tools/activity-writer/parser-test.js`（解析）、`node tools/activity-writer/ui-test.js`（介面：本機版＋試算表視窗版，伺服器與 AI 用假回應）、
+      `node tools/apps-script-tests/activity-writer-test.js`（試算表端寫入＋自動部署，假試算表）
+
 ## 教訓記錄
-- [2026-09-21] 上線前清 `/promos` 死碼，一併修掉兩個沒被發現的 bug：
-  `.promo-card-stack .promo-act { padding: 17px 16px 11px }`（桌機）與
-  `{ padding-inline: 14px }`（≤480px）是「卡疊卡」時代寫給活動卡本體的，改成附屬列之後
-  `.promo-act` 只剩一層外框，那些內距變成**多出來的**——每一列白白高了 28px。
-  → 規則：**把一個 class 的角色換掉（從「卡片」變成「外框」）時，要把所有
-  `.祖先 .那個 class` 的規則重新掃一遍**，不是只改新寫的那幾條。
-  清理判準（可重複使用）：**選擇器裡只要有一個 class 不會出現在生成的 HTML，
-  整條就永遠不可能命中**——用這個判準掃出 53 條死規則（改版前的 `.promo-hero*` /
-  `.promo-card-toggle` / `.promo-card-detail` 那一整套）。
-  ⚠️ 用腳本刪 CSS 規則時**必須先剝掉註解再分析選擇器**：註解裡出現的 class
-  （例如提到 `.cashback-rate-num`）會讓判斷失準，也不能用 regex 直接刪，
-  逗號分隔的選擇器群組會被切壞（2026-09-17 就是這樣把 chips 的樣式刪掉過）。
-- [2026-09-21] `/promos` 附屬列「點開之後上面的小標和獎品圖跟著跑位」：兇手是把
-  **排版**綁在互動狀態上的一組規則——`.promo-sub-row[aria-expanded="true"]` 同時改了
-  `align-items`（center → flex-start）並給金額欄／meta／獎品圖各加 `margin-top: 1px`。
-  本意是「展開後標題攤成多行，金額要對到第一行」，但它對**每一列**生效：首刷禮列的
-  標題本來就不截斷、展開前後一樣高，卻照樣被整排推上去；手機上非首刷禮列也常常前後
-  同高（2 行 clamp 展開後還是 2 行），一樣白跳。
-  **通則：只有「因為內容變高而不得不動」的東西可以動，對齊方式本身要與展開狀態無關。**
-  改法是把 `align-items: flex-start` 寫成 `:not(.is-gift)` 的常駐規則、首刷禮列維持置中，
-  展開時只留下換底色。順手發現同一組還有一顆地雷：沒有獎品圖時補的
-  `.promo-sub-thumb.is-empty` 是 34px **見方**，齊頂之後會在文字底下留一塊空白——
-  它只負責「把標題欄對齊」，所以改成留寬度、`height: 0`（桌機列高 53px → 41px）。
-  驗收方式：Playwright 量同一顆類型 chip 與獎品圖展開前後的 `x/y`，要**逐字相同**，
-  不能只用肉眼看。
-  **後續（同日晚上）**：附屬列改成 grid 一列兩排之後，獎品圖與「詳情」搬進跨兩排、
-  垂直置中的 `.promo-sub-meta`，位置在結構上就與文字行數無關，這類補償規則一條都不需要。
-  這才是根治——把「不該動的東西」放進一個它動不了的格子，而不是逐條補償。
-- [2026-09-21] `/promos` 手機版單檔卡按鈕貼死在卡片圖下緣：`@media (max-width: 1024px)`
-  裡那條 `.promo-card[data-act-count="1"] .promo-card-actions { order: -1; margin-top: 0 }`
-  是「按鈕還住在 `.promo-card-main` 時」寫的，按鈕搬進 `.promo-card-rail--solo` 之後
-  `order` 已經沒有意義，`margin-top: 0` 卻還在生效、把 rail 給的間距清成 0。
-  **這就是「元素換了角色，舊規則沒跟著掃」的第二次**（第一次是 `.promo-card-name`）。
-  搬動任何節點之後，一定要 `grep` 舊 class 在所有 media query 裡的出現位置逐條確認。
-- [2026-09-21] `/promos` 附屬列「NT$500 貼死左緣、箭頭貼死右緣」：`.promo-sub-row`
-  寫了 `padding: 9px 16px`，但它同時掛著 `promo-act-row`，而 `.promo-act-row`（0,1,0）
-  設了 `padding: 0`——**兩條同分，後定義的 `.promo-act-row` 贏**，內距整個沒生效 →
-  規則：**沿用既有 class 換一套樣式時，覆寫選擇器一律寫成雙 class**
-  （`.promo-act-row.promo-sub-row`），並在驗收時直接讀 `getComputedStyle(el).padding`，
-  不要只看 CSS 原始碼有沒有寫。這是本頁第二類 specificity 陷阱，與
-  「author `display` 蓋掉 `[hidden]`」並列。
-  同一輪還踩到 flex 版的同類問題：`.promo-sub-meta` 設 `flex: none` 時，
-  首刷禮那幾列的長 meta 會把 `flex: 1 1 0` 的標題擠成 0 寬（整列只剩徽章）；
-  改成 `flex: 0 1 auto` ＋ `max-width` 封頂才對——**會變長的欄位一定要可壓縮**。
-- [2026-09-20] `/promos` 第四次踩「author 的 `display` 蓋掉 `[hidden]`」：新增的「即將結束」
-  chip 在沒有任何即將到期的卡時仍然露出來，因為 `.promo-chip` 設了 `display:inline-flex`。
-  前三次是倒數徽章、堆疊層、卡片本身的類型篩選 → 通則：**這頁（以及任何 author 大量設
-  `display` 的頁）每新增一個「靠 `el.hidden` 控制顯示」的元素，就要同時補一條
-  `[hidden] { display: none; }`**；驗收一律看 `getComputedStyle(el).display`，
-  不要看 `el.hidden`（屬性是 true 不代表真的沒顯示，2026-09-18 就是這樣驗錯過）。
-- [2026-09-18] `tools/build-promos-features.js` 的注入用 `/<div ...>([\s\S]*?)<\/div>/`（非貪婪配第一個
-  `</div>`）**不具冪等性**：容器裝進帶巢狀 `<div>` 的內容後，第二次執行時「第一個 `</div>`」
-  變成內層元素的結尾，只換掉前半段、後半段原地留下 → 卡片特色整份變兩份。上線才發現：
-  repo commit 的是已注入版，Cloudflare build 又跑一次，preview 上每張卡都重複。
-  兩個修法都要做：(1) 改成**數 `<div>` 巢狀深度**找配對的結尾標籤；
-  (2) **repo 只 commit 空容器版**，注入僅發生在部署時——即使冪等，repo 與匯出端的內容
-  也不該分岔。通則：**任何「就地改寫 HTML」的生成器都要能重複執行**，
-  因為部署流程沒有保證只跑一次。
-
-
-- [2026-07-15] 搜尋結果出現 6/30 已過期的新戶活動 → script.js 載入時的過期過濾用了只認「/」格式的舊 `parseDateString()`，ISO `period_end` 解析成 null 被當「無截止日」永久保留（正是第 8 節陷阱，該函數早於規則存在）→ 已改用 `parseISODate()`（該函式已於 2026-11-17 併入 `taiwanDaysUntil()`／`getRateStatus()`） 並刪除 `parseDateString`；日後看到「過期活動還在顯示」先查日期解析格式，並 Grep 手刻 `.split('/')`/`.split('-')` 的日期比較
-- [2026-08-16] 監控摘要連寫三件不實變動（新增通路/活動下架/新增海外加碼，全部沒發生） → diffSegments_ 是「切段比字串」，商店清單重排會讓每一刀位置全變、產生 8 行假新增；且 classifyDiff_ 從來沒拿到舊版全文，等於逼 AI 猜「這是不是新的」 → 加 refineDiff_ 改比「詞」（零新詞才丟整行）＋把舊全文與程式算出的新詞清單一起餵給 AI；規則 D2：要說新增，該詞必須出現在新詞清單裡
-- [2026-09-02] 改好生成器、站長也貼進 Sheets 了，線上 promos 頁尾仍缺新連結，連兩輪以為沒貼 → `promos.html`／`sitemap.xml` 是**匯出時**才重生的，改生成器不會讓線上立刻變；而線上服務的就是 repo 這份 → 生成檔的改動要「兩手都做」：改 `apps-script/cards-export.gs`（＋貼進 Sheets）**並且**把 repo 那份手動補成與生成器輸出**逐字一致**（不一致會在下次匯出來回打架）；驗收方式是請站長觸發一次匯出後 grep 該關鍵字
-- [2026-09-11] `checkWatchlist` 每週寄回 Apps Script 失敗信（`Exceeded maximum execution time`，起訖剛好 6 分 00 秒），一度以為是「排程要人工重新授權」 → 不是授權問題，是 Apps Script 單次執行 6 分鐘硬上限：監控清單一長，每列一次網頁抓取（Jina 渲染 30~60 秒）＋一次 Gemini 呼叫就撞得到；超時是**直接砍掉**，逐列即時寫的快照與分頁都在，但收尾的 `sendDigest_` 整個不執行＝通知信無聲消失 → 凡是「每列都要打外部 API」的 Apps Script 迴圈，一律加「開跑前看錶」的煞車（`maxRunSeconds`，比照 `register-link-finder.gs`）＋指令碼屬性存進度游標＋一次性觸發器自動接續；游標一定要設過期時間（排程觸發器撿到舊游標會靜悄悄跳過清單前半段），清除接力觸發器**只能比對 uniqueId**（Trigger API 分辨不出一次性與週期性，掃著刪會把每週觸發器一起刪掉）
-- [2026-09-29] 站長把活動槽加到 `rate_26` 後盤點，`cards-export.gs` 匯出正常，但 slot 23–26 裡「需登錄」的活動不會被標黃、不會抓登錄連結、也不會查死連結（靜默、無錯誤訊息） → `register-link-finder.gs` 的 `REGLINK_CONFIG.maxSlots` 寫死 22（就是 2026-07「匯出迴圈寫死 21 吃掉 slot 22」那個坑換一支程式重演，當時只修了匯出端） → 凡是照 `欄名_N` 橫向展開的迴圈，上限一律依表頭自動偵測（`cards-export.gs` 的 `maxSlotIndex()`／`register-link-finder.gs` 的 `regLinkMaxSlot_()`），禁止寫死數字；加槽位時順手 `grep -rn 'maxSlots\|<= 2[0-9]' apps-script/` 確認沒有漏網的寫死上限
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
-- [2026-10-21] promos 頁尾隨主站重排、首刷禮多選一改懸掛縮排（`pmcGiftNameHtml_` 包 `.promo-gift-item`）→ 這類「生成器標記＋promos.css」一起改的變更，**兩邊上線時間不同**：promos.css merge 就上線，promos.html 要等站長把 `cards-export.gs` 貼回 Sheets、下一次匯出才換新標記（期間每次匯出都會用舊生成器蓋回舊標記）→ promos.css 的新規則必須同時讓舊標記排得能看（這次保留 `.sponsor-section`、`.social-link.privacy` 相關選擇器並用舊標記實測截圖），等新標記上線後再清掉相容規則；驗收時兩種標記都要看
+
+> 2026-11-22 精簡：原有 13 條已全數歸入正文（promos 的 CSS 與生成器坑進 9f（現 `promos.md` 第 9 節），其餘進第 2、8、12 節；監控兩條的細節本來就在 `apps-script/README.md`），原文見 `docs/archive/data-pipeline.md-2026-11-22.bak`。新教訓照常追加在這行下面。

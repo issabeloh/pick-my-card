@@ -71,7 +71,7 @@ function runQACheck() {
   const qaSheet = ss.getSheetByName('QA Check');
 
   if (!dataSheet || !qaSheet) {
-    SpreadsheetApp.getUi().alert('找不到必要的工作表！');
+    pmcUi_().alert('找不到必要的工作表！');
     return;
   }
 
@@ -323,7 +323,7 @@ function runQACheck() {
   const warningCount = issues.filter(issue => issue[5] === '⚠️').length;
 
   // 顯示結果
-  const ui = SpreadsheetApp.getUi();
+  const ui = pmcUi_();
   if (criticalCount === 0 && warningCount === 0) {
     ui.alert('✅ 資料品質檢查完成', '沒有發現任何問題！可以安全匯出 JSON。', ui.ButtonSet.OK);
   } else {
@@ -371,6 +371,23 @@ function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, c
   Object.keys(cardApplyCtas || {}).forEach(function(cid) {
     if (!idSet[cid]) {
       problems.push('申辦 CTA（cardApplyCtas）的卡片 id「' + cid + '」對不到任何卡片');
+    }
+  });
+
+  // 申辦連結的網域把關（2026-11-17）：FAQ「安全」分類對用戶聲明「連結只會前往發卡銀行官網或
+  // Money101、每次更新都會逐一核對」（文案在 Sheets 的 FAQ 工作表），核對就在這裡。判斷與頁面上的去向標示共用 pmcApplyDest_，
+  // 所以「這裡沒報」＝「頁面上不會出現『前往 <陌生網域>』」。
+  // 只在卡片帶 website 時檢查——手動檢查用的精簡 reader 可能沒讀這一欄，沒有比對基準就不報。
+  const cardById = {};
+  (cards || []).forEach(function(c) { if (c && c.id) cardById[c.id] = c; });
+  Object.keys(cardApplyCtas || {}).forEach(function(cid) {
+    const card = cardById[cid];
+    const link = cardApplyCtas[cid] && cardApplyCtas[cid].link;
+    if (!card || !card.website || !link) return;
+    const dest = pmcApplyDest_(link, card);
+    if (!dest || dest.kind === 'other') {
+      problems.push('申辦 CTA「' + cid + '」的連結網域（' + (pmcHostOf_(link) || '無法解析') +
+        '）不是這張卡的銀行官網、也不是 Money101——請確認連結有沒有貼錯卡');
     }
   });
 
@@ -555,6 +572,41 @@ function normalizeMerchantKey_(name) {
 }
 
 // ==========================================
+// 手機匯出：沒有試算表畫面時的替身 UI（2026-11-18）
+// ==========================================
+// SpreadsheetApp.getUi() 只有從試算表選單執行時拿得到；在 Apps Script 編輯器按「執行」
+// （手機上只能這樣跑）會直接丟「Cannot call SpreadsheetApp.getUi() from this context」，
+// 匯出第一行就停。拿不到時改用這個替身：所有對話框改寫進「執行記錄」，
+// 需要回答「是／否」的一律當成「否」——也就是：
+//   ・QA 有 ❌ 嚴重問題 → 照樣擋下（跟電腦一樣）
+//   ・card_id 對不到／申辦連結網域不對 → 手機上沒辦法問你，**一律取消匯出**（電腦上可以選擇硬發布）
+//   ・只提醒不擋的（精選排序、寫法不一致）→ 寫進記錄、照常匯出
+// 從選單執行時拿得到真的 UI，行為跟以前完全一樣。
+// 用法：手機開 Apps Script → 上方函式選 exportToJSON → 執行 → 看下方「執行記錄」最後一行。
+function pmcUi_() {
+  try {
+    return SpreadsheetApp.getUi();
+  } catch (e) {
+    return PMC_HEADLESS_UI_;
+  }
+}
+const PMC_HEADLESS_UI_ = {
+  ButtonSet: { OK: 'OK', OK_CANCEL: 'OK_CANCEL', YES_NO: 'YES_NO', YES_NO_CANCEL: 'YES_NO_CANCEL' },
+  Button: { OK: 'OK', CANCEL: 'CANCEL', YES: 'YES', NO: 'NO', CLOSE: 'CLOSE' },
+  // ui.alert 有三種呼法：alert(訊息)／alert(訊息, 按鈕組)／alert(標題, 訊息, 按鈕組)
+  alert: function (a, b, c) {
+    const hasTitle = typeof b === 'string';
+    const buttons = hasTitle ? c : b;
+    console.log('【' + (hasTitle ? a : '訊息') + '】\n' + (hasTitle ? b : a));
+    if (buttons === 'YES_NO' || buttons === 'YES_NO_CANCEL' || buttons === 'OK_CANCEL') {
+      console.log('（手機模式沒辦法回答這個問題，一律當作「否」。要硬發布請用電腦從選單匯出）');
+      return buttons === 'OK_CANCEL' ? 'CANCEL' : 'NO';
+    }
+    return 'OK';
+  }
+};
+
+// ==========================================
 // 匯出 JSON 功能（新增 QuickSearch）
 // ==========================================
 
@@ -564,7 +616,7 @@ function exportToJSON() {
   const paymentsSheet = ss.getSheetByName('Payments');
   const quickSearchSheet = ss.getSheetByName('QuickSearch');
   const qaSheet = ss.getSheetByName('QA Check');
-  const ui = SpreadsheetApp.getUi();
+  const ui = pmcUi_();
 
   // 先執行 QA 檢查
   runQACheck();
@@ -1090,7 +1142,7 @@ if (faqSheet) {
   const refProblems = validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, cardApplyCtas);
   if (refProblems.length > 0) {
     const proceed = ui.alert(
-      '⚠️ 發現 ' + refProblems.length + ' 個參照問題（card_id 對不到卡片）',
+      '⚠️ 發現 ' + refProblems.length + ' 個參照問題（card_id 對不到卡片，或申辦連結網域不對）',
       refProblems.slice(0, 20).join('\n') +
         (refProblems.length > 20 ? '\n…（其餘 ' + (refProblems.length - 20) + ' 個略）' : '') +
         '\n\n這些引用會讓前端靜默退回手打文字或不顯示申辦按鈕。\n仍要繼續匯出嗎？',
@@ -1141,7 +1193,7 @@ if (faqSheet) {
   // 上次的指紋＋日期存在 Script Properties（Apps Script 端持久化，不佔 repo 檔案、不多一個
   // commit、維護者流程零改動）。首次執行或指紋不符 → 蓋今天並寫回。這個 promosUpdatedIso 之後
   // 同時餵給：generatePromosPageHtml（可見戳章＋JSON-LD dateModified）與 sitemap 的 promos
-  // lastmod，三處同源一致（見 data-pipeline.md 第 9 節）。
+  // lastmod，三處同源一致（見 promos.md 第 1 節）。
   // （2026-08-16 起共用 pmcStampedDate_，key 沿用 PROMOS_*，語義與存的屬性都不變）
   const promosUpdatedIso = pmcStampedDate_('PROMOS', pmcPromoSignature_(newCardholderPromos));
 
@@ -1190,6 +1242,18 @@ if (faqSheet) {
     promosUpdatedIso: promosUpdatedIso
   });
 
+  // 單卡頁 /promos/<card id>（2026-11-18）：頁面本體在部署時由 tools/build-promo-card-pages.js 生成，
+  // 這裡只算「哪些卡有頁」與「每一頁自己的更新日」。日期用每張卡自己的指紋（活動＋申辦連結＋卡名），
+  // 一張卡改活動不會讓其他頁的 lastmod 一起前進（同 promos／首頁的狼來了原則，見 data-pipeline.md 第 10 節）。
+  // 日期放進 cards.data（promoCardUpdatedIso），部署端烤進頁面的「資料更新於」與 JSON-LD dateModified，
+  // 跟 sitemap 的 lastmod 同源。它不在 homeUpdatedIso 的指紋裡（同 contentUpdatedIso），不會造成每次都變。
+  const promoExportData = { cards: cards, newCardholderPromos: newCardholderPromos, cardApplyCtas: cardApplyCtas };
+  const promoCardUpdatedIso = {};
+  pmcPromoCardPageIds_(promoExportData).forEach(function (id) {
+    promoCardUpdatedIso[id] = pmcStampedDate_('PROMOCARD_' + pmcHashString_(id),
+      pmcPromoCardSignature_(id, promoExportData));
+  });
+
   // 生成 cards.json 內容
   const jsonContent = JSON.stringify({
   lastUpdated: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy/M/d"),
@@ -1197,6 +1261,8 @@ if (faqSheet) {
   // HTML（可見日期＋JSON-LD dateModified），前端頁尾也優先顯示它（2026-10-30）。
   // 它由上面的指紋算出，本身不在指紋裡，不會造成「每次都變」。
   contentUpdatedIso: homeUpdatedIso,
+  // 單卡頁各自的更新日（見上方 promoCardUpdatedIso），鍵＝有單卡頁的卡片 id
+  promoCardUpdatedIso: promoCardUpdatedIso,
   cards: cards,
   payments: payments,
   quickSearchOptions: quickSearchOptions,
@@ -1225,7 +1291,7 @@ if (faqSheet) {
   //    每次匯出都在 Drive 堆兩個永不清理的檔案；歷史版本備份由 GitHub
   //    的 commit 紀錄承擔，原始資料的備份由 Google Sheets 版本記錄承擔）。
   const encoded = Utilities.base64Encode(jsonContent, Utilities.Charset.UTF_8);
-  const version = publishToGitHub(encoded, promosPageHtml, merchantPages, promosUpdatedIso, homeUpdatedIso);
+  const version = publishToGitHub(encoded, promosPageHtml, merchantPages, promosUpdatedIso, homeUpdatedIso, promoCardUpdatedIso);
 
   ui.alert(
     '✅ 匯出完成',
@@ -2270,7 +2336,7 @@ function generateSearchTerms(id, name) {
 // 回傳完整 HTML 字串。內部不得呼叫任何 Sheets/Apps Script API（連 Utilities 也不用），
 // 這樣同一份程式碼才能被 exportToJSON() 與 Node harness（repo 初版由
 // scratchpad 的臨時 harness 呼叫本函數，餵現有 cards.json 產生）共用、行為保證一致。
-// 詳見 docs/project/data-pipeline.md「promos.html 靜態生成」一節。
+// 詳見 docs/project/promos.md 第 1 節「promos.html 靜態生成」。
 
 const PMC_SITE_URL = 'https://pickmycard.app';
 const PMC_OG_IMAGE = 'https://pickmycard.app/assets/images/pickmycard-social-share.png?v=20261007-2';
@@ -2281,20 +2347,16 @@ const PMC_CHIP_DEFS = [
   { key: 'voucher', label: '定額回饋' }
 ];
 
-function generatePromosPageHtml(exportData) {
+// 新戶活動的共用前處理（2026-11-18 從 generatePromosPageHtml 抽出）：過期過濾、分組、排序、錨點。
+// 清單頁與單卡頁（generatePromoCardPages，見下方）吃同一份結果，兩邊的組內順序、錨點 id、
+// 申辦連結才不會分岔。純函數，todayIso 由呼叫端傳入（過期過濾必須用「實際今天」）。
+function pmcPreparePromoGroups_(exportData, todayIso) {
   const cards = (exportData && exportData.cards) || [];
   const promos = (exportData && exportData.newCardholderPromos) || [];
   const cardApplyCtas = (exportData && exportData.cardApplyCtas) || {};
 
   const cardsById = {};
   cards.forEach(function (c) { if (c && c.id) cardsById[c.id] = c; });
-
-  const todayIso = pmcTodayISO_();
-  // 「資料更新於」戳章／sitemap lastmod／JSON-LD dateModified 三處共用的日期：由 exportToJSON
-  // 依 promo 內容指紋決定（內容沒變就沿用上次那天），透過 promosUpdatedIso 傳入；沒傳（Node
-  // 初版 harness、或第一次生成）就退回今天。注意這條「更新日」不等於 todayIso——todayIso 仍
-  // 專責過期過濾與 versionTag 快取破壞（那兩件事必須用「實際今天」），別混用。
-  const updatedIso = (exportData && exportData.promosUpdatedIso) || todayIso;
 
   // 過濾已過期活動：period_end 存在且早於今天才濾掉；無 period_end（不限期）永遠保留
   const activePromos = promos.filter(function (p) {
@@ -2376,6 +2438,22 @@ function generatePromosPageHtml(exportData) {
     g.buckets.forEach(function (b) { bucketCounts[b] = (bucketCounts[b] || 0) + 1; });
   });
 
+  return { cardsById: cardsById, prepared: prepared, groups: groups, bucketCounts: bucketCounts };
+}
+
+function generatePromosPageHtml(exportData) {
+  const todayIso = pmcTodayISO_();
+  // 「資料更新於」戳章／sitemap lastmod／JSON-LD dateModified 三處共用的日期：由 exportToJSON
+  // 依 promo 內容指紋決定（內容沒變就沿用上次那天），透過 promosUpdatedIso 傳入；沒傳（Node
+  // 初版 harness、或第一次生成）就退回今天。注意這條「更新日」不等於 todayIso——todayIso 仍
+  // 專責過期過濾與 versionTag 快取破壞（那兩件事必須用「實際今天」），別混用。
+  const updatedIso = (exportData && exportData.promosUpdatedIso) || todayIso;
+
+  const pg = pmcPreparePromoGroups_(exportData, todayIso);
+  const prepared = pg.prepared;
+  const groups = pg.groups;
+  const bucketCounts = pg.bucketCounts;
+
   const cardsHtml = groups.map(pmcRenderCardGroup_).join('\n');
 
   // 站長推薦＋行李箱專區（2026-09-23）。舊版匯出程式不會輸出 min_spend／pick_rank／luggage_inch，
@@ -2405,10 +2483,10 @@ function generatePromosPageHtml(exportData) {
   const sampleNames = sampleNameList.join('、');
   // 不寫檔數：活動數每次匯出都變，放進描述會讓搜尋結果摘要跟頁面實況對不上（2026-09-23）
   const description = '信用卡新戶活動一次看' + (sampleNames ? '，含' + sampleNames + '等' : '') +
-    '首刷禮、新戶回饋加碼、定額回饋活動，依即將截止時間排序，持續更新。';
+    '首刷禮、新戶回饋加碼、定額回饋活動，附達成條件與截止日，持續更新。';
   // 版本含台北時間的時分：同一天多次匯出／改版也能破 promos.css/js 快取
   // （2026-07-16 教訓：純日期版本讓當天稍早的舊 CSS/JS 被瀏覽器快取住）。
-  // 位元級重現驗證時用 exportData.versionTagOverride 固定值（見 data-pipeline.md 第 9 節）。
+  // 位元級重現驗證時用 exportData.versionTagOverride 固定值（見 promos.md 第 1 節）。
   const versionTag = (exportData && exportData.versionTagOverride) ||
     todayIso.replace(/-/g, '') + pmcTaipeiHm_();
 
@@ -2492,7 +2570,7 @@ function pmcStableStringify_(v) {
 // （把每一筆各自序列化成字串後排序——2026-08-15 移除 promo_id 之前是拿它當排序鍵，
 // 現在直接用內容本身排，同一張卡有多檔活動時也不會有排序歧義，比舊做法更穩）。
 // exportToJSON 拿它跟 Script Properties 存的上次指紋比對，用來
-// 決定 promos 頁「資料更新於」要不要蓋今天（見 data-pipeline.md 第 9 節）。純函數：
+// 決定 promos 頁「資料更新於」要不要蓋今天（見 promos.md 第 1 節）。純函數：
 // djb2 雜湊配 Math.imul 固定在 32-bit 無號，Node/Apps Script 結果一致，回傳十進位字串。
 function pmcPromoSignature_(promos) {
   const list = (promos || []).map(pmcStableStringify_).sort();
@@ -2727,7 +2805,7 @@ function pmcRewardSub_(promo) {
 
 // ---------- 站長推薦／行李箱專區（2026-09-23）----------
 // 兩個區塊都放在清單上方、不受篩選／搜尋／「隱藏我持有的卡片」影響（站長指定）。
-// 資料欄位見 pmcRowToPromo_ 的說明；規則的完整說明在 docs/project/data-pipeline.md 第 9b 節。
+// 資料欄位見 pmcRowToPromo_ 的說明；規則的完整說明在 docs/project/promos.md 第 5 節。
 //
 // 選榜規則（站長 2026-09-23 定案）：
 //   1. pick_rank 填 1–5 的活動，強制排在該位置；填 x 的永遠不自動選入
@@ -2785,6 +2863,80 @@ function pmcThresholdText_(promo) {
 
 // 申辦連結：有分潤 CTA 用「立即申辦」，沒有就退用銀行活動頁「活動頁面」（同清單的規則；
 // 2026-09-24 站長：所有卡都已有辦卡連結，這只是退路，且不能跟卡片內展開用的「活動詳情」撞名）
+// ---- 申辦連結的「去向」標示（2026-11-16）----
+// 有辦卡意願的人最容易在「按下去會到哪裡」這一步退縮：同樣寫「立即申辦」，有的直連銀行官網、
+// 有的先經過合作平台的追蹤網址（網址列會出現沒看過的網域）。每顆按鈕下面明講去向。
+// 判斷只看網址本身，不需要 Sheets 多填欄位：
+//   - 合作平台網域（PMC_PARTNER_HOSTS）→「經 Money101 合作連結前往銀行官網」
+//     （站長 2026-11-17 確認：連結只有「銀行」與「Money101」兩種，後者點下去也是轉到銀行官網申辦，
+//      例：apply.creatory.money101.com.tw/click?… → iapp.feib.com.tw/…）
+//   - 與該卡 website 同一個品牌網域 →「直達銀行官網・<主網域>」。比的是主網域的第一段
+//     （esunbank／kgibank），不是整串——同一家銀行常常 .com 與 .com.tw 混用
+//     （卡片介紹在 esunbank.com、線上申辦在 card.esunbank.com.tw）。
+//     連第一段都不同的同一家銀行（國泰：cathay-cube／cathaybk）列在 PMC_BANK_DOMAIN_ALIASES
+//   - 其餘 →「前往 <完整網域>」（不替它背書是哪裡；連結填錯銀行時也會在這裡露出來）
+const PMC_PARTNER_HOSTS = [
+  { test: /(^|\.)money101\.com\.tw$/, name: 'Money101' },
+  { test: /(^|\.)creatory\.biz$/, name: 'Money101' }   // 同一個平台的另一個網域（追蹤參數 a= 相同）
+];
+const PMC_BANK_DOMAIN_ALIASES = { 'cathay-cube': ['cathaybk'] };
+function pmcHostOf_(url) {
+  const m = /^https?:\/\/([^\/?#:]+)/i.exec(String(url || ''));
+  return m ? m[1].toLowerCase() : '';
+}
+// 主網域：esunbank.com.tw／ctbcbank.com。台灣的二級網域（com.tw 等）取後三段，其餘取後兩段。
+function pmcBaseDomain_(host) {
+  const parts = String(host || '').split('.');
+  if (parts.length <= 2) return parts.join('.');
+  return parts.slice(/\.(com|net|org|gov|edu|idv)\.tw$/.test(host) ? -3 : -2).join('.');
+}
+function pmcApplyDest_(href, card) {
+  const host = pmcHostOf_(href);
+  if (!host) return null;
+  for (let i = 0; i < PMC_PARTNER_HOSTS.length; i++) {
+    if (PMC_PARTNER_HOSTS[i].test.test(host)) {
+      return { kind: 'partner', text: '經 ' + PMC_PARTNER_HOSTS[i].name + ' 合作連結前往銀行官網' };
+    }
+  }
+  const siteHost = card ? pmcHostOf_(card.website) : '';
+  const siteBrand = siteHost ? pmcBaseDomain_(siteHost).split('.')[0] : '';
+  const hostBrand = pmcBaseDomain_(host).split('.')[0];
+  if (siteBrand && (siteBrand === hostBrand || (PMC_BANK_DOMAIN_ALIASES[siteBrand] || []).indexOf(hostBrand) !== -1)) {
+    return { kind: 'bank', text: '直達銀行官網・' + pmcBaseDomain_(host) };
+  }
+  return { kind: 'other', text: '前往 ' + host };
+}
+// 輸出成 <span>：會出現在 flex 動作列與一般區塊兩種容器裡，CSS 統一把它當 block/flex 項目排。
+function pmcApplyDestHtml_(href, card, extraCls) {
+  const d = pmcApplyDest_(href, card);
+  if (!d) return '';
+  return '<span class="promo-apply-dest promo-apply-dest--' + d.kind + (extraCls ? ' ' + extraCls : '') + '">' +
+    '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2.5H2.5v7h7v-2M7 2.5h2.5V5M9.5 2.5L5.5 6.5" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+    pmcEscapeHtml_(d.text) + '</span>';
+}
+
+// ---- 信任列（2026-11-16 建立；2026-11-17 定案為「一行字＋灰底＋連到 FAQ」）----
+// 這頁是辦卡轉換的主要入口，要讓人在按「立即申辦」之前看到一句資安上的交代。
+// 只有一行：盾牌＋PMC_TRUST_LINE＋「｜了解更多 ›」，整列是一個連結，連到 FAQ 頁並直接選好
+// 「安全說明」分類（faq.js 認 ?category=）。完整說明由站長寫在 Sheets 的 FAQ 工作表、分類填
+// PMC_TRUST_FAQ_CATEGORY 那兩個字——**兩邊的分類名稱要一字不差**，對不上時 FAQ 頁會停在「全部」。
+// 第一版是原地展開六題問答＋FAQPage JSON-LD，站長改成連到 FAQ：說明只維護一份、這頁也不必變長。
+// 16 個字是量過的：360～390px 的手機都是一行，再長就會折行。
+// 文字只講資安防護，不提分潤、也不提按鈕去向（站長 2026-11-17 指定）。
+const PMC_TRUST_LINE = '不經手個資・全站加密・連結防竄改';
+const PMC_TRUST_FAQ_CATEGORY = '安全說明';   // 站長 2026-11-17 在 Sheets 建立的分類名稱
+function pmcRenderTrust_() {
+  const shield = '<svg class="pmc-trust-icon" viewBox="0 0 20 20" aria-hidden="true">' +
+    '<path d="M10 2l6 2.2v4.6c0 3.9-2.5 7.2-6 8.7-3.5-1.5-6-4.8-6-8.7V4.2L10 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<path d="M7.2 10.1l2 2 3.6-3.9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // 另開新分頁：讀完說明關掉就回到原本看到一半的清單
+  return '  <a class="pmc-trust" id="trust" href="/faq?category=' + encodeURIComponent(PMC_TRUST_FAQ_CATEGORY) +
+    '" target="_blank" rel="noopener">' + shield +
+    '<span class="pmc-trust-line">' + pmcEscapeHtml_(PMC_TRUST_LINE) + '</span>' +
+    '<span class="pmc-trust-more">了解更多 ›</span></a>\n';   // 「｜」分隔線由 promos.css 的 ::before 畫
+}
+
 function pmcApplyLink_(p) {
   const ctaLink = p.cta ? pmcSanitizeUrl_(p.cta.link) : '';
   if (ctaLink) return { href: ctaLink, label: '立即申辦', sponsored: true };
@@ -2949,7 +3101,7 @@ function pmcApplyLinkHtml_(link, p, cls, surface) {
 }
 
 function pmcCardImgHtml_(p, cls) {
-  const src = 'assets/images/cards/' + encodeURIComponent(p.promo.id) + '.png';
+  const src = '/assets/images/cards/' + encodeURIComponent(p.promo.id) + '.png';
   return '<span class="' + cls + '"><img src="' + pmcEscapeHtml_(src) + '" alt="' + pmcEscapeHtml_(p.cardName) +
     '" loading="lazy" onerror="this.closest(\'.' + cls + '\').style.display=\'none\'"></span>';
 }
@@ -2972,7 +3124,8 @@ function pmcRenderPicks_(picks, monthLabel) {
     return '    <article class="pmc-pick pmc-pick--' + c.kind + '" data-period-end="' + (p.periodEndIso || '') + '">\n' +
       '      <p class="pmc-pick-q">' + pmcEscapeHtml_(c.question) + '</p>\n' +
       '      ' + pmcCardImgHtml_(p, 'pmc-pick-img') + '\n' +
-      '      <h3 class="pmc-pick-name">' + pmcEscapeHtml_(p.cardName) + '</h3>\n' +
+      // 卡名連單卡頁（2026-11-23 站長）：同清單卡名的 .promo-card-name-link（藍色「›」）
+      '      <h3 class="pmc-pick-name">' + pmcCardNameLinkHtml_(p.promo.id, p.cardName) + '</h3>\n' +
       '      <div class="pmc-pick-badges"><span class="pmc-kind pmc-kind--' + c.kind + '">' + PMC_KIND_LABEL[c.kind] +
         '</span><span class="promo-ending-badge" hidden></span></div>\n' +
       '      <p class="pmc-pick-headline">' + pmcEscapeHtml_(c.headline) +
@@ -2994,6 +3147,7 @@ function pmcRenderPicks_(picks, monthLabel) {
         '">活動詳情</a><button type="button" class="promo-feat-btn pmc-pick-feat" aria-expanded="false" data-feat-card="' +
         pmcEscapeHtml_(p.promo.id) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button></div>\n' +
       '      ' + pmcApplyLinkHtml_(c.link, p, 'promo-apply-btn pmc-pick-cta', 'picks') + '\n' +
+      (c.link.sponsored ? '      ' + pmcApplyDestHtml_(c.link.href, p.card, 'pmc-pick-dest') + '\n' : '') +
       '    </article>';
   }).join('\n');
   return '  <section class="pmc-picks" id="picks" aria-labelledby="pmc-picks-title">\n' +
@@ -3057,7 +3211,7 @@ function pmcRenderLuggage_(items) {
         '" style="--inch:' + l.inch + '">\n' +
       '      <div class="pmc-lg-size">' + pmcSuitcaseSvg_() + '<span class="pmc-lg-inch">' + inchText + '<small>吋</small></span></div>\n' +
       '      <div class="pmc-lg-body">\n' +
-      '        <h3 class="pmc-lg-name">' + pmcEscapeHtml_(p.cardName) + '</h3>\n' +
+      '        <h3 class="pmc-lg-name">' + pmcCardNameLinkHtml_(p.promo.id, p.cardName) + '</h3>\n' +
       '        <p class="pmc-lg-gift">' + pmcEscapeHtml_(l.gift) + '</p>\n' +
       '        <div class="pmc-lg-meta"><dl class="pmc-lg-facts"><div><dt>參考價</dt><dd>' +
         (typeof v === 'number' && v > 0 ? pmcEscapeHtml_(pmcMoney_(v)) : '—') + '</dd></div>' +
@@ -3126,8 +3280,16 @@ function pmcRenderPromoDetail_(p, detailId, leadHtml, leadRowHtml) {
     ? '<div class="promo-notes" data-notes-block><div class="promo-notes-label">備註</div>' +
       '<div class="promo-notes-text">' + pmcEscapeHtmlMultiline_(promo.notes) + '</div></div>'
     : '';
+  // 【大師加碼】＝本站連結限定的活動（站長 2026-11-16 定義）：摘要裡只有這四個字，
+  // 沒看過的人不知道那是什麼、也不知道怎樣才算數——在條件正上方用一句話講完。
+  // 判斷只認摘要裡的標記，站長在 Sheets 拿掉【大師加碼】這句就跟著消失。
+  const exclusiveHtml = /大師加碼/.test(String(promo.new_customer_summary || ''))
+    ? '<p class="promo-exclusive-note"><b>大師加碼</b>本站連結限定：從本頁「立即申辦」進入申辦，' +
+      '並完成下列全部達成條件，即可獲得。</p>'
+    : '';
+  // ⚠️ 詳情底部不放第二顆申辦鈕：2026-11-16 做過，站長隔天裁定拿掉——直向空間比少捲一次重要。
   return '<div class="promo-act-detail" id="' + pmcEscapeHtml_(detailId) + '" hidden>' +
-    (leadHtml || '') +
+    (leadHtml || '') + exclusiveHtml +
     '<dl class="promo-card-meta">' + (leadRowHtml || '') + rows.join('') + '</dl>' +
     notesHtml + '</div>';
 }
@@ -3150,7 +3312,7 @@ function pmcRenderPromoAct_(p, actId) {
   // ⚠️ onerror 要藏掉**整個 .promo-act-thumb 外框**，不能只藏 <img>——外框有 1px 細框，
   // 只藏 img 會留下一個空的方框（2026-09-18 實測）。
   const giftImgUrl = (pmcPromoValue_(promo) === null) ? pmcSanitizeUrl_(promo.gift_image_url) : '';
-  const cardImgSrc = 'assets/images/cards/' + encodeURIComponent(p.promo.id || '') + '.png';
+  const cardImgSrc = '/assets/images/cards/' + encodeURIComponent(p.promo.id || '') + '.png';
   const thumbSrc = giftImgUrl || cardImgSrc;
   const thumbAlt = giftImgUrl ? (p.cardName + ' 活動宣傳圖') : p.cardName;
   const thumbCls = 'promo-act-thumb' + (giftImgUrl ? ' promo-act-thumb--gift' : '');
@@ -3158,10 +3320,14 @@ function pmcRenderPromoAct_(p, actId) {
   const summary = promo.new_customer_summary || '';
   const rewardSub = pmcRewardSub_(promo);
 
-  return '<div class="promo-act is-main" data-period-end="' +
+  // id＝ItemList JSON-LD 與 data-jump-act 用的那個錨點（…-a1）。2026-11-16 前只有
+  // 詳情區有 id（…-a1-detail），JSON-LD 的 55 個網址全部指向不存在的元素。
+  return '<div class="promo-act is-main" id="' + pmcEscapeHtml_(actId) + '" data-period-end="' +
       (p.periodEndIso || '') + '">\n' +
-    '  <button type="button" class="promo-act-row" aria-expanded="false" aria-controls="' +
-      pmcEscapeHtml_(detailId) + '">\n' +
+    // promo-act-row--gift：這一列有活動宣傳圖（2026-11-17 起放大到 118px、放左邊），
+    // CSS 靠它把獎品名稱降一階字級，不必用 :has()
+    '  <button type="button" class="promo-act-row' + (giftImgUrl ? ' promo-act-row--gift' : '') +
+      '" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
     '    <span class="' + thumbCls + '"><img src="' + pmcEscapeHtml_(thumbSrc) + '" alt="' +
       pmcEscapeHtml_(thumbAlt) + '" loading="lazy" onerror="this.closest(\'.promo-act-thumb\').style.display=\'none\'"></span>\n' +
     '    <span class="promo-act-body">\n' +
@@ -3265,7 +3431,7 @@ function pmcRenderPromoSubRow_(p, actId) {
 
   // is-gift 掛在整列上，CSS 靠它處理「獎品名不是數字，字重輕一階且可換行」。
   // 刻意輸出成 class 而不是靠 :has()，對舊瀏覽器是確定的行為。
-  return '<div class="promo-act is-sub" data-period-end="' + (p.periodEndIso || '') + '">\n' +
+  return '<div class="promo-act is-sub" id="' + pmcEscapeHtml_(actId) + '" data-period-end="' + (p.periodEndIso || '') + '">\n' +
     '  <button type="button" class="promo-act-row promo-sub-row' + (isGift ? ' is-gift' : '') +
       '" aria-expanded="false" aria-controls="' + pmcEscapeHtml_(detailId) + '">\n' +
     // 倒數徽章跟著上排（類型 chip、值）走，跟主活動「chip 旁邊掛徽章」同一個位置
@@ -3285,7 +3451,10 @@ function pmcRenderPromoSubRow_(p, actId) {
     '</div>';
 }
 
-function pmcRenderCardGroup_(group) {
+// opts.page（2026-11-18，單卡頁用）：不輸出 rail（卡圖／卡名／申辦鈕／卡片特色鈕）與特色容器——
+// 單卡頁的身分區塊與申辦鈕在頁首、卡片特色是獨立一節，article 只剩活動本身。
+function pmcRenderCardGroup_(group, opts) {
+  const pageMode = !!(opts && opts.page);
   const acts = group.items;          // 已依「最高可拿」倒序
   const main = acts[0];
   const cardId = group.cardId;
@@ -3302,10 +3471,12 @@ function pmcRenderCardGroup_(group) {
   const ctaLink = group.cta ? pmcSanitizeUrl_(group.cta.link) : '';
   const promoLink = pmcSanitizeUrl_(main.promo.link);
   let ctaHtml = '';
+  let destHtml = '';   // 「立即申辦」會去哪（pmcApplyDest_）；退用銀行活動頁時按鈕自己就寫「活動頁面」，不必再標
   if (ctaLink) {
     ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(ctaLink) +
       '" target="_blank" rel="noopener noreferrer sponsored" data-ga-track="1" data-card-id="' +
       pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) + '">立即申辦</a>';
+    destHtml = pmcApplyDestHtml_(ctaLink, group.card, '');
   } else if (promoLink) {
     ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) +
       '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動頁面</a>';
@@ -3319,15 +3490,17 @@ function pmcRenderCardGroup_(group) {
 
   const featBtn = '<button type="button" class="promo-feat-btn" aria-expanded="false" aria-controls="' +
     pmcEscapeHtml_(featId) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button>';
-  const nameHtml = '<h2 class="promo-card-name">' + pmcEscapeHtml_(group.cardName) + '</h2>';
-  const openTag = '<article class="promo-card" id="' + pmcEscapeHtml_(anchorId) + '" data-card-id="' +
+  // 卡名連到這張卡的單卡頁（2026-11-18）：清單是單卡頁唯一的站內入口，Google 也靠這條連結找到它們。
+  // 單卡頁在部署時由 tools/build-promo-card-pages.js 生成，跟這份清單用同一份資料、同一條過期規則。
+  const nameHtml = '<h2 class="promo-card-name">' + pmcCardNameLinkHtml_(cardId, group.cardName) + '</h2>';
+  const openTag = '<article class="promo-card' + (pageMode ? ' promo-card--page' : '') + '" id="' + pmcEscapeHtml_(anchorId) + '" data-card-id="' +
     pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) +
     '" data-order-index="' + group.orderIndex + '" data-act-count="' + acts.length +
     '" data-type-buckets="' + pmcEscapeHtml_(group.buckets.join(' ')) + '">\n';
   const featBox = '  <div class="promo-card-feat" id="' + pmcEscapeHtml_(featId) + '" data-feat-for="' +
     pmcEscapeHtml_(cardId) + '" hidden></div>\n';
 
-  const cardImg = 'assets/images/cards/' + encodeURIComponent(cardId) + '.png';
+  const cardImg = '/assets/images/cards/' + encodeURIComponent(cardId) + '.png';
   const thumbHtml = '<span class="promo-rail-thumb"><img src="' + pmcEscapeHtml_(cardImg) +
     '" alt="' + pmcEscapeHtml_(group.cardName) + '" loading="lazy" ' +
     'onerror="this.closest(\'.promo-rail-thumb\').style.display=\'none\'"></span>';
@@ -3343,7 +3516,14 @@ function pmcRenderCardGroup_(group) {
   // 兩顆按鈕跟多檔卡一樣住在 rail 裡（站長 2026-09-21）：桌機與手機都是
   // 「卡片圖＋名稱 → 按鈕 → 分割線 → 活動內容」。放進 rail 才會在分割線**上方**
   // ——rail 的 border-bottom 就是那條線，按鈕留在 .promo-card-main 裡怎麼排都在線下。
-  const actionsHtml = '  <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n  </div>\n';
+  const actionsHtml = '  <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn +
+    (destHtml ? '\n      ' + destHtml : '') + '\n  </div>\n';
+  if (pageMode) {
+    return openTag +
+      '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
+      (stackHtml ? '  <div class="promo-card-stack">\n' + stackHtml + '\n  </div>\n' : '') +
+      '</article>';
+  }
   if (acts.length === 1) {
     return openTag +
       '  <div class="promo-card-rail promo-card-rail--solo">\n' +
@@ -3373,7 +3553,8 @@ function pmcRenderCardGroup_(group) {
     '        <p class="promo-rail-count">' + pmcRailCount_(acts) + '</p>\n' +
     '      </div>\n' +
     '    </div>\n' +
-    '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn + '\n' +
+    '    <div class="promo-card-actions">\n' + ctaHtml + '\n      ' + featBtn +
+      (destHtml ? '\n      ' + destHtml : '') + '\n' +
     '    </div>\n' +
     '  </div>\n' +
     '  <div class="promo-card-main">\n' + mainHtml + '\n  </div>\n' +
@@ -3429,7 +3610,7 @@ function pmcBuildJsonLd_(prepared) {
 // 頁面層級結構化資料（2026-07-23 新增）：帶 dateModified 的 CollectionPage，讓答案引擎
 // （AEO/GEO）與 Google 讀到「這份新戶活動清單最後更新日」。dateModified 用 updatedIso
 // ——只有 promo 內容真的變動時才前進的那個日期，與可見「資料更新於」戳章、sitemap 的
-// promos lastmod 同源，三處一致（見 data-pipeline.md 第 9 節）。與 ItemList／BreadcrumbList
+// promos lastmod 同源，三處一致（見 promos.md 第 1 節）。與 ItemList／BreadcrumbList
 // 三個 JSON-LD 並存（同頁多個 <script type="application/ld+json"> 是合法用法）。
 function pmcBuildWebPageJsonLd_(updatedIso, title, description) {
   const ld = {
@@ -3464,7 +3645,118 @@ function pmcBuildBreadcrumbJsonLd_() {
   return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/');
 }
 
+// 清單頁 <main> 的內容（麵包屑 → 空狀態）。
+function pmcListMainHtml_(o) {
+  return '' +
+// 麵包屑（2026-07-16 新增）：結構化資料另見 <head> 的 BreadcrumbList JSON-LD
+// （pmcBuildBreadcrumbJsonLd_）。
+'  <nav class="promos-breadcrumb" aria-label="breadcrumb">\n' +
+'    <a href="/">首頁</a><span class="promos-breadcrumb-sep" aria-hidden="true">›</span><span aria-current="page">新戶活動</span>\n' +
+'  </nav>\n' +
+'  <section class="promos-hero">\n' +
+'    <h1>信用卡新戶活動一覽</h1>\n' +
+// 引言一句話（站長 2026-11-17 定稿，原本是淡底卡片裡的兩段）。手機首屏要留給獎勵。
+'    <p class="promos-hero-lede">新戶辦卡推薦！一次比較信用卡首刷禮、加碼回饋及刷卡金回饋，並排比較。</p>\n' +
+'  </section>\n' +
+'\n' +
+// 信任列（2026-11-16）：放在第一顆申辦鈕（站長推薦）之前，只有一行，連到 FAQ 的「安全」分類。
+pmcRenderTrust_() +
+// 站長推薦＋行李箱專區（2026-09-23）：放在搜尋列之前——搜尋、篩選只作用在下方清單，
+// 這兩區固定顯示（站長指定：勾「隱藏我持有的卡片」也不隱藏）。沒資料時是空字串。
+(o.picksHtml || o.luggageHtml ? pmcJumpNav_(!!o.picksHtml, !!o.luggageHtml) : '') +
+(o.picksHtml || '') + (o.luggageHtml || '') +
+// 「新戶活動」標題：完整清單的起點，也是索引列第三個連結的錨點（站長 2026-09-23）
+'  <div class="pmc-section-head pmc-list-head" id="all-promos"><h2>新戶活動</h2></div>\n' +
+// 卡片名稱搜尋框（2026-07-22 站長需求：比照主站搜尋框，讓用戶輸入卡名快速定位
+// 活動）。type=search＋autocomplete/autocorrect/autocapitalize 全關：同 index.html
+// 的 #merchant-input，避免手機鍵盤跳 autofill 建議。清除 ✕ 鈕預設 hidden，
+// promos.js setupSearch() 偵測到有輸入才顯示；即時 substring 比對 data-card-name，
+// 疊加在既有類型/持有卡篩選之上（見 promos.js refreshVisibility）。
+// 2026-09-20：搜尋框與「資料更新於」併成同一列（站長：桌機搜尋框不必佔整行）。
+// 桌機＝搜尋框靠左（有 max-width）、戳章靠右；手機＝wrap 成兩列，戳章仍右對齊。
+'  <div class="promos-search-row">\n' +
+'  <div class="promos-search-box">\n' +
+'    <div class="promos-search-input-wrap">\n' +
+'      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>\n' +
+'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片、贈品或通路名稱" aria-label="搜尋卡片、贈品或通路名稱">\n' +
+'      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
+'    </div>\n' +
+'  </div>\n' +
+// 「資料更新於」戳章：2026-07-23 從頁尾搬到 grid 上方讓用戶一眼看到新鮮度；
+// 2026-09-20 再搬進搜尋列的右側（站長）。updatedIso 只在活動內容真的變動時才前進
+// （見 exportToJSON 的指紋比對）。<time datetime> 保語意化，機器可讀。
+'  <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
+'  </div>\n' +
+'\n' +
+// 「類型」「排序」低調組前綴 label：2026-07-15 站長回饋，兩排 chips 光看外觀
+// 分不出是「篩選活動類型」跟「排序方式」兩組不同的操作。id 仍留在
+// .promos-filter-chips / .promos-sort-toggle 本體（promos.js 用 getElementById
+// 抓這兩個 id，querySelectorAll('.promo-chip'/'.promo-sort-btn') 只會選到按鈕，
+// 不受外層新增的 label/wrapper 影響）。
+'  <section class="promos-controls" aria-label="篩選與排序">\n' +
+'    <div class="promos-control-group">\n' +
+'      <span class="promos-control-label">類型</span>\n' +
+'      <div class="promos-filter-chips" role="group" aria-label="活動類型篩選" id="promos-filter-chips">\n' +
+o.filterChipsHtml + '\n' +
+'      </div>\n' +
+'    </div>\n' +
+    // 排序切換已移除（2026-09-17 站長裁定）：清單固定依 pmcCompareSortKey_ 的順序（首刷禮→回饋率→金額，2026-09-21 改），
+    // 不再讓使用者選排序方式。保留的是「類型」chips 與「隱藏我持有的卡片」。
+
+    // 「隱藏我持有的卡片」篩選（2026-07-16 第四輪站長回饋）：讀主站
+    // localStorage 的 myOwnedCards_*（見 promos.js），這裡靜態生成時完全不知道
+    // 訪客/用戶持有哪些卡，所以一律先 hidden，交給 promos.js 在偵測到有持有資料
+    // 時才拿掉 hidden（見 promos.js setupOwnedFilter）——沒有任何持有資料時，
+    // 這組控制項整個不出現。
+'    <div class="promos-control-group" id="promos-owned-filter-group" hidden>\n' +
+'      <span class="promos-control-label">篩選</span>\n' +
+'      <label class="promos-owned-filter-label">\n' +
+'        <input type="checkbox" id="promos-hide-owned-checkbox">\n' +
+'        隱藏我持有的卡片\n' +
+'      </label>\n' +
+// 「?」浮出說明（2026-07-16 站長回饋）：絕對定位浮層，不推開版面；
+// 文案中的張數由 promos.js 依實際比對結果填入 #promos-owned-help-count。
+'      <span class="promos-owned-help-wrap">\n' +
+'        <button type="button" class="promos-owned-help-btn" id="promos-owned-help-btn" aria-expanded="false" aria-controls="promos-owned-help-pop" aria-label="說明">?</button>\n' +
+'        <span class="promos-owned-help-pop" id="promos-owned-help-pop" role="tooltip" hidden>您有「我的信用卡」的記錄，因此將幫你隱藏 <strong id="promos-owned-help-count">0</strong> 張信用卡的新戶活動</span>\n' +
+'      </span>\n' +
+'    </div>\n' +
+'  </section>\n' +
+'\n' +
+'  <!-- PROMOS:START -->\n' +
+'  <div class="promo-grid" id="promo-grid">\n' +
+o.cardsHtml + '\n' +
+'  </div>\n' +
+'  <!-- PROMOS:END -->\n' +
+'\n' +
+'  <p class="promos-empty-state" id="promos-empty-state" hidden>目前沒有符合條件的活動，換個篩選試試？</p>\n';
+}
+
 function pmcPageTemplate_(o) {
+  return pmcPageShell_({
+    title: o.title,
+    description: o.description,
+    path: '/promos',
+    jsonLds: [o.jsonLd, o.breadcrumbJsonLd, o.webPageJsonLd],
+    navCurrent: 'page',
+    versionTag: o.versionTag,
+    mainHtml: pmcListMainHtml_(o)
+  });
+}
+
+// 頁面外殼（2026-11-18 從 pmcPageTemplate_ 拆出）：<head>、header、手機抽屜、警語、footer、
+// 申辦前須知、回到頂部、Analytics 與 promos.js。清單頁（pmcPageTemplate_）與單卡頁
+// （pmcCardPageHtml_）共用這一份，header／footer 手抄件才不會再多一份。
+//   o.path       canonical／og:url 的路徑（'/promos' 或 '/promos/<id>'）
+//   o.jsonLds    JSON-LD 字串陣列（各自已處理 </ 跳脫）
+//   o.robots     有值才輸出 <meta name="robots">（單卡頁的「活動已結束」用 noindex）
+//   o.navCurrent header「新戶活動」的 aria-current：清單頁 page、單卡頁 true
+//   o.mainClass／o.mainHtml  <main> 的 class 與內容
+//   o.ogImage／o.ogImageAlt  分享圖（絕對網址）與替代文字；沒給就用全站預設 PMC_OG_IMAGE（清單頁一律沒給）
+// ⚠️ 站內資源一律寫絕對路徑（/promos.css、/assets/…）：單卡頁在 /promos/<id>，相對路徑會落空。
+function pmcPageShell_(o) {
+  const ogImage = o.ogImage || PMC_OG_IMAGE;
+  const ogAlt = pmcEscapeHtml_(o.ogImageAlt || 'Pick My Card 信用卡回饋大師 — pickmycard.app');
   return '<!DOCTYPE html>\n' +
 '<html lang="zh-Hant">\n' +
 '<head>\n' +
@@ -3473,40 +3765,41 @@ function pmcPageTemplate_(o) {
 '<title>' + pmcEscapeHtml_(o.title) + '</title>\n' +
 '\n' +
 '<meta name="description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
-'<link rel="canonical" href="' + PMC_SITE_URL + '/promos">\n' +
+(o.robots ? '<meta name="robots" content="' + pmcEscapeHtml_(o.robots) + '">\n' : '') +
+'<link rel="canonical" href="' + PMC_SITE_URL + o.path + '">\n' +
 '\n' +
 '<meta property="og:type" content="website">\n' +
-'<meta property="og:url" content="' + PMC_SITE_URL + '/promos">\n' +
+'<meta property="og:url" content="' + PMC_SITE_URL + o.path + '">\n' +
 '<meta property="og:title" content="' + pmcEscapeHtml_(o.title) + '">\n' +
 '<meta property="og:description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
-'<meta property="og:image" content="' + PMC_OG_IMAGE + '">\n' +
+'<meta property="og:image" content="' + pmcEscapeHtml_(ogImage) + '">\n' +
 '<meta property="og:image:width" content="1200">\n' +
 '<meta property="og:image:height" content="630">\n' +
-'<meta property="og:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">\n' +
+'<meta property="og:image:alt" content="' + ogAlt + '">\n' +
 '<meta property="og:locale" content="zh_TW">\n' +
 '<meta property="og:site_name" content="信用卡回饋大師">\n' +
 '\n' +
 '<meta name="twitter:card" content="summary_large_image">\n' +
-'<meta name="twitter:url" content="' + PMC_SITE_URL + '/promos">\n' +
+'<meta name="twitter:url" content="' + PMC_SITE_URL + o.path + '">\n' +
 '<meta name="twitter:title" content="' + pmcEscapeHtml_(o.title) + '">\n' +
 '<meta name="twitter:description" content="' + pmcEscapeHtml_(o.description) + '">\n' +
-'<meta name="twitter:image" content="' + PMC_OG_IMAGE + '">\n' +
-'<meta name="twitter:image:alt" content="Pick My Card 信用卡回饋大師 — pickmycard.app">\n' +
+'<meta name="twitter:image" content="' + pmcEscapeHtml_(ogImage) + '">\n' +
+'<meta name="twitter:image:alt" content="' + ogAlt + '">\n' +
 '\n' +
 '<link rel="preconnect" href="https://fonts.googleapis.com">\n' +
 '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
 '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap" rel="stylesheet">\n' +
 '\n' +
-'<link rel="stylesheet" href="promos.css?v=' + o.versionTag + '">\n' +
+'<link rel="stylesheet" href="/promos.css?v=' + o.versionTag + '">\n' +
 '\n' +
 '<link rel="icon" href="/favicon.ico" sizes="32x32">\n' +
-'<link rel="icon" href="assets/images/favicon.svg?v=' + o.versionTag + '" type="image/svg+xml">\n' +
-'<link rel="apple-touch-icon" href="assets/images/icon-pickmycard-ios.png?v=' + o.versionTag + '">\n' +
+'<link rel="icon" href="/assets/images/favicon.svg?v=' + o.versionTag + '" type="image/svg+xml">\n' +
+'<link rel="apple-touch-icon" href="/assets/images/icon-pickmycard-ios.png?v=' + o.versionTag + '">\n' +
 '<meta name="theme-color" content="#1e40af">\n' +
 '\n' +
-'<script type="application/ld+json">\n' + o.jsonLd + '\n</script>\n' +
-'<script type="application/ld+json">\n' + o.breadcrumbJsonLd + '\n</script>\n' +
-'<script type="application/ld+json">\n' + o.webPageJsonLd + '\n</script>\n' +
+(o.jsonLds || []).map(function (ld) {
+  return '<script type="application/ld+json">\n' + ld + '\n</script>\n';
+}).join('') +
 '</head>\n' +
 '<body>\n' +
 '<div class="promos-container">\n' +
@@ -3514,7 +3807,7 @@ function pmcPageTemplate_(o) {
 // 同款結構——漢堡（手機）、logo＋站名整塊連回 `/`、導覽「新戶活動」（本頁，
 // aria-current）＋「常見問題」→ `/faq`、右側「返回首頁」鈕。跟 faq.html 一樣是
 // 手抄件，不是共用元件；faq.html 又是抄 index.html 的 header-top，三邊都要手動
-// 同步（見 FAQ-README.md／data-pipeline.md 第 9 節）。
+// 同步（見 FAQ-README.md／promos.md 第 1 節）。
 // 站名刻意用 <span> 而非 <h1>：這頁真正的 SEO H1 是下面 hero 區塊的
 // 「信用卡新戶活動一覽」，同頁兩個 h1 對文件結構不利。
 // 右側原本試過頭像＋精簡 dropdown，站長裁定「副頁頭像做不到主站完整功能
@@ -3526,11 +3819,11 @@ function pmcPageTemplate_(o) {
 '      <svg width="22" height="22" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zm0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5z"/></svg>\n' +
 '    </button>\n' +
 '    <a href="/" class="promos-header-content">\n' +
-'      <img src="assets/images/logo-header.svg?v=' + o.versionTag + '" alt="" class="promos-header-logo" width="79" height="83">\n' +
+'      <img src="/assets/images/logo-header.svg?v=' + o.versionTag + '" alt="" class="promos-header-logo" width="79" height="83">\n' +
 '      <span class="promos-header-title">信用卡回饋大師</span>\n' +
 '    </a>\n' +
 '    <nav class="promos-header-links" aria-label="站內頁面">\n' +
-'      <a href="/promos" class="promos-header-nav-link" aria-current="page">新戶活動</a>\n' +
+'      <a href="/promos" class="promos-header-nav-link" aria-current="' + (o.navCurrent || 'page') + '">新戶活動</a>\n' +
 '      <a href="/faq" class="promos-header-nav-link">常見問題</a>\n' +
 '    </nav>\n' +
 '    <a href="/" class="promos-back-home-btn" title="返回首頁">\n' +
@@ -3569,89 +3862,8 @@ function pmcPageTemplate_(o) {
 '  </div>\n' +
 '</aside>\n' +
 '\n' +
-'<main class="promos-main">\n' +
-// 麵包屑（2026-07-16 新增）：結構化資料另見 <head> 的 BreadcrumbList JSON-LD
-// （pmcBuildBreadcrumbJsonLd_）。
-'  <nav class="promos-breadcrumb" aria-label="breadcrumb">\n' +
-'    <a href="/">首頁</a><span class="promos-breadcrumb-sep" aria-hidden="true">›</span><span aria-current="page">新戶活動</span>\n' +
-'  </nav>\n' +
-'  <section class="promos-hero">\n' +
-'    <h1>信用卡新戶活動一覽</h1>\n' +
-'    <div class="promos-hero-intro">\n' +
-'      <p>信用卡首刷禮排行榜！新戶辦卡推薦</p>\n' +
-'      <p>各大銀行信用卡新戶活動一次比較，為你列出刷卡金、加碼回饋及首刷禮，一次比較多張信用卡新戶活動、快速看懂活動條件及回饋方式。</p>\n' +
-'    </div>\n' +
-'  </section>\n' +
-'\n' +
-// 站長推薦＋行李箱專區（2026-09-23）：放在搜尋列之前——搜尋、篩選只作用在下方清單，
-// 這兩區固定顯示（站長指定：勾「隱藏我持有的卡片」也不隱藏）。沒資料時是空字串。
-(o.picksHtml || o.luggageHtml ? pmcJumpNav_(!!o.picksHtml, !!o.luggageHtml) : '') +
-(o.picksHtml || '') + (o.luggageHtml || '') +
-// 「新戶活動」標題：完整清單的起點，也是索引列第三個連結的錨點（站長 2026-09-23）
-'  <div class="pmc-section-head pmc-list-head" id="all-promos"><h2>新戶活動</h2></div>\n' +
-// 卡片名稱搜尋框（2026-07-22 站長需求：比照主站搜尋框，讓用戶輸入卡名快速定位
-// 活動）。type=search＋autocomplete/autocorrect/autocapitalize 全關：同 index.html
-// 的 #merchant-input，避免手機鍵盤跳 autofill 建議。清除 ✕ 鈕預設 hidden，
-// promos.js setupSearch() 偵測到有輸入才顯示；即時 substring 比對 data-card-name，
-// 疊加在既有類型/持有卡篩選之上（見 promos.js refreshVisibility）。
-// 2026-09-20：搜尋框與「資料更新於」併成同一列（站長：桌機搜尋框不必佔整行）。
-// 桌機＝搜尋框靠左（有 max-width）、戳章靠右；手機＝wrap 成兩列，戳章仍右對齊。
-'  <div class="promos-search-row">\n' +
-'  <div class="promos-search-box">\n' +
-'    <div class="promos-search-input-wrap">\n' +
-'      <svg class="promos-search-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>\n' +
-'      <input type="search" id="promos-search-input" name="promos-card-search" inputmode="search" enterkeyhint="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="搜尋卡片名稱及通路名稱" aria-label="搜尋卡片名稱及通路名稱">\n' +
-'      <button type="button" id="promos-search-clear-btn" class="promos-search-clear-btn" aria-label="清除輸入" hidden>&times;</button>\n' +
-'    </div>\n' +
-'  </div>\n' +
-// 「資料更新於」戳章：2026-07-23 從頁尾搬到 grid 上方讓用戶一眼看到新鮮度；
-// 2026-09-20 再搬進搜尋列的右側（站長）。updatedIso 只在活動內容真的變動時才前進
-// （見 exportToJSON 的指紋比對）。<time datetime> 保語意化，機器可讀。
-'  <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(o.updatedIso) + '">' + pmcEscapeHtml_(o.generatedDisplay) + '</time></div>\n' +
-'  </div>\n' +
-'\n' +
-// 「類型」「排序」低調組前綴 label：2026-07-15 站長回饋，兩排 chips 光看外觀
-// 分不出是「篩選活動類型」跟「排序方式」兩組不同的操作。id 仍留在
-// .promos-filter-chips / .promos-sort-toggle 本體（promos.js 用 getElementById
-// 抓這兩個 id，querySelectorAll('.promo-chip'/'.promo-sort-btn') 只會選到按鈕，
-// 不受外層新增的 label/wrapper 影響）。
-'  <section class="promos-controls" aria-label="篩選與排序">\n' +
-'    <div class="promos-control-group">\n' +
-'      <span class="promos-control-label">類型</span>\n' +
-'      <div class="promos-filter-chips" role="group" aria-label="活動類型篩選" id="promos-filter-chips">\n' +
-o.filterChipsHtml + '\n' +
-'      </div>\n' +
-'    </div>\n' +
-    // 排序切換已移除（2026-09-17 站長裁定）：清單固定依「最高可拿」倒序，
-    // 不再讓使用者選排序方式。保留的是「類型」chips 與「隱藏我持有的卡片」。
-
-    // 「隱藏我持有的卡片」篩選（2026-07-16 第四輪站長回饋）：讀主站
-    // localStorage 的 myOwnedCards_*（見 promos.js），這裡靜態生成時完全不知道
-    // 訪客/用戶持有哪些卡，所以一律先 hidden，交給 promos.js 在偵測到有持有資料
-    // 時才拿掉 hidden（見 promos.js setupOwnedFilter）——沒有任何持有資料時，
-    // 這組控制項整個不出現。
-'    <div class="promos-control-group" id="promos-owned-filter-group" hidden>\n' +
-'      <span class="promos-control-label">篩選</span>\n' +
-'      <label class="promos-owned-filter-label">\n' +
-'        <input type="checkbox" id="promos-hide-owned-checkbox">\n' +
-'        隱藏我持有的卡片\n' +
-'      </label>\n' +
-// 「?」浮出說明（2026-07-16 站長回饋）：絕對定位浮層，不推開版面；
-// 文案中的張數由 promos.js 依實際比對結果填入 #promos-owned-help-count。
-'      <span class="promos-owned-help-wrap">\n' +
-'        <button type="button" class="promos-owned-help-btn" id="promos-owned-help-btn" aria-expanded="false" aria-controls="promos-owned-help-pop" aria-label="說明">?</button>\n' +
-'        <span class="promos-owned-help-pop" id="promos-owned-help-pop" role="tooltip" hidden>您有「我的信用卡」的記錄，因此將幫你隱藏 <strong id="promos-owned-help-count">0</strong> 張信用卡的新戶活動</span>\n' +
-'      </span>\n' +
-'    </div>\n' +
-'  </section>\n' +
-'\n' +
-'  <!-- PROMOS:START -->\n' +
-'  <div class="promo-grid" id="promo-grid">\n' +
-o.cardsHtml + '\n' +
-'  </div>\n' +
-'  <!-- PROMOS:END -->\n' +
-'\n' +
-'  <p class="promos-empty-state" id="promos-empty-state" hidden>目前沒有符合條件的活動，換個篩選試試？</p>\n' +
+'<main class="' + (o.mainClass || 'promos-main') + '">\n' +
+o.mainHtml +
 '</main>\n' +
 // 信用卡警語橫條：跟 index.html 的 .finance-warning-row 一樣是 .promos-container／
 // .container 的直接子元素（不包在有 padding 的 <main> 裡），才能 width:100% 貼齊
@@ -3662,7 +3874,7 @@ o.cardsHtml + '\n' +
 '\n' +
 // Footer：移除「用回饋計算機比比看」按鈕，改放主站的 footer（社群媒體/贊助區塊），
 // 複製自 index.html 的 .social-media-footer——主站改動這塊時，這裡要手動同步（同一句
-// 提醒也寫進了 docs/project/data-pipeline.md 第 9 節）。
+// 提醒也寫進了 docs/project/promos.md 第 1 節）。
 // 2026-10-21 隨主站重排：追蹤＋贊助併成一組；探索更多不列本頁（新戶活動）；
 // 隱私權／使用須知改成 .footer-legal 一行小字。樣式在 promos.css「抄自 styles.css」那段。
 '<footer class="social-media-footer">\n' +
@@ -3755,9 +3967,337 @@ o.cardsHtml + '\n' +
 '  window.firebaseAnalytics = getAnalytics(app);\n' +
 '  window.logEvent = logEvent;\n' +
 '</script>\n' +
-'<script src="promos.js?v=' + o.versionTag + '"></script>\n' +
+'<script src="/promos.js?v=' + o.versionTag + '"></script>\n' +
 '</body>\n' +
 '</html>\n';
+}
+
+// ============ 單卡頁 /promos/<card id>（2026-11-18）============
+// 每張有新戶活動的卡一頁，吃「台新 Richart 新戶」「玉山 UniCard 首刷禮」這類搜尋。
+// ⚠️ 這一段 Apps Script **不會呼叫**：頁面在 Cloudflare Pages 部署時由
+// tools/build-promo-card-pages.js 用 vm 載入本檔、餵 cards.data 生成（不進 repo）。
+// 放在這裡是為了跟清單頁共用 pmcPreparePromoGroups_／pmcRenderCardGroup_／pmcPageShell_，
+// 不另抄一份 header／footer／活動卡。Apps Script 端只負責兩件事：清單卡名的連結
+// （pmcRenderCardGroup_）與 sitemap／promoCardUpdatedIso（exportToJSON）。
+// 完整說明：docs/project/promos.md 第 7 節。
+
+// 卡片 id 只收小寫英數與連字號：它同時是網址與檔名，其他字元一律不出頁（也擋掉 ../ 之類的路徑）。
+const PMC_CARD_PAGE_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
+function pmcCardPagePath_(cardId) {
+  return PMC_CARD_PAGE_ID_RE.test(String(cardId || '')) ? '/promos/' + cardId : '';
+}
+
+// 卡名＋單卡頁連結（清單卡名、站長推薦、行李箱專區共用；2026-11-23 抽出）。
+// id 不合規（沒有單卡頁）就只輸出純文字卡名。回傳值已跳脫，直接放進標題標籤。
+function pmcCardNameLinkHtml_(cardId, cardName) {
+  const path = pmcCardPagePath_(cardId);
+  return path
+    ? '<a class="promo-card-name-link" href="' + pmcEscapeHtml_(path) + '">' + pmcEscapeHtml_(cardName) + '</a>'
+    : pmcEscapeHtml_(cardName);
+}
+
+// 要出單卡頁（＝進 sitemap）的卡：今天還有進行中活動、id 合法。清單頁與部署端同一條規則。
+function pmcPromoCardPageIds_(exportData, todayIso) {
+  return pmcPreparePromoGroups_(exportData, todayIso || pmcTodayISO_()).groups
+    .map(function (g) { return g.cardId; })
+    .filter(function (id) { return !!pmcCardPagePath_(id); });
+}
+
+// 單卡頁「內容變了沒」的指紋：這張卡的活動＋申辦連結＋卡名。exportToJSON 拿它配
+// pmcStampedDate_ 算出每張卡自己的更新日——一張卡改活動，不會讓其他 29 頁的 lastmod 一起前進。
+function pmcPromoCardSignature_(cardId, exportData) {
+  const promos = ((exportData && exportData.newCardholderPromos) || [])
+    .filter(function (p) { return p && p.id === cardId; });
+  const cta = ((exportData && exportData.cardApplyCtas) || {})[cardId] || null;
+  const card = ((exportData && exportData.cards) || []).filter(function (c) { return c && c.id === cardId; })[0];
+  return pmcHashString_(pmcPromoSignature_(promos) + '|' + pmcStableStringify_(cta) + '|' + (card ? card.name : ''));
+}
+
+function pmcShortDate_(iso) {
+  return iso ? parseInt(iso.slice(5, 7), 10) + '/' + parseInt(iso.slice(8, 10), 10) : '';
+}
+
+// 一檔活動的一句話獎勵（description／「相關卡片」用，純文字）
+function pmcRewardPlain_(promo, withGiftName) {
+  if (pmcIsBonus_(promo)) {
+    const rate = pmcRateDisplay_(promo);
+    if (rate) return rate + ' 回饋加碼';
+  }
+  const v = pmcPromoValue_(promo);
+  // 用途只取括號前那段（「LINE POINTS 點數（限新戶首次綁定…）」→「LINE POINTS 點數」），整句會撐爆標題
+  const usage = String(promo.voucher_usage || '').split(/[（(]/)[0].trim();
+  if (v !== null) return pmcMoney_(v) + ' ' + (usage || '刷卡金');
+  // 沒有金額、沒有回饋率、也沒有贈品：照活動類型寫（抽獎、贈點…），不要一律叫「首刷禮」
+  if (!pmcHasValue_(promo.gift_content)) {
+    const type = (Array.isArray(promo.promo_types) && promo.promo_types[0]) ? String(promo.promo_types[0]) : '';
+    return type || '新戶禮';
+  }
+  if (!withGiftName) return '首刷禮';
+  const opts = pmcGiftOptions_(promo.gift_content);
+  if (opts.length > 1) return '首刷禮 ' + opts.length + ' 選 1';
+  const name = opts[0] || '';
+  return name ? '首刷禮 ' + (name.length > 18 ? name.slice(0, 18) + '…' : name) : '首刷禮';
+}
+
+// 頁首三格：活動檔數／截止／收藏愛心（2026-11-22 站長：拿掉「回饋金額」——活動卡就在正下方，
+// 金額重複；愛心從卡圖那一列搬進來，申辦鈕那列才放得下去向文字）。
+// 愛心由 promos.js 的 setupFavorites() 填進 .pmc-fav-slot（生成器只留空位）。
+function pmcCardPageFacts_(g) {
+  const ends = g.items.map(function (p) { return p.periodEndIso; }).filter(Boolean).sort();
+  const endLabel = g.items.length > 1 ? '最快截止' : '活動截止';
+  const endValue = ends.length ? pmcShortDate_(ends[0]) : '不限期';
+  return '    <div class="pmc-cp-facts">\n' +
+    '      <div><small>新戶活動</small><b>' + g.items.length + ' 檔</b></div>\n' +
+    '      <div><small>' + endLabel + '</small><b>' + pmcEscapeHtml_(endValue) + '</b></div>\n' +
+    '      <div class="pmc-cp-fact-fav"><small>收藏</small>' +
+      '<span class="pmc-fav-slot" data-card-id="' + pmcEscapeHtml_(g.cardId) + '" data-card-name="' + pmcEscapeHtml_(g.cardName) + '"></span></div>\n' +
+    '    </div>\n';
+}
+
+// 逐檔獎勵（去重）：同樣的獎勵寫一次、後面註明檔數（滙豐兩檔都是「NT$1,000 刷卡金」，
+// 照列會像重複的 bug）。回傳 { text: '甲、乙（2 檔）', more: 還有沒列出的檔 }
+function pmcRewardList_(g, max) {
+  const order = [];
+  const count = {};
+  g.items.forEach(function (p) {
+    const r = pmcRewardPlain_(p.promo, true);
+    if (!count[r]) { count[r] = 0; order.push(r); }
+    count[r]++;
+  });
+  const shown = order.slice(0, max);
+  return {
+    text: shown.map(function (r) { return count[r] > 1 ? r + '（' + count[r] + ' 檔）' : r; }).join('、'),
+    more: order.length > max
+  };
+}
+
+// 引言＝整頁的一句話答案（2026-11-22 站長：AI／搜尋摘要最常直接引用第一段，要有實際數字）。
+// 1 檔：該檔摘要＋截止日；多檔：逐檔列出獎勵（最多 3 檔，其餘「等 N 檔」）＋最快截止。
+function pmcCardPageLede_(g) {
+  const n = g.items.length;
+  const name = g.cardName;
+  const main = g.items[0];
+  if (n === 1) {
+    // 摘要沒填就退回獎勵本身，引言才不會只剩「目前有 1 檔新戶活動」
+    const summary = String(main.promo.new_customer_summary || '').trim().replace(/[。．.\s]+$/, '') ||
+      pmcRewardPlain_(main.promo, true);
+    return name + '目前有 1 檔新戶活動：' + summary +
+      (main.periodEndIso ? '，活動到 ' + pmcFormatDateDisplay_(main.periodEndIso) : '') + '。';
+  }
+  const rewards = pmcRewardList_(g, 3);
+  const ends = g.items.map(function (p) { return p.periodEndIso; }).filter(Boolean).sort();
+  return name + '目前有 ' + n + ' 檔新戶活動：' + rewards.text + (rewards.more ? '等' : '') +
+    (ends.length ? '，最快 ' + pmcFormatDateDisplay_(ends[0]) + ' 截止' : '') +
+    '。每一檔的達成條件不同、要分別達成，以下逐檔整理條件與新戶定義。';
+}
+
+// <title> 用的主獎勵（≤20 字）：首刷禮單一品名太長只寫「首刷禮」、金額的用途太長只寫「NT$X 回饋」，標題才不會被 Google 截在半路
+function pmcCardPageTitleReward_(g) {
+  const promo = g.items[0].promo;
+  const r = pmcRewardPlain_(promo, true);
+  if (r.length <= 20) return r;
+  const short = pmcRewardPlain_(promo, false);
+  if (short.length <= 20) return short;
+  const v = pmcPromoValue_(promo);
+  return v !== null ? pmcMoney_(v) + ' 回饋' : short.slice(0, 20);
+}
+
+// 「相關卡片」（站長 2026-11-22 從「也可以看看」改名）：同類型（主活動的類型）優先，其餘照清單順序，取 3 張
+function pmcCardPageRelated_(g, groups) {
+  const tier = g.sortKey ? g.sortKey.tier : 0;
+  const others = groups.filter(function (o) { return o !== g && pmcCardPagePath_(o.cardId); });
+  const same = others.filter(function (o) { return o.sortKey && o.sortKey.tier === tier; });
+  const rest = others.filter(function (o) { return !(o.sortKey && o.sortKey.tier === tier); });
+  const picks = same.concat(rest).slice(0, 3);
+  if (!picks.length) return '';
+  return '  <section class="pmc-cp-rel" aria-labelledby="pmc-cp-rel-h">\n' +
+    '    <div class="pmc-section-head"><h2 id="pmc-cp-rel-h">相關卡片</h2></div>\n' +
+    '    <div class="pmc-cp-rel-grid">\n' +
+    picks.map(function (o) {
+      return '      <a class="pmc-cp-rel-card" href="' + pmcEscapeHtml_(pmcCardPagePath_(o.cardId)) + '">' +
+        '<span class="pmc-cp-rel-img"><img src="/assets/images/cards/' + encodeURIComponent(o.cardId) + '.png" alt="" loading="lazy" ' +
+        'onerror="this.closest(\'.pmc-cp-rel-img\').style.display=\'none\'"></span>' +
+        '<b>' + pmcEscapeHtml_(o.cardName) + '</b>' +
+        '<small>' + pmcEscapeHtml_(pmcRewardPlain_(o.items[0].promo, false)) +
+        (o.items.length > 1 ? '・共 ' + o.items.length + ' 檔' : '') + '</small></a>\n';
+    }).join('') +
+    '    </div>\n' +
+    '  </section>\n';
+}
+
+function pmcCardPageBreadcrumb_(name) {
+  return '  <nav class="promos-breadcrumb" aria-label="breadcrumb">\n' +
+    '    <a href="/">首頁</a><span class="promos-breadcrumb-sep" aria-hidden="true">›</span>' +
+    '<a href="/promos">新戶活動</a><span class="promos-breadcrumb-sep" aria-hidden="true">›</span>' +
+    '<span aria-current="page">' + pmcEscapeHtml_(name) + '</span>\n' +
+    '  </nav>\n';
+}
+
+function pmcCardPageJsonLds_(cardId, name, title, description, updatedIso) {
+  const url = PMC_SITE_URL + '/promos/' + cardId;
+  const crumbs = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: '首頁', item: PMC_SITE_URL + '/' },
+      { '@type': 'ListItem', position: 2, name: '新戶活動', item: PMC_SITE_URL + '/promos' },
+      { '@type': 'ListItem', position: 3, name: name, item: url }
+    ]
+  };
+  const page = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: title,
+    description: description,
+    url: url,
+    inLanguage: 'zh-Hant',
+    dateModified: updatedIso,
+    isPartOf: { '@type': 'WebSite', name: '信用卡回饋大師', url: PMC_SITE_URL + '/' }
+  };
+  return [page, crumbs].map(function (ld) { return JSON.stringify(ld, null, 2).replace(/<\//g, '<\\/'); });
+}
+
+function pmcCardPageHtml_(g, groups, ctx) {
+  const cardId = g.cardId;
+  const name = g.cardName;
+  const updatedIso = ctx.updatedFor(cardId);
+  // 標題把主獎勵放前面（2026-11-22 站長同意）：搜尋結果一眼看到「拿什麼」；品牌留在尾巴
+  const titleReward = pmcCardPageTitleReward_(g);
+  const title = name + '新戶' + (/^[A-Za-z0-9]/.test(titleReward) ? ' ' : '') + titleReward +
+    (g.items.length > 1 ? (/[A-Za-z0-9]$/.test(titleReward) ? ' 等 ' : '等 ') + g.items.length + ' 檔' : '') +
+    '｜' + ctx.yearMonthLabelFor(updatedIso) + '新戶活動 - Pick My Card';
+  const rewards = pmcRewardList_(g, 3);
+  const ends = g.items.map(function (p) { return p.periodEndIso; }).filter(Boolean).sort();
+  const endText = ends.length ? (g.items.length > 1 ? '，最快 ' : '，活動到 ') + pmcShortDate_(ends[0]) + (g.items.length > 1 ? ' 截止' : '') : '';
+  const description = name + '新戶活動整理：' + rewards.text + (rewards.more ? '等 ' + g.items.length + ' 檔' : '') +
+    endText + '。附達成條件與新戶定義，資料持續更新。';
+
+  // 申辦鈕：同清單（有分潤連結→立即申辦＋去向；沒有→銀行活動頁）。data-ga-section 讓 GA 分得出是單卡頁
+  const ctaLink = g.cta ? pmcSanitizeUrl_(g.cta.link) : '';
+  const promoLink = pmcSanitizeUrl_(g.items[0].promo.link);
+  let ctaHtml = '';
+  if (ctaLink) {
+    ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(ctaLink) +
+      '" target="_blank" rel="noopener noreferrer sponsored" data-ga-track="1" data-ga-section="card_page" data-card-id="' +
+      pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(name) + '">立即申辦</a>' +
+      pmcApplyDestHtml_(ctaLink, g.card, '');
+  } else if (promoLink) {
+    ctaHtml = '<a class="promo-apply-btn" href="' + pmcEscapeHtml_(promoLink) +
+      '" target="_blank" rel="noopener noreferrer" data-card-id="' + pmcEscapeHtml_(cardId) + '">活動頁面</a>';
+  }
+
+  const main =
+    pmcCardPageBreadcrumb_(name) +
+    '  <section class="pmc-cp-hero" data-card-id="' + pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(name) + '">\n' +
+    // 月份不放進 h1（站長 2026-11-22：標題太長、手機折成兩行），改成標題下方一行小灰字；<title> 仍帶月份
+    '    <h1>' + pmcEscapeHtml_(name) + '新戶活動</h1>\n' +
+    '    <p class="pmc-cp-month">' + pmcEscapeHtml_(ctx.monthLabelFor(updatedIso)) + '整理</p>\n' +
+    '    <p class="pmc-cp-lede">' + pmcEscapeHtml_(pmcCardPageLede_(g)) + '</p>\n' +
+    '    <div class="pmc-cp-top">\n' +
+    '      <span class="pmc-cp-img"><img src="/assets/images/cards/' + encodeURIComponent(cardId) + '.png" alt="' +
+      pmcEscapeHtml_(name) + '" onerror="this.closest(\'.pmc-cp-img\').style.display=\'none\'"></span>\n' +
+    '      <div class="pmc-cp-cta">' + ctaHtml + '</div>\n' +
+    '    </div>\n' +
+    pmcCardPageFacts_(g) +
+    '    <div class="promos-data-update">資料更新於 <time datetime="' + pmcEscapeHtml_(updatedIso) + '">' +
+      pmcEscapeHtml_(pmcFormatDateDisplay_(updatedIso)) + '</time></div>\n' +
+    '  </section>\n' +
+    pmcRenderTrust_() +
+    '  <div class="pmc-section-head" id="all-promos"><h2>新戶活動</h2></div>\n' +
+    '  <div class="pmc-cp-acts">\n' + pmcRenderCardGroup_(g, { page: true }) + '\n  </div>\n' +
+    // 部署之後才到期的情況：promos.js 把整張卡藏起來時，改顯示這一句（見 setupCardPage）
+    '  <p class="pmc-cp-ended" id="pmc-cp-ended" hidden>這張卡的新戶活動都已經結束了。<a href="/promos">看其他卡的新戶活動 ›</a></p>\n' +
+    // 卡片特色：容器由 tools/build-promos-features.js 注入（同清單頁）；沒注入時 promos.js 把整節藏起來
+    '  <section class="pmc-cp-feat-sec" id="pmc-cp-feat-sec" aria-labelledby="pmc-cp-feat-h">\n' +
+    '    <div class="pmc-section-head"><h2 id="pmc-cp-feat-h">卡片特色</h2></div>\n' +
+    // ⚠️ class 只能是 promo-card-feat 一個字：注入器的比對寫死 class="promo-card-feat"（樣式靠外層 .pmc-cp-feat-sec）
+    '    <div class="promo-card-feat" data-feat-for="' + pmcEscapeHtml_(cardId) + '"></div>\n' +
+    '  </section>\n' +
+    pmcCardPageRelated_(g, groups) +
+    '  <p class="pmc-cp-all"><a href="/promos">看全部信用卡新戶活動 ›</a></p>\n';
+
+  return pmcPageShell_({
+    title: title,
+    description: description,
+    path: '/promos/' + cardId,
+    jsonLds: pmcCardPageJsonLds_(cardId, name, title, description, updatedIso),
+    navCurrent: 'true',
+    versionTag: ctx.versionTag,
+    mainClass: 'promos-main pmc-cp',
+    mainHtml: main,
+    // 分享圖（2026-11-23）：有 assets/images/promo-og/<id>.jpg 才換，沒有就是全站預設圖（見 ctx.ogImageFor）
+    ogImage: ctx.ogImageFor ? ctx.ogImageFor(cardId) : '',
+    ogImageAlt: name + '新戶活動 — Pick My Card'
+  });
+}
+
+// 活動全部到期、但部署時還在 cards.data 裡的卡：給一頁「已結束」（noindex），
+// 免得 sitemap／外部連結在下次匯出前指到 404。
+function pmcCardPageEndedHtml_(cardId, name, groups, ctx) {
+  const title = name + '新戶活動 - Pick My Card';
+  const description = name + '目前沒有進行中的新戶活動。看看其他信用卡的首刷禮與新戶回饋。';
+  const fake = { cardId: cardId, sortKey: { tier: 0 } };
+  const main =
+    pmcCardPageBreadcrumb_(name) +
+    '  <section class="pmc-cp-hero">\n' +
+    '    <h1>' + pmcEscapeHtml_(name) + '新戶活動</h1>\n' +
+    '    <p class="pmc-cp-lede">' + pmcEscapeHtml_(name) + '目前沒有進行中的新戶活動，銀行推出新活動時這一頁會再更新。</p>\n' +
+    '  </section>\n' +
+    pmcCardPageRelated_(fake, groups) +
+    '  <p class="pmc-cp-all"><a href="/promos">看全部信用卡新戶活動 ›</a></p>\n';
+  return pmcPageShell_({
+    title: title,
+    description: description,
+    path: '/promos/' + cardId,
+    robots: 'noindex',
+    jsonLds: [],
+    navCurrent: 'true',
+    versionTag: ctx.versionTag,
+    mainClass: 'promos-main pmc-cp',
+    mainHtml: main
+  });
+}
+
+// 部署端入口：回傳 [{ cardId, html, ended }]。exportData 同 generatePromosPageHtml，另外吃：
+//   promoCardUpdatedIso  { 卡片 id: 'YYYY-MM-DD' }（exportToJSON 算好放進 cards.data）
+//   promosUpdatedIso     沒有個別日期時的退路；再沒有就今天
+//   versionTagOverride   ?v= 佔位（部署端傳 'dev'，之後由 deploy-version.sh 換成 commit hash）
+//   promoOgImages        { 卡片 id: 圖檔內容雜湊 }：有 assets/images/promo-og/<id>.jpg 的卡（tools/build-promo-og.js 畫、
+//                        commit 進 repo；tools/build-promo-card-pages.js 掃檔填這欄）。沒列到的卡用全站預設分享圖。
+//                        ?v= 帶內容雜湊：換圖後網址跟著變，Facebook／LINE 的分享快取才會重抓
+function generatePromoCardPages(exportData) {
+  const todayIso = pmcTodayISO_();
+  const pg = pmcPreparePromoGroups_(exportData, todayIso);
+  const perCard = (exportData && exportData.promoCardUpdatedIso) || {};
+  const fallbackIso = (exportData && exportData.promosUpdatedIso) || todayIso;
+  const ogImages = (exportData && exportData.promoOgImages) || {};
+  // 月份跟著「這張卡自己的資料更新日」走，不跟部署日（站長 2026-11-22 選 a）：
+  // 活動沒更新、月份卻每月自動往前跳＝假的新鮮度，而且跟頁面上的「資料更新於」對不起來
+  const ctx = {
+    monthLabelFor: function (iso) { return iso.slice(0, 4) + ' 年 ' + parseInt(iso.slice(5, 7), 10) + ' 月'; },
+    yearMonthLabelFor: function (iso) { return iso.slice(0, 4) + '年' + parseInt(iso.slice(5, 7), 10) + '月'; },
+    versionTag: (exportData && exportData.versionTagOverride) || 'dev',
+    updatedFor: function (id) { return perCard[id] || fallbackIso; },
+    ogImageFor: function (id) {
+      const v = ogImages[id];
+      return v ? PMC_SITE_URL + '/assets/images/promo-og/' + encodeURIComponent(id) + '.jpg?v=' + encodeURIComponent(v) : '';
+    }
+  };
+  const out = [];
+  const seen = {};
+  pg.groups.forEach(function (g) {
+    if (!pmcCardPagePath_(g.cardId)) return;
+    seen[g.cardId] = true;
+    out.push({ cardId: g.cardId, html: pmcCardPageHtml_(g, pg.groups, ctx), ended: false });
+  });
+  ((exportData && exportData.newCardholderPromos) || []).forEach(function (p) {
+    const id = p && p.id;
+    if (!id || seen[id] || !pmcCardPagePath_(id)) return;
+    seen[id] = true;
+    const card = pg.cardsById[id];
+    out.push({ cardId: id, html: pmcCardPageEndedHtml_(id, card ? card.name : id, pg.groups, ctx), ended: true });
+  });
+  return out;
 }
 
 // ============ GitHub 自動發布 ============
@@ -3769,7 +4309,7 @@ const GITHUB_REPO = 'issabeloh/pick-my-card';
 const GITHUB_BRANCH = 'main';
 const SITE_ORIGIN = 'https://pickmycard.app';
 
-function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promosUpdatedIso, homeUpdatedIso) {
+function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promosUpdatedIso, homeUpdatedIso, promoCardUpdatedIso) {
   const token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) throw new Error('請先在「專案設定 → 指令碼屬性」設定 GITHUB_TOKEN');
 
@@ -3797,7 +4337,7 @@ function publishToGitHub(cardsDataContent, promosPageHtml, merchantPages, promos
   // 起商家頁也比照辦理，先前每次匯出都蓋今天＝對 Google 天天喊「我更新了」，內容其實沒動，
   // 久了 Google 反而不信任 lastmod、降低重爬效率）：promos → promosUpdatedIso、
   // 首頁 → homeUpdatedIso（cards.data 內容指紋）、商家頁 → 見 generateSitemapXml_。
-  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso), `${skip}Update sitemap.xml (${version})`, token);
+  commitFileToGitHub('sitemap.xml', generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso, promoCardUpdatedIso), `${skip}Update sitemap.xml (${version})`, token);
 
   // 唯一不加 [CI Skip] 的 commit：觸發本次匯出僅有的一次 Cloudflare build
   commitFileToGitHub('cards.version', version, `Update cards.version (${version})`, token);
@@ -3817,8 +4357,10 @@ const MERCHANT_FALLBACK_SLUGS = ['蝦皮', 'momo', '高鐵', 'linepay', '中華�
 //  - 商家頁：同樣用 homeUpdatedIso。那些頁＝index.html 版面 ＋ cards.data 算出來的卡片
 //    清單，內容會變的來源就是 cards.data，與首頁同一個訊號（2026-08-16 改；在那之前是
 //    每次匯出蓋當天，等於對 Google 天天喊更新，久了 lastmod 就不被信任）
+//  - 單卡頁 /promos/<id>：promoCardUpdatedIso[id]（每張卡自己的指紋，2026-11-18）。只收今天還有
+//    進行中活動的卡——鍵就是 exportToJSON 用 pmcPromoCardPageIds_ 挑出來的那份
 // 沒傳的日期一律退回今天（Node harness／第一次生成）。日期都走 pmcTodayISO_() 台北時區。
-function generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso) {
+function generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso, promoCardUpdatedIso) {
   const today = pmcTodayISO_();
   const merchantLastmod = homeUpdatedIso || today;
   const urls = [
@@ -3828,6 +4370,10 @@ function generateSitemapXml_(merchantPages, promosUpdatedIso, homeUpdatedIso) {
     { loc: SITE_ORIGIN + '/terms', lastmod: '2026-09-02' },
     { loc: SITE_ORIGIN + '/promos', lastmod: promosUpdatedIso || today }
   ];
+  Object.keys(promoCardUpdatedIso || {}).forEach(function (id) {
+    if (!pmcCardPagePath_(id)) return;
+    urls.push({ loc: SITE_ORIGIN + pmcCardPagePath_(id), lastmod: promoCardUpdatedIso[id] || today });
+  });
   // 商家頁清單以 MerchantPages 工作表為準（active=FALSE 的不收）；工作表不存在才用退路清單
   const active = (merchantPages || []).filter(function (m) { return m && m.slug && m.active !== false; });
   const slugs = active.length

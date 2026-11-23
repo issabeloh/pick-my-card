@@ -13,7 +13,7 @@
 
 - 主選單／主函數：`exportToJSON`（含 `runQACheck` 資料品質檢查）
 - 2026-09-23 新增「站長推薦／行李箱專區」：New Cardholder Promos 多讀 `min_spend`、`luggage_inch`／`luggage_value`、
-  `pick_*` 共六欄（說明見 `docs/project/data-pipeline.md` 第 9b 節）。同專案另加
+  `pick_*` 共六欄（說明見 `docs/project/promos.md` 第 5 節）。同專案另加
   **`promo-picks-fill.gs`**（新檔，要在 Apps Script 編輯器「＋ 檔案」貼進去）：執行
   `fillPickSuggestions()` 會把目前上榜 5 檔的自動問句／理由填進空白格。
 - 2026-07-31 新增 `readChangelog()`（詳情頁「近期異動」）：讀資料檔的「變動紀錄」表，依 `id`
@@ -423,7 +423,9 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
     公式欄一律靠 `copyTo` 延續）：從 `GA4_按鈕點擊` 用 `SUMIFS` 彙總，
     只算 `button_type` 含 `apply` 的 6 種（`spotlight_apply`／`detail_header_apply`／
     `detail_sticky_apply`／`card_apply`／`search_result_apply`／`promos_page_apply`），
-    排除 `spotlight_compare`／`spotlight_info`。
+    排除 `spotlight_compare`／`spotlight_info`。`spotlight_apply` 2026-11-23 停用（按鈕已移除，歷史月份照算）；
+    同日新增的 `spotlight_promo`（推薦活動 modal 的新戶膠囊，連到站內 /promos/<id>）與
+    `detail_official_site`（詳情頁官網連結）都不是申辦，名稱刻意不帶 `apply`，不會被算進來。
     ```
     =IFERROR(LET(ms,IF(ISNUMBER($A2),EOMONTH($A2,-1)+1,DATEVALUE($A2&"/01")),me,EOMONTH(ms,0),
      IF(ms<DATE(2026,7,1),"—",
@@ -547,7 +549,7 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
 
 `exportToJSON()` 現在除了 `cards.data` / `cards.version`，還會多 commit 一個 `promos.html`
 （給 SEO／社群轉貼用的「新戶活動一覽」落地頁，糖果果凍風 UI）。生成邏輯與資料流細節見
-`docs/project/data-pipeline.md` 第 9 節，這裡只記站長要做的事與程式位置。
+`docs/project/promos.md`，這裡只記站長要做的事與程式位置。
 
 - **函數**：`generatePromosPageHtml(exportData)`（純函數，不呼叫任何 Sheets/Apps Script API），
   在 `exportToJSON()` 內讀完 `newCardholderPromos` / `cardApplyCtas` 後呼叫，回傳的 HTML

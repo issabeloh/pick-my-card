@@ -389,19 +389,6 @@ function hasNotesChanged(cardId, currentNotes) {
     return currentNotes !== lastSaved;
 }
 
-// 更新儲存按鈕狀態
-function updateSaveButtonState(cardId, currentNotes) {
-    const saveBtn = document.getElementById('save-notes-btn');
-    if (!saveBtn) return;
-    
-    const hasChanged = hasNotesChanged(cardId, currentNotes);
-    saveBtn.disabled = !hasChanged;
-    
-    if (hasChanged && !saveBtn.className.includes('saving')) {
-        saveBtn.className = 'save-notes-btn';
-    }
-}
-
 // 免年費狀態相關功能
 
 // 讀取免年費狀態
@@ -439,13 +426,16 @@ async function loadFeeWaiverStatus(cardId) {
     }
 }
 
-// 儲存免年費狀態
+// 儲存免年費狀態（回傳儲存結果，見 js/levels-payments.js「儲存結果」；寫入邏輯不變）
 async function saveFeeWaiverStatus(cardId, isWaived) {
     const localKey = `feeWaiver_${currentUser?.uid || 'local'}_${cardId}`;
-    writeLocal(localKey, isWaived.toString());   // 寫不進去不擋雲端，見 writeLocal
+    let local = true;
+    try { localStorage.setItem(localKey, isWaived.toString()); } catch (e) { local = false; }
     console.log('✅ [免年費] 已保存到本地快取:', cardId, isWaived);
 
-    if (!currentUser) return;
+    if (!currentUser) {
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
+    }
 
     try {
         // 保存到 Firestore 的 users collection
@@ -466,13 +456,16 @@ async function saveFeeWaiverStatus(cardId, isWaived) {
             }, { merge: true });
 
             console.log('☁️ [免年費] 已同步到 Firestore:', cardId, isWaived);
+            return { ok: true };
         }
+        return { ok: false, reason: '雲端連線尚未就緒', local };
     } catch (error) {
         console.error('❌ [免年費] Firestore 保存失敗:', error);
+        return { ok: false, reason: describeSaveError(error), local };
     }
 }
 
-// 設置免年費狀態功能
+// 設置免年費狀態功能（勾選＝開關樣式，改了就存；儲存結果交給詳情頁的儲存狀態列 cdTrackSave）
 async function setupFeeWaiverStatus(cardId) {
     const checkbox = document.getElementById('fee-waiver-checked');
     if (!checkbox) return;
@@ -483,17 +476,8 @@ async function setupFeeWaiverStatus(cardId) {
 
     // 設置變更監聽
     checkbox.onchange = (e) => {
-        const newStatus = e.target.checked;
-        saveFeeWaiverStatus(cardId, newStatus);
-
-        // 更新視覺提示 (可選)
-        const checkboxLabel = e.target.parentElement.querySelector('.checkbox-label');
-        if (newStatus) {
-            checkboxLabel.style.color = '#10b981';
-            setTimeout(() => {
-                checkboxLabel.style.color = '';
-            }, 1000);
-        }
+        const saving = saveFeeWaiverStatus(cardId, e.target.checked);
+        if (typeof cdTrackSave === 'function') cdTrackSave('fee', saving);
     };
 }
 
@@ -530,12 +514,17 @@ async function loadCreditLimit(cardId) {
     }
 }
 
-// 儲存我的額度（amount 為數字，null 表示清空）
+// 儲存我的額度（amount 為數字，null 表示清空；回傳儲存結果，寫入邏輯不變）
 async function saveCreditLimit(cardId, amount) {
     const localKey = `creditLimit_${currentUser?.uid || 'local'}_${cardId}`;
-    writeLocal(localKey, amount === null ? '' : String(amount));   // 寫不進去不擋雲端，見 writeLocal
-    if (!currentUser) { notifyMappingsDataChanged(); return; }
+    let local = true;
+    try { localStorage.setItem(localKey, amount === null ? '' : String(amount)); } catch (e) { local = false; }
+    if (!currentUser) {
+        notifyMappingsDataChanged();
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
+    }
 
+    let result = { ok: false, reason: '雲端連線尚未就緒', local };
     try {
         if (window.db && window.doc && window.setDoc && window.getDoc) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
@@ -555,35 +544,31 @@ async function saveCreditLimit(cardId, amount) {
             }, { merge: true });
 
             console.log('☁️ [我的額度] 已同步到 Firestore:', cardId, amount);
+            result = { ok: true };
         }
     } catch (error) {
         console.error('❌ [我的額度] Firestore 保存失敗:', error);
+        result = { ok: false, reason: describeSaveError(error), local };
     }
     notifyMappingsDataChanged();   // 刷卡小抄底部的「額度合計」跟著更新
+    return result;
 }
 
-// 設置我的額度輸入（卡片詳情頁）
+// 設置我的額度輸入（卡片詳情頁）：失焦或按 Enter 即儲存；只留數字、顯示千分位；
+// 儲存結果交給詳情頁的儲存狀態列（cdTrackSave），不再有 2 秒就消失的「✓ 已儲存」
 async function setupCreditLimit(cardId) {
     const input = document.getElementById('credit-limit-input');
-    const savedTag = document.getElementById('credit-limit-saved');
     if (!input) return;
 
-    if (savedTag) savedTag.textContent = '';
     const current = await loadCreditLimit(cardId);
     input.value = current !== null ? current.toLocaleString() : '';
 
-    // 失焦或按 Enter 即儲存；只留數字，顯示千分位
     input.onchange = () => {
         const raw = input.value.replace(/[^\d]/g, '');
         const amount = raw ? Number(raw) : null;
         input.value = amount !== null ? amount.toLocaleString() : '';
-        saveCreditLimit(cardId, amount);
-        if (savedTag) {
-            savedTag.textContent = '✓ 已儲存';
-            setTimeout(() => {
-                if (savedTag.textContent === '✓ 已儲存') savedTag.textContent = '';
-            }, 2000);
-        }
+        const saving = saveCreditLimit(cardId, amount);
+        if (typeof cdTrackSave === 'function') cdTrackSave('credit', saving);
     };
     input.onkeydown = (e) => {
         if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
@@ -632,7 +617,9 @@ async function loadBillingDates(cardId) {
     }
 }
 
-// 儲存結帳日期
+// 儲存結帳日期（回傳儲存結果，見 js/levels-payments.js「儲存結果」；key、文件路徑、格式都沒動）
+// ⚠️ 欄位名稱跟意思是反的（站長 2026-11-22 確認）：billingDate＝繳款截止日、statementDate＝結帳日。
+//    已經有用戶資料用這兩個名字，改名會讓舊資料對不上，所以只在畫面上對好、資料名稱不動
 async function saveBillingDates(cardId, billingDate, statementDate) {
     const dateData = {
         billingDate: billingDate || '',
@@ -640,10 +627,13 @@ async function saveBillingDates(cardId, billingDate, statementDate) {
     };
 
     const localKey = `billingDates_${currentUser?.uid || 'local'}_${cardId}`;
-    writeLocal(localKey, JSON.stringify(dateData));   // 寫不進去不擋雲端，見 writeLocal
+    let local = true;
+    try { localStorage.setItem(localKey, JSON.stringify(dateData)); } catch (e) { local = false; }
     console.log('✅ [結帳日期] 已保存到本地快取:', cardId, dateData);
 
-    if (!currentUser) return;
+    if (!currentUser) {
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
+    }
 
     try {
         // 保存到 Firestore 的 users collection
@@ -664,60 +654,55 @@ async function saveBillingDates(cardId, billingDate, statementDate) {
             }, { merge: true });
 
             console.log('☁️ [結帳日期] 已同步到 Firestore:', cardId, dateData);
+            return { ok: true };
         }
+        return { ok: false, reason: '雲端連線尚未就緒', local };
     } catch (error) {
         console.error('❌ [結帳日期] Firestore 保存失敗:', error);
+        return { ok: false, reason: describeSaveError(error), local };
     }
 }
 
-// 設置結帳日期功能
+// 存的日期字串 → 1–31 的數字；空白或看不懂回傳 null（只用來顯示，不寫回）
+function billingDayNumber(v) {
+    const n = parseInt(v, 10);
+    return Number.isInteger(n) && n >= 1 && n <= 31 ? n : null;
+}
+
+// 設置結帳日／繳款截止日（個人設定「我的紀錄」，2026-11-22 補上欄位）：兩個「每月 N 日」下拉，改了就存；
+// 儲存結果交給儲存狀態列（cdTrackSave）。#statement-date＝結帳日、#billing-date＝繳款截止日（見 saveBillingDates 上方）。
+// 存的值看不懂時下拉顯示「未設定」，但只要用戶沒動這兩格就不會寫回
 async function setupBillingDates(cardId) {
-    const billingInput = document.getElementById('billing-date');
-    const statementInput = document.getElementById('statement-date');
-    
-    if (!billingInput || !statementInput) return;
-    
-    // 讀取已儲存的日期
-    const savedDates = await loadBillingDates(cardId);
-    billingInput.value = savedDates.billingDate;
-    statementInput.value = savedDates.statementDate;
-    
-    // 為有值的輸入框加上視覺強調
-    const updateInputAppearance = (input) => {
-        if (input.value.trim() !== '') {
-            input.style.borderColor = '#10b981';
-            input.style.background = 'white';
-            input.style.fontWeight = '600';
-        }
+    const statementSel = document.getElementById('statement-date');
+    const billingSel = document.getElementById('billing-date');
+    if (!billingSel || !statementSel) return;
+
+    const fill = (sel) => {
+        if (sel.options.length > 1) return;
+        sel.innerHTML = '<option value="">未設定</option>' +
+            Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}">每月 ${i + 1} 日</option>`).join('');
     };
-    
-    updateInputAppearance(billingInput);
-    updateInputAppearance(statementInput);
-    
-    // 儲存功能
-    const saveDates = () => {
-        const billing = billingInput.value;
-        const statement = statementInput.value;
-        saveBillingDates(cardId, billing, statement);
-        
-        // 更新視覺狀態
-        updateInputAppearance(billingInput);
-        updateInputAppearance(statementInput);
+    fill(statementSel);
+    fill(billingSel);
+    // 讀完之前先清空，免得顯示上一張卡的日期
+    statementSel.value = '';
+    billingSel.value = '';
+    statementSel.onchange = billingSel.onchange = null;
+
+    // 快速換卡時，晚回來的舊讀取不能蓋掉新卡的值
+    const tok = (setupBillingDates._t = (setupBillingDates._t || 0) + 1);
+    const saved = await loadBillingDates(cardId);
+    if (tok !== setupBillingDates._t) return;
+    const s = billingDayNumber(saved.statementDate);
+    const b = billingDayNumber(saved.billingDate);
+    statementSel.value = s ? String(s) : '';
+    billingSel.value = b ? String(b) : '';
+
+    const save = () => {
+        const saving = saveBillingDates(cardId, billingSel.value, statementSel.value);
+        if (typeof cdTrackSave === 'function') cdTrackSave('dates', saving);
     };
-    
-    // 設置變更監聽
-    billingInput.onchange = saveDates;
-    billingInput.onblur = saveDates;
-    statementInput.onchange = saveDates;
-    statementInput.onblur = saveDates;
-    
-    // 輸入驗證
-    [billingInput, statementInput].forEach(input => {
-        input.oninput = (e) => {
-            let value = parseInt(e.target.value);
-            if (value > 31) e.target.value = 31;
-            if (value < 1 && e.target.value !== '') e.target.value = 1;
-        };
-    });
+    statementSel.onchange = save;
+    billingSel.onchange = save;
 }
 

@@ -137,7 +137,7 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
 - 領券活動的溢出直接用 `basicCashback`（與 getOverflowRate 現值等價；不共用只是避免依賴，程式內有註解）
 - 無匹配 fallback：`buildBasicCashbackResult(card, amount)`（**只算 `basicCashback`，不加 `domesticBonusRate`**——2026-10-13 站長決定；國內加碼只在 cashbackModel 明確列出的槽才算）；搜尋結果合併：`mergeResultsByActivity(resultList)`
 
-**計算明細（計算機按鈕）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），按鈕永遠顯示。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（`js/results-display.js`）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
+**計算明細（回饋率按鈕，2026-11-22 起不再是計算機圖示，見 ui-display.md 1q）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），回饋率永遠是可點的按鈕。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（約 script.js:5249）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
 
 **加碼期間**（2026-11-23）：卡片層的 `domesticBonusPeriod`／`overseasBonusPeriod`（`YYYY/M/D~YYYY/M/D`）由 `applyBonusPeriods()`（`js/core-utils.js`，在 `filterExpiredRates` 裡跑，和活動過期同一個時機）處理：未開始或已過期 → 卡片層與**每個級別**的 `domesticBonusRate`／`overseasBonusRate` 一律歸零，下游（計算三種模型、`getDisplayRate`、回饋組成、詳情頁加碼卡）全部自然看到 0；期間內的記在 `card.bonusPeriods[kind]` 給詳情頁顯示「活動期間」與「即將結束」；歸零的記在 `card.endedBonuses[kind]`（搜尋結果「一般消費回饋率」卡據此不再顯示加碼條件）。沒填期間＝長期有效。**新增任何讀加碼率的地方不必自己判斷期間**；但要讀加碼的「條件」「上限」等非率欄位時，要看 `endedBonuses`。
 

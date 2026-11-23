@@ -822,7 +822,7 @@ function mpFitRows() {
 }
 
 // ============================================
-// 拖曳排序（自訂）：move/up 掛 document，不用 setPointerCapture（見 ui-display.md 教訓）
+// 拖曳排序（自訂）：move/up 掛 document，不用 setPointerCapture（見 ui-display.md 第 11 節「互動」）
 // ============================================
 function mpStartDrag(e) {
     const grip = e.target.closest('[data-mp-grip]');

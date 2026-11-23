@@ -11,3 +11,6 @@ tools/regression/search-compare-last.json
 # （上面的 package.json 是不帶斜線的樣式，會匹配所有層級）。
 # package-lock.json 沿用本 repo 慣例不進版控。
 !functions/package.json
+
+# 單卡頁 /promos/<card id>：部署時由 tools/build-promo-card-pages.js 生成，不進版控
+/promos/

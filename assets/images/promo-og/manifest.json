@@ -1,0 +1,152 @@
+{
+  "cathay-cube": {
+    "name": "國泰 CUBE 卡",
+    "cardImage": "e19067e31943",
+    "template": 1
+  },
+  "ctbc-linepay-card": {
+    "name": "中信 LINE Pay 卡",
+    "cardImage": "ba0b0fea52a8",
+    "template": 1
+  },
+  "ctbc-uniopen": {
+    "name": "中信 Uniopen 聯名卡",
+    "cardImage": "4c63e4d41913",
+    "template": 1
+  },
+  "dbs-aov": {
+    "name": "星展傳說對決聯名卡",
+    "cardImage": "649e8067bc45",
+    "template": 1
+  },
+  "dbs-eco": {
+    "name": "星展 eco 永續卡",
+    "cardImage": "718ed9bd5fd7",
+    "template": 1
+  },
+  "febank-happy": {
+    "name": "遠東快樂卡",
+    "cardImage": "5e4a09b72e1a",
+    "template": 1
+  },
+  "febank-lejia": {
+    "name": "遠東樂家+卡",
+    "cardImage": "3b6f8cd5c4d4",
+    "template": 1
+  },
+  "firstbank-ileo": {
+    "name": "一銀 iLEO 信用卡",
+    "cardImage": "b462297a051d",
+    "template": 1
+  },
+  "fubon-jcard": {
+    "name": "富邦 J 卡",
+    "cardImage": "e29e6cf83bca",
+    "template": 1
+  },
+  "hsbc-cashback-signature": {
+    "name": "滙豐現金回饋御璽卡",
+    "cardImage": "e475fcbfd5e1",
+    "template": 1
+  },
+  "hsbc-liveplus": {
+    "name": "滙豐 Live+ 卡",
+    "cardImage": "b8b2fc125d37",
+    "template": 1
+  },
+  "hsbc-titanium": {
+    "name": "滙豐匯鑽卡",
+    "cardImage": "84e337db7be5",
+    "template": 1
+  },
+  "kgi-eslite": {
+    "name": "凱基誠品聯名卡",
+    "cardImage": "f007daa1042b",
+    "template": 1
+  },
+  "mega-bt21": {
+    "name": "兆豐 BT21 卡",
+    "cardImage": "20398bbf9ef5",
+    "template": 1
+  },
+  "sinopac-coin": {
+    "name": "永豐幣倍卡",
+    "cardImage": "d80aa93aab60",
+    "template": 1
+  },
+  "sinopac-daway": {
+    "name": "永豐 DAWAY 卡",
+    "cardImage": "9a9f8298e4e9",
+    "template": 1
+  },
+  "sinopac-dawho": {
+    "name": "永豐大戶卡",
+    "cardImage": "69583dc722ba",
+    "template": 1
+  },
+  "sinopac-green": {
+    "name": "永豐 Green 卡",
+    "cardImage": "c29c016843ad",
+    "template": 1
+  },
+  "sinopac-sport": {
+    "name": "永豐 Sport 卡",
+    "cardImage": "e96030e294cf",
+    "template": 1
+  },
+  "taishin-richart": {
+    "name": "台新 Richart 卡",
+    "cardImage": "a718e213d3b0",
+    "template": 1
+  },
+  "tbb-artfun": {
+    "name": "企銀藝FUN悠遊御璽卡",
+    "cardImage": "ba66178ed4b3",
+    "template": 1
+  },
+  "tbb-chaotian": {
+    "name": "企銀朝天宮卡",
+    "cardImage": "258aa0adf8b4",
+    "template": 1
+  },
+  "ubot-jiho": {
+    "name": "聯邦吉鶴卡",
+    "cardImage": "9943fa08374d",
+    "template": 1
+  },
+  "ubot-linebank": {
+    "name": "聯邦 LINE Bank 卡",
+    "cardImage": "3b9b203df4ad",
+    "template": 1
+  },
+  "ubot-linepoint": {
+    "name": "聯邦賴點卡",
+    "cardImage": "f210d68d69d3",
+    "template": 1
+  },
+  "ubot-mcard": {
+    "name": "聯邦 M 卡",
+    "cardImage": "2f80a7db65ee",
+    "template": 1
+  },
+  "yushan-kumamon": {
+    "name": "玉山熊本熊卡",
+    "cardImage": "6c728118871e",
+    "template": 1
+  },
+  "yushan-pi-card": {
+    "name": "玉山 Pi 卡",
+    "cardImage": "0424d67c773b",
+    "template": 1
+  },
+  "yushan-ubear": {
+    "name": "玉山 Ubear 卡",
+    "cardImage": "e0e0951836cd",
+    "template": 1
+  },
+  "yushan-unicard": {
+    "name": "玉山 UniCard",
+    "cardImage": "99006beaf042",
+    "template": 1
+  }
+}

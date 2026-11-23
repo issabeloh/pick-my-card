@@ -233,21 +233,29 @@ function rowHtml(r) {
     '<span class="promo-feat-cap">' + escapeHtml(capText(r.cap)) + '</span></li>';
 }
 
+const CHEVRON = '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">' +
+  '<path d="M7.5 4.5L13 10l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function blockHtml(cardId, feat, usage) {
   if (!feat.rows.length && !feat.base.length) return '';
   const lv = feat.level
     ? '<span class="promo-feat-level">以「' + escapeHtml(feat.level) + '」計</span>' : '';
   // 原本是卡名旁那顆 ⓘ（2026-09-17 改成「查看全部 ›」文字連結）；
   // 2026-09-21 站長：在 modal 裡改當 CTA 按鈕、移到最下方、文字改「查看卡片詳情」。
+  // 2026-11-23 站長：文字改「看完整回饋與權益 ›」（清單頁 modal 與單卡頁一起改）——讓人分得出
+  // 新戶活動頁看的是新戶活動、詳情頁才是平常刷卡的完整回饋與權益。箭頭用 svg 而不是「›」字元，
+  // 兩頁的按鈕都是置中 flex，字元箭頭的基線會偏。
   // 這裡仍然輸出在 .promo-feat-head 裡——promos.js 的 openFeatModal() 會把這個節點
   // 搬到 modal 的 footer 再套 CTA 樣式，注入器不必知道它最後長什麼樣子。
   // href 保留深連結當 fallback；promos.js 攔截後開內嵌詳情並捲到「指定通路回饋」。
   const all = '<a class="promo-feat-all" href="' + escapeHtml('/?start&card=' + cardId) +
     '" data-card-id="' + escapeHtml(cardId) + '" data-section="card-special-section"' +
-    ' target="_blank" rel="noopener noreferrer">查看卡片詳情</a>';
+    ' target="_blank" rel="noopener noreferrer">看完整回饋與權益' + CHEVRON + '</a>';
   // 卡片用途：Sheets 的 cardUseCase 欄，沒填就整行不出現（站長 2026-09-17，可以慢慢填）
+  // 署名「— 大師點評」：單卡頁比照詳情頁的引言樣式顯示（2026-11-22）；清單頁 modal 仍是色條樣式、
+  // promos.css 把署名藏起來。兩頁吃同一份注入結果，所以署名一律輸出、由 CSS 決定顯示與否。
   const usageHtml = usage
-    ? '<p class="promo-feat-usage">' + escapeHtml(usage) + '</p>' : '';
+    ? '<p class="promo-feat-usage">' + escapeHtml(usage) + '</p><p class="promo-feat-usage-cite">— 大師點評</p>' : '';
   return '<div class="promo-feat-head"><b>卡片特色</b>' + lv + all + '</div>' + usageHtml +
     '<ul class="promo-feat-list">' +
     feat.rows.map(rowHtml).join('') +
@@ -261,7 +269,16 @@ function readCardsData() {
   return JSON.parse(Buffer.from(raw, 'base64').toString('utf8'));
 }
 
-function build() {
+// 單卡頁（2026-11-18，tools/build-promo-card-pages.js 在部署時生成到 promos/）也有同樣的容器，
+// 一起注入。那些頁只在部署時存在，本機沒跑過生成器時這裡就只處理 promos.html。
+const CARD_PAGE_DIR = path.join(REPO, 'promos');
+function cardPageFiles() {
+  if (!fs.existsSync(CARD_PAGE_DIR)) return [];
+  return fs.readdirSync(CARD_PAGE_DIR).filter(f => f.endsWith('.html')).sort()
+    .map(f => path.join(CARD_PAGE_DIR, f));
+}
+
+function makeContext() {
   if (!fs.existsSync(PAGE)) {
     throw new Error('找不到 promos.html —— 它由 Apps Script 匯出生成，應該跟 cards.data 一起進 repo');
   }
@@ -276,8 +293,11 @@ function build() {
     if (s.active === false) return;
     (spotByCard[s.card_id] = spotByCard[s.card_id] || []).push(s);
   });
+  return { engine, cd, byId, spotByCard };
+}
 
-  let html = fs.readFileSync(PAGE, 'utf8');
+function injectInto(html, c) {
+  const { engine, cd, byId, spotByCard } = c;
   let filled = 0, empty = 0, missing = [];
 
   // 只換容器內容，容器本身（id / class / data-feat-for）維持生成器輸出的樣子。
@@ -328,32 +348,46 @@ function build() {
     OPEN_RE.lastIndex = closeEnd;
   }
   out.push(html.slice(cursor));
-  html = out.join('');
+  return { html: out.join(''), filled, empty, missing };
+}
 
-  if (missing.length) {
-    throw new Error('promos.html 有對不到 cards.data 的卡片 id：' + missing.join('、'));
+function build() {
+  const c = makeContext();
+  const main = injectInto(fs.readFileSync(PAGE, 'utf8'), c);
+  if (main.missing.length) {
+    throw new Error('promos.html 有對不到 cards.data 的卡片 id：' + main.missing.join('、'));
   }
-  if (filled === 0) {
+  if (main.filled === 0) {
     throw new Error('一個卡片特色容器都沒填到——生成器的標記可能改了，這支腳本要跟著更新');
   }
-  return { html, filled, empty };
+  // 單卡頁：「活動已結束」那種頁沒有容器，所以不檢查 filled；對不到 id 一樣擋
+  const cards = cardPageFiles().map(file => {
+    const r = injectInto(fs.readFileSync(file, 'utf8'), c);
+    if (r.missing.length) throw new Error(path.relative(REPO, file) + ' 有對不到 cards.data 的卡片 id：' + r.missing.join('、'));
+    return Object.assign({ file }, r);
+  });
+  return { main, cards };
 }
 
 try {
-  const { html, filled, empty } = build();
-  const current = fs.readFileSync(PAGE, 'utf8');
+  const { main, cards } = build();
+  const targets = [Object.assign({ file: PAGE }, main)].concat(cards);
+  const stale = targets.filter(t => t.html !== fs.readFileSync(t.file, 'utf8'));
+  const cardFilled = cards.reduce((n, t) => n + t.filled, 0);
+  const cardNote = cards.length ? '；單卡頁 ' + cards.length + ' 頁（' + cardFilled + ' 組）' : '';
   if (CHECK_ONLY) {
-    if (html !== current) {
-      console.error('❌ promos.html 的卡片特色區塊與生成結果不一致');
+    if (stale.length) {
+      console.error('❌ 卡片特色區塊與生成結果不一致：' + stale.map(t => path.relative(REPO, t.file)).join('、'));
       process.exit(1);
     }
-    console.log('✅ promos.html 卡片特色已是最新（' + filled + ' 組）');
+    console.log('✅ promos.html 卡片特色已是最新（' + main.filled + ' 組）' + cardNote);
   } else {
-    if (html === current) {
-      console.log('✅ promos.html 卡片特色無變化（' + filled + ' 組）');
+    stale.forEach(t => fs.writeFileSync(t.file, t.html));
+    if (!stale.length) {
+      console.log('✅ promos.html 卡片特色無變化（' + main.filled + ' 組）' + cardNote);
     } else {
-      fs.writeFileSync(PAGE, html);
-      console.log('✅ promos.html 卡片特色已注入：' + filled + ' 組' + (empty ? '（' + empty + ' 組無資料、留空）' : ''));
+      console.log('✅ 卡片特色已注入：promos.html ' + main.filled + ' 組' +
+        (main.empty ? '（' + main.empty + ' 組無資料、留空）' : '') + cardNote);
     }
   }
 } catch (err) {

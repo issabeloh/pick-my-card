@@ -10,7 +10,7 @@
  *  - 級別解析                  → "resolveCardLevel"
  *  - 行動支付管理              → "Payment Management" / "openMyPaymentsModal"
  *  - 支付詳情/比較             → "showPaymentDetail" / "showComparePaymentsModal"
- *  - 支付卡片/名次獎牌          → "renderPaymentCardResult" / "renderPaymentRankMedal"
+ *  - 支付清單列/名次            → "renderPaymentRow" / "renderPaymentRank"
  *  - 用戶支付載存              → "loadUserPayments" / "saveUserPayments"
  * ============================================================ */
 // ========== Card Level Management Functions ==========
@@ -107,35 +107,65 @@ async function getCardLevelUncached(cardId, defaultLevel) {
     }
 }
 
+// ===== 儲存結果（2026-11-17，個人設定「統一自動儲存＋常駐儲存狀態列」）=====
+// 下面四個 save 函數、js/spending-mappings.js 的 saveFeeWaiverStatus／saveCreditLimit、
+// js/card-detail.js 的 saveUserNotes 都回傳同一種結果物件，詳情頁的儲存狀態列（cdTrackSave）據此顯示，
+// 不再是「存了沒反應」：
+//   { ok: true }                        成功（訪客＝存在這台裝置；登入者＝已寫入雲端）
+//   { ok: true, volatile: true }        訪客且這項設定沒有本機備份（只在這次瀏覽有效；目前只有生日月份，而訪客不能設）
+//   { ok: false, reason, local }        失敗；reason 是給人看的原因，local＝失敗前是否已先存在這台裝置
+// 邏輯本身（寫哪個 key、哪份文件、什麼格式）一律不變，只是把原本吞掉的結果回傳出來。
+// 呼叫端不看結果也沒事（absorbGuestPersonalData 等舊呼叫端照舊）。
+function describeSaveError(error) {
+    const code = error && error.code ? String(error.code) : '';
+    const msg = error && error.message ? String(error.message) : '';
+    if (/permission-denied/.test(code)) return '沒有寫入權限（可能需要重新登入）';
+    if (/unauthenticated/.test(code)) return '登入已失效（請重新登入）';
+    if (/unavailable|deadline-exceeded|network/i.test(code) || /network|offline|Failed to fetch/i.test(msg)) return '網路連線不穩';
+    if (/resource-exhausted/.test(code)) return '寫入太頻繁，請稍後再試';
+    if (/Firestore not available/.test(msg)) return '雲端連線尚未就緒';
+    return '雲端寫入失敗';
+}
+
 // Save user's birthday month to Firestore and update pre-computed flag
 async function saveBirthdayMonth(month) {
     userBirthdayMonth = month;
     isBirthdayMonth = month !== null && month === getTaiwanMonth();
 
-    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    // 訪客：生日月份只有登入後才能設定（詳情頁的下拉是 disabled），這裡不會有東西要存
+    if (!auth || !auth.currentUser) return { ok: true, volatile: true };
+    if (!window.db || !window.doc || !window.setDoc) return { ok: false, reason: '雲端連線尚未就緒', local: false };
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
         await window.setDoc(docRef, { birthdayMonth: month, updatedAt: new Date().toISOString() }, { merge: true });
         console.log(`Birthday month saved: ${month}`);
+        return { ok: true };
     } catch (error) {
         console.error('Failed to save birthday month:', error);
+        return { ok: false, reason: describeSaveError(error), local: false };   // 沒有本機備份
     }
 }
 
 // Save user's CUBE card issuer (Visa/Mastercard/JCB) to Firestore + localStorage and update global flag
 async function saveCubeIssuer(issuer) {
     cubeIssuer = issuer;
-    try { localStorage.setItem('cubeIssuer', issuer); } catch (e) {}
+    let local = true;
+    try { localStorage.setItem('cubeIssuer', issuer); } catch (e) { local = false; }
 
-    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    if (!auth || !auth.currentUser) {
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
+    }
+    if (!window.db || !window.doc || !window.setDoc) return { ok: false, reason: '雲端連線尚未就緒', local };
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
         await window.setDoc(docRef, { cubeIssuer: issuer, updatedAt: new Date().toISOString() }, { merge: true });
         console.log(`Cube issuer saved: ${issuer}`);
+        return { ok: true };
     } catch (error) {
         console.error('Failed to save cube issuer:', error);
+        return { ok: false, reason: describeSaveError(error), local };
     }
 }
 
@@ -143,31 +173,46 @@ async function saveCubeIssuer(issuer) {
 async function saveChildrenEligible(eligible) {
     isChildrenEligible = eligible;
 
-    if (!auth || !auth.currentUser || !window.db || !window.doc || !window.setDoc) return;
+    // 訪客：存在這台裝置（2026-11-20 起；key childrenEligible_guest，只存 true/false）。登入時由
+    // absorbGuestPersonalData 帶進帳號並移除，登出清理也會清（js/auth-user-data.js）。
+    // ⚠️ 登入狀態下不讀寫這個訪客 key（共用電腦上那可能是別人的選擇）
+    if (!auth || !auth.currentUser) {
+        try {
+            localStorage.setItem('childrenEligible_guest', JSON.stringify(!!eligible));
+            return { ok: true };
+        } catch (e) {
+            return { ok: false, reason: '這台裝置不允許網站存資料（例如無痕模式）', local: false };
+        }
+    }
+    if (!window.db || !window.doc || !window.setDoc) return { ok: false, reason: '雲端連線尚未就緒', local: false };
 
     try {
         const docRef = window.doc(window.db, 'users', auth.currentUser.uid);
         await window.setDoc(docRef, { isChildrenEligible: eligible, updatedAt: new Date().toISOString() }, { merge: true });
         console.log(`Children eligibility saved: ${eligible}`);
+        return { ok: true };
     } catch (error) {
         console.error('Failed to save children eligibility:', error);
+        return { ok: false, reason: describeSaveError(error), local: false };
     }
 }
 
 // Save card level to Firestore (with localStorage backup)
+// 回傳儲存結果（見上方「儲存結果」說明）；寫入邏輯不變。⚠️ 呼叫點的限制見檔頭（鐵則 1）
 async function saveCardLevel(cardId, level) {
-    if (!cardId || !level) return;
+    if (!cardId || !level) return { ok: false, reason: '缺少資料', local: false };
 
     // Write-through to the in-memory cache so subsequent reads see the new value.
     cardLevelCache.set(cardLevelCacheKey(cardId), level);
 
     // Always save to localStorage as backup（登入者用 uid 區分的 key，見 cardLevelLocalKey）
-    try { localStorage.setItem(cardLevelLocalKey(cardId), level); } catch (e) {}
+    let local = true;
+    try { localStorage.setItem(cardLevelLocalKey(cardId), level); } catch (e) { local = false; }
 
     // If user not logged in, only save locally
     if (!auth || !auth.currentUser) {
         console.log(`Card level saved locally for ${cardId}: ${level}`);
-        return;
+        return local ? { ok: true } : { ok: false, reason: '無法寫入這台裝置的儲存空間', local: false };
     }
 
     try {
@@ -181,8 +226,10 @@ async function saveCardLevel(cardId, level) {
         });
 
         console.log(`Card level synced to Firestore for ${cardId}: ${level}`);
+        return { ok: true };
     } catch (error) {
         console.error('Failed to save card level to Firestore:', error);
+        return { ok: false, reason: describeSaveError(error), local };
     }
 }
 
@@ -257,10 +304,15 @@ function openManagePaymentsModal() {
         const checkbox = paymentDiv.querySelector('input');
         checkbox.addEventListener('change', () => {
             paymentDiv.classList.toggle('selected', checkbox.checked);
+            updateSelectionDirtyState('payments-selection');
         });
 
         paymentsSelection.appendChild(paymentDiv);
     });
+
+    // 儲存列（2026-11-22，同選卡 modal）：打開當下的勾選＝比較基準，有改動才出現「已變更 N 個　取消　儲存設定」
+    paymentsSelection._initialSelection = new Set(paymentsData.payments.filter(p => userSelectedPayments.has(p.id)).map(p => p.id));
+    updateSelectionDirtyState('payments-selection');
 
     saveBtn.disabled = false;
     saveBtn.style.opacity = '1';
@@ -279,6 +331,7 @@ function openManagePaymentsModal() {
             cb.closest('.card-checkbox').classList.toggle('selected', allSelected);
         });
         toggleAllBtn.textContent = allSelected ? '取消全選' : '全選';
+        updateSelectionDirtyState('payments-selection');
     };
 
     // Setup modal controls
@@ -312,7 +365,8 @@ function openManagePaymentsModal() {
     // Setup search functionality
     const searchInput = document.getElementById('search-payments-input');
     searchInput.value = ''; // Clear search on open
-    searchInput.addEventListener('input', (e) => {
+    // 用 oninput 不用 addEventListener：這支每次打開都會跑，addEventListener 會一次疊一個監聽
+    searchInput.oninput = (e) => {
         const searchTerm = e.target.value.toLowerCase().trim();
         const paymentDivs = paymentsSelection.querySelectorAll('.card-checkbox');
 
@@ -327,7 +381,7 @@ function openManagePaymentsModal() {
                 }
             }
         });
-    });
+    };
 
     modal.style.display = 'flex';
     disableBodyScroll();
@@ -403,9 +457,9 @@ async function showPaymentDetail(paymentId) {
     } else {
         const maxRate = uniqueCards[0].rate;
 
-        // 卡片樣式與「比較所有行動支付回饋」共用 renderPaymentCardResult（2026-10-08）
+        // 每一列與「比較所有行動支付回饋」共用 renderPaymentRow
         detailsContainer.innerHTML = uniqueCards
-            .map((mc, index) => renderPaymentCardResult(mc, index === 0 && maxRate > 0))
+            .map((mc, index) => renderPaymentRow(mc, index === 0 && maxRate > 0))
             .join('');
     }
 
@@ -425,43 +479,37 @@ async function showPaymentDetail(paymentId) {
     disableBodyScroll();
 }
 
-// 行動支付的一張卡（單一支付詳情 modal、「比較所有行動支付回饋」modal 共用，2026-10-08）：
-// 搜尋結果卡片的縮小版——直接沿用 .card-result／.card-header／.card-details／.matched-merchant
-// 與「最優回饋」角標。三欄少了「回饋金額」（這裡沒有消費金額），回饋率接手綠色強調（同詳情頁回饋卡）。
+// 行動支付的一張卡＝一列（單一支付詳情 modal、「比較所有行動支付回饋」modal 共用）。
+// 2026-11-16 由「搜尋結果卡片的縮小版」改成清單列：縮圖｜卡名（下方灰字＝活動名）｜右側回饋率大字＋上限小字。
+// 原本每張卡一個框、每個支付一張綠底「最優回饋」，加上縮圖後畫面太亂（站長裁定，示意圖比較見
+// docs/project/ui-display.md 第 1i 節）。列與列之間只有一條細線，排第一列就是最優。
+// showBest：只有單一支付詳情的第一列傳 true（卡名後面一個小的「最優」）；比較 modal 每個支付的第一列
+// 都是最優，標了等於沒標，所以不傳。
 // mc = { card, rate, cap, category }
-function renderPaymentCardResult(mc, isBest) {
-    const capText = formatRateCardCap(mc.cap); // 上限字樣與詳情頁回饋卡同一支（js/card-detail.js）
+function renderPaymentRow(mc, showBest) {
+    const cap = formatRateCardCap(mc.cap); // 上限字樣與詳情頁回饋卡同一支（js/card-detail.js）
+    const capText = mc.cap ? `上限 ${cap}` : cap; // 無上限就不再加「上限」兩個字
+    const activity = mc.category ? getCategoryDisplayName(mc.category) : '';
     return `
-        <div class="card-result payment-card-result${isBest ? ' best-card' : ''}">
-            <div class="card-header">
-                <div class="card-name-with-pin"><div class="card-name">${escapeHtml(mc.card.name)}</div></div>
-                <div class="badges-container">${isBest ? '<div class="best-badge">最優回饋</div>' : ''}</div>
+        <div class="payment-row">
+            ${renderCardThumb(mc.card.id)}
+            <div class="payment-row-main">
+                <div class="payment-row-name">${escapeHtml(mc.card.name)}${showBest ? ' <span class="payment-row-best">最優</span>' : ''}</div>
+                ${activity ? `<div class="payment-row-activity">${escapeHtml(activity)}</div>` : ''}
             </div>
-            <div class="card-details rate-card-details">
-                <div class="detail-item">
-                    <div class="detail-label">回饋率</div>
-                    <div class="detail-value cashback-amount">${escapeHtml(String(mc.rate))}%</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">回饋消費上限</div>
-                    <div class="detail-value">${capText}</div>
-                </div>
+            <div class="payment-row-nums">
+                <div class="payment-row-rate">${escapeHtml(String(mc.rate))}%</div>
+                <div class="payment-row-cap">${escapeHtml(capText)}</div>
             </div>
-            ${renderActivityInfo({ activityName: mc.category ? getCategoryDisplayName(mc.category) : '' })}
         </div>
     `;
 }
 
-// 名次獎牌（行動支付比較前三名）：彩帶＋金／銀／銅牌面＋名次數字，一眼看得出是「名次」不是序號。
-// 顏色在 styles.css「.payment-rank-medal」
-function renderPaymentRankMedal(rank) {
-    return `<svg class="payment-rank-medal payment-rank-medal-${rank}" viewBox="0 0 28 34" role="img" aria-label="第 ${rank} 名">` +
-        `<path class="prm-ribbon-l" d="M6 0h7l4 13h-7z"/>` +
-        `<path class="prm-ribbon-r" d="M22 0h-7l-4 13h7z"/>` +
-        `<circle class="prm-face" cx="14" cy="22" r="11"/>` +
-        `<circle class="prm-ring" cx="14" cy="22" r="8"/>` +
-        `<text class="prm-num" x="14" y="26.4" text-anchor="middle">${rank}</text>` +
-        `</svg>`;
+// 名次（行動支付比較，每個支付名稱前面）：斜體「NO.1」，沒有底色；第 1 名墨色、其餘灰色。
+// 沿革：彩帶＋金銀銅獎牌 SVG（2026-10-08）→ 圓形數字（2026-11-16，站長：獎牌有 AI 感、讓畫面亂）
+// → 現在這個（2026-11-17，站長：圓形數字不夠像名次；三個示意裡選的）。樣式在 styles.css「.payment-rank」
+function renderPaymentRank(rank) {
+    return `<span class="payment-rank${rank === 1 ? ' payment-rank-first' : ''}" role="img" aria-label="第 ${rank} 名"><small>NO.</small>${rank}</span>`;
 }
 
 // Show compare payments modal
@@ -517,10 +565,11 @@ async function showComparePaymentsModal() {
         }
 
         // Sort payments by highest rate
-        // 前三名要標名次徽章（2026-10-08）。同回饋率的支付常常一大串，
+        // 每個支付名稱前面標名次。同回饋率的支付常常一大串，
         // 只比回饋率的話名次等於原始清單順序。同分依序再比：最優那張的消費上限（高者勝，無上限最高）
         // → 第二名卡片的回饋率——都是「這個支付實際上能拿多少」，名次才講得出道理。
-        // 三者全同＝真的並列，給同一個名次（標準競賽排名 1、2、2、2、5：並列第 2 之後沒有第 3）
+        // 三者全同＝真的並列，給同一個名次。並列之後接下一個數字（1、1、1、2、3），不跳號——
+        // 2026-10-08～11-16 是跳號的競賽排名（1、1、1、4），站長 2026-11-17 裁定那是錯的
         const capOf = mc => (mc.cap ? mc.cap : Infinity);
         const comparePayments = (a, b) =>
             (b.cards[0].rate - a.cards[0].rate) ||
@@ -529,7 +578,7 @@ async function showComparePaymentsModal() {
         paymentsWithCards.sort(comparePayments);
         paymentsWithCards.forEach((pwc, i) => {
             const prev = paymentsWithCards[i - 1];
-            pwc.rank = (prev && comparePayments(prev, pwc) === 0) ? prev.rank : i + 1;
+            pwc.rank = !prev ? 1 : (comparePayments(prev, pwc) === 0 ? prev.rank : prev.rank + 1);
         });
 
         // Display compact comparison with 2-column grid
@@ -546,11 +595,11 @@ async function showComparePaymentsModal() {
                 const paymentCard = document.createElement('div');
                 paymentCard.className = 'compare-payment-card';
 
-                const cardsHTML = pwc.cards.map((mc, index) => renderPaymentCardResult(mc, index === 0)).join('');
+                const cardsHTML = pwc.cards.map(mc => renderPaymentRow(mc, false)).join('');
 
                 paymentCard.innerHTML = `
                     <div class="compare-payment-name">
-                        ${pwc.rank <= 3 ? renderPaymentRankMedal(pwc.rank) : ''}<span>${escapeHtml(pwc.payment.name)}</span>
+                        ${renderPaymentRank(pwc.rank)}<span>${escapeHtml(pwc.payment.name)}</span>
                     </div>
                     ${cardsHTML}
                 `;

@@ -34,7 +34,8 @@ LOGIC_FILES = re.compile(r"js/(cashback-engine|search-match|results-display)\.js
 ROUTES = [
     (re.compile(r"js/(cashback-engine|search-match)\.js$"), "docs/project/cashback-engine.md"),
     (re.compile(r"(js/(results-display|card-detail|home-ui|cards-modals|mappings-page|spending-mappings|levels-payments)\.js|styles\.css|index\.html)$"), "docs/project/ui-display.md"),
-    (re.compile(r"(apps-script/.*\.gs|cards\.data|tools/build-.*\.js)$"), "docs/project/data-pipeline.md"),
+    (re.compile(r"(apps-script/.*\.gs|cards\.data|tools/build-(?!promos-).*\.js)$"), "docs/project/data-pipeline.md"),
+    (re.compile(r"((^|/)promos\.(html|js|css)|tools/build-promos-.*\.js|tools/lib/promos-generator\.js)$"), "docs/project/promos.md"),
     (re.compile(r"(js/auth-user-data\.js|firestore\.rules)$"), "docs/project/storage-and-security.md"),
     (re.compile(r"(^CLAUDE\.md|docs/(ops|project)/.*\.md)$"), "docs/ops/maintenance.md"),
 ]

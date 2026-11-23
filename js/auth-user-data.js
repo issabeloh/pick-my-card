@@ -150,7 +150,7 @@ function clearPersonalLocalDataOnSignOut(uid) {
     const guestExact = [
         'spendingMappings', 'cubeIssuer', 'userQuickSearchPrefs', 'mappingsPrefs_guest',
         'merchantAliases_guest', 'mappingsTitle_guest',
-        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest'
+        'cardsInComparison_guest', 'myOwnedCards_guest', 'selectedPayments_guest', 'childrenEligible_guest'
     ];
     const guestPrefixes = ['cardLevel-', 'feeWaiver_local_', 'billingDates_local_', 'creditLimit_local_'];
     // 訪客筆記 key 是 notes_<cardId>，用已知卡片 ID 跟 notes_<uid>_<cardId> 區分
@@ -401,6 +401,7 @@ function ensureAuthSubscribed() {
             // 雲端沒值 → 靜默帶入訪客值並上傳；訪客 key 兩種情況都會被消化移除。
             await loadCardsInComparison(userData);
             await loadMyOwnedCards(userData);
+            if (typeof refreshCardDetailApply === 'function') refreshCardDetailApply();   // 詳情頁開著時，持卡人要收起申辦鈕
             await loadUserPayments(userData);
             await absorbGuestPersonalData(userData);
             await loadSpendingMappings();
@@ -424,12 +425,13 @@ function ensureAuthSubscribed() {
             // Load guest data from localStorage
             await loadCardsInComparison();
             await loadMyOwnedCards();
+            if (typeof refreshCardDetailApply === 'function') refreshCardDetailApply();
             userSelectedPayments.clear();
             await loadUserPayments();  // loads guest payments from localStorage
             await loadSpendingMappings();
             userBirthdayMonth = null;
             isBirthdayMonth = false;
-            isChildrenEligible = true;
+            isChildrenEligible = readLocalJSON('childrenEligible_guest', true) !== false;
             cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa';
             setGuestAvatarState();
 
@@ -663,8 +665,10 @@ async function absorbGuestPersonalData(userData) {
     }
     if (Object.keys(limitUpdates).length > 0 && canWrite) {
         try {
+            // 只寫要補的那幾張卡：setDoc merge 會逐鍵合併 map，雲端其他卡的額度一格都不碰
+            // （不拿登入當下的 userData 快照整包覆寫，免得蓋掉別台裝置剛改的值）
             await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
-                creditLimits: { ...cloudLimits, ...limitUpdates },
+                creditLimits: limitUpdates,
                 updatedAt: new Date().toISOString()
             }, { merge: true });
             if (userData) userData.creditLimits = { ...cloudLimits, ...limitUpdates };
@@ -705,6 +709,20 @@ async function absorbGuestPersonalData(userData) {
             await saveCubeIssuer(localIssuer);
             console.log('🔀 雲端無 CUBE 發卡組織設定，帶入訪客選擇:', localIssuer);
         }
+    }
+
+    // 7. 「童樂匯」權益（訪客 key childrenEligible_guest，2026-11-20 起）：雲端有值 → 雲端為準、丟掉訪客值；
+    //    雲端沒值 → 帶入訪客值。處理完就移除訪客 key（共用電腦上不留「有沒有未成年子女」）；
+    //    帶入失敗時保留 key，下次登入再試
+    if (allKeys.includes('childrenEligible_guest')) {
+        const guestKids = readLocalJSON('childrenEligible_guest', null);
+        let done = true;
+        if (typeof guestKids === 'boolean' && !(userData && userData.isChildrenEligible != null)) {
+            const r = await saveChildrenEligible(guestKids);
+            done = !!(r && r.ok);
+            if (done) console.log('🔀 雲端無童樂匯設定，帶入訪客選擇:', guestKids);
+        }
+        if (done) { try { localStorage.removeItem('childrenEligible_guest'); } catch (e) {} }
     }
 }
 
@@ -935,7 +953,7 @@ function setupManageCardsModal() {
         if (e.target === modal) closeModal();
     });
     
-    // Save cards (shared handler for both footer and quick-save buttons)
+    // Save cards（儲存列只有一顆鈕；2026-11-22 拿掉「全選」旁的快速儲存鈕）
     const doSaveCards = async () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const newSelection = new Set();
@@ -963,8 +981,6 @@ function setupManageCardsModal() {
         closeModal();
     };
     saveBtn.addEventListener('click', doSaveCards);
-    const quickSaveBtn = document.getElementById('save-cards-btn-quick');
-    if (quickSaveBtn) quickSaveBtn.addEventListener('click', doSaveCards);
     
     // Toggle all cards button
     const toggleAllBtn = document.getElementById('toggle-all-cards');
@@ -987,6 +1003,7 @@ function setupManageCardsModal() {
             });
             toggleAllBtn.textContent = '全不選';
         }
+        updateSelectionDirtyState('cards-selection');
     });
 
     // "套用我的信用卡" toggle: add all myOwnedCards to current selection,
@@ -1002,6 +1019,7 @@ function setupManageCardsModal() {
                 cb.checked = !allOwnedChecked;
                 cb.parentElement.classList.toggle('selected', !allOwnedChecked);
             });
+            updateSelectionDirtyState('cards-selection');
         });
     }
 }

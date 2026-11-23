@@ -165,12 +165,34 @@ node tools/regression/card-detail-test.js                   # 2 個日期 × 全
 node tools/regression/card-detail-test.js --update-baseline # 重拍基準（只在「改動前」版本跑！）
 ```
 
-每張卡打開詳情頁，抓「一般回饋／指定通路回饋／即將開始／領券」四區每一張回饋卡的畫面文字（逐行 innerText）＋ class，
-與 `card-detail-baseline.json` 比對。沿用 run-regression.js 的凍結資料、訪客替身、凍結時鐘（三者由該檔 `module.exports` 提供）。
+每張卡打開詳情頁，抓「一般回饋／指定通路回饋／即將開始／領券」四區每一張回饋卡，與 `card-detail-baseline.json` 比對。
+**2026-11-17 起**（同方案一張卡，docs/project/ui-display.md 1n 節）：同方案卡（`.cd-rc`）抓**語意欄位**——標題、小標與徽章、上限、期間、註記、
+每一列的回饋率／分級／子標／門檻／通路完整清單與總數／條件／登錄連結（收成幾個通路、有沒有「顯示全部」鈕取決於字型寬度，不能逐行比 innerText）；
+非同方案卡（一般消費排除卡、停車、說明）仍是逐行畫面文字。另外跑一組 **390px 版面不變式**與造資料驗併卡規則（通路 ≤ 三行且非空、
+同區沒有「標題＋上限＋期間」相同的兩張卡、卡與列由高到低、回饋率 24px/#111827），不比對基準檔。沿用 run-regression.js 的凍結資料、訪客替身、凍結時鐘（三者由該檔 `module.exports` 提供）。
 **跑兩個日期**：fixture 的 frozenDate，加上 2026-08-25——凍結日期那天沒有 30 天內即將開始、也沒有 10 天內即將結束的活動，
-不加第二個日期，「即將開始」區與兩種徽章完全測不到。抓文字不抓 HTML，所以標記重構只要畫面內容與順序不變就是綠燈。
+不加第二個日期，「即將開始」區與兩種徽章完全測不到。抓文字／語意欄位不抓 HTML，所以標記重構只要畫面內容與順序不變就是綠燈。
 **改 `renderRateCard()`、`js/results-display.js` 的「回饋卡共用片段」、或詳情頁任何一條回饋 render 路徑（含 CUBE）後必跑。**
 重拍 fixture 之後，這份基準也要跟著重拍。
+
+## 詳情頁個人設定與新戶活動票券（獨立一支，2026-11-17 新增）
+
+```bash
+node tools/regression/card-settings-promo-test.js   # 有 ❌ → exit 1
+```
+
+訪客／已登入（自帶 Firebase 替身，可讓 setDoc 失敗）兩種情況下的儲存狀態列、筆記自動儲存、額度格式、開關可用鍵盤操作、鐵則 1（存的級別找不到不寫回），以及所有新戶活動的欄位都出現在詳情頁票券裡。沿用 run-regression.js 的凍結資料與時鐘。
+**改個人設定的欄位或儲存接線（js/card-detail.js「儲存狀態列」、js/spending-mappings.js 額度／免年費、js/levels-payments.js 各 save 函數）或詳情頁新戶活動（renderCardDetailPromoTickets）後必跑。**
+⚠️ `run-regression.js` 不比對搜尋結果的新戶活動卡；改 `createCardholderPromoElement` 時要另外比對前後輸出（第三輪的做法：載入舊版函數，對所有活動 × 多個凍結日期比 outerHTML）。
+
+## 「我的信用卡」單卡面板（獨立一支，2026-11-22 新增）
+
+```bash
+node tools/regression/owned-cards-panel-test.js   # 47 項，有 ❌ → exit 1
+```
+
+點卡片 → 同一個視窗直接編輯：唯一一份 `#card-personal-section` 搬進面板／搬回詳情頁、詳情頁不被彈出、樣式兩邊一致、結帳日／繳款截止日的欄位對應（`statementDate`＝結帳日、`billingDate`＝繳款日）與存取、雲端失敗紅字、鐵則 1（開面板不寫級別、改了才存一次）、筆記離開面板即存、桌機寬度；兩個選卡 modal 與管理行動支付的儲存列（有改動才出現、固定底部、全選／點卡圖／取消）與管理視窗同寬。Firebase 替身借 `card-settings-promo-test.js` 的 `stub`（該檔 `module.exports`，require 時不跑測試）。
+**改 `js/cards-modals.js` 的單卡面板（`openOwnedCardPanel`／`ownedPanelExit`）、`renderCardPersonalSettings`／`cdMountPersonalSection`、或結帳日存取後必跑**；改個人設定欄位時跟 `card-settings-promo-test.js` 一起跑。
 
 ## 一般消費排除項目（獨立一支，2026-09-30 新增）
 
@@ -195,8 +217,12 @@ python3 -m http.server 8000   # 開 http://localhost:8000/index.html?start&debug
 ## 教訓記錄
 
 （格式：`- [YYYY-MM-DD] 症狀 → 根因 → 新規則`）
+- [2026-11-19] 合併 main 後 card-detail-test 穩定紅 2 張卡，都是「Firebase 載入逾時」→ main 在 run-regression.js 的替身補了 setUserProperties，這支測試自己又用 replace 補一次，重複 export 讓模組語法錯誤 → 測試替身只在 run-regression.js 一處補，各支測試直接用它，不要各自 replace 加 export
 - [2026-09-11] 基準每 1–2 天就要重拍一次，而每次紅燈幾乎都不是程式問題（9/10 那次 6 組紅燈，0 組是回歸）→ 基準存的是「答案」，答案＝程式 × 資料 × 日期；線上 cards.data 一天更新 3–5 次，基準的壽命因此只有一天，真正的程式回歸被埋在資料噪音裡 → **測試改讀凍結的 `tools/regression/fixture.data`、並把瀏覽器時鐘固定在 `fixture.json` 的 `frozenDate`**。只凍資料不凍時鐘沒有用（`filterExpiredRates()`／`getRateStatus()` 拿「今天」比期限，活動照樣會到期）。凍結後任何差異都代表程式行為變了，不再有「資料漂移、重拍就好」這個選項；要驗線上資料改用 `--live`（那是資料驗證，不做逐字比對）
 - [2026-07-12] 快捷搜尋自動計算在測試中不觸發 → handleQuickSearch 檢查 calculateBtn.disabled 的時機早於 validateInputs()（script.js:1181 vs 1193 的時序）→ 自動化腳本比照真實用戶：點快捷按鈕後自己按計算鈕；此時序若要修屬 UX 行為變更，先問用戶
 - [2026-09-08] 基準停在 20260902-155444 沒重拍，資料一路更新到 20260908-165106，12 組長期紅 2→4→5 組 → 每次改動都要靠「stash 後再跑一次比對」才知道差異是不是新的，等於這套機制暫時失效 → **基準過期就當天重拍**，不要累積；重拍前一定逐條看差異報告（本次 6 條差異全部只動到 `matched` 文字欄，回饋率／回饋金額／回饋消費上限／筆數／排序／threshold／parking／coupons 全部逐字相同，才敢重拍）
 - [2026-07-12] 領券檢查用了已到期商家（台灣永生 2026/6/30 止）導致 0 券 → 檢查詞要挑檔期最長的活動並在表格註明到期日 → 到期時換商家並重拍基準
-- [2026-11-16] `card-detail-test.js` 同一份程式連跑 7 次有 3 次紅，每次都是 `2026-08-25｜tbb-chaotian` 的 `[consoleErrors]`：基準有一條 `Failed to load resource: net::ERR_FAILED`、現在是空的 → 基準拍攝時剛好有一個外部資源載入失敗被記進去，這條錯誤看網路狀況時有時無，和程式無關 → 這支測試紅的時候先看差異是不是只有這一條「基準有、現在沒有」的網路錯誤；是的話重跑即可，**不要為它 --update-baseline**（重拍只會把當下的網路狀況再烤進去）。**已於 2026-11-17 根治**（commit `bc52a3c`）：`card-detail-test.js` 收集錯誤時濾掉 `Failed to load resource`／`net::ERR`，基準裡的 6 條雜訊也一併移除，之後這支測試紅了就是程式真的變了。另：收尾指令不要寫成 `node 測試 | tail -1 && git commit`——管線的結束碼是 tail 的，測試紅了照樣會 commit（這次就是這樣推上去的）
+- [2026-11-16] `card-detail-test.js` 同一份程式連跑 7 次有 3 次紅，每次都是 `2026-08-25｜tbb-chaotian` 的 `[consoleErrors]`：基準有一條 `Failed to load resource: net::ERR_FAILED`、現在是空的 → 基準拍攝時剛好有一個外部資源載入失敗被記進去，這條錯誤看網路狀況時有時無，和程式無關 → 這支測試紅的時候先看差異是不是只有這一條「基準有、現在沒有」的網路錯誤；是的話重跑即可，**不要為它 --update-baseline**（重拍只會把當下的網路狀況再烤進去）。根治要讓測試忽略資源載入類的 console error，還沒做。另：收尾指令不要寫成 `node 測試 | tail -1 && git commit`——管線的結束碼是 tail 的，測試紅了照樣會 commit（這次就是這樣推上去的）
+- [2026-11-17] 詳情頁改「同方案一張卡」（標題句型、分組合併、排序、註記移位、特列項目搬到一般回饋區）是**有意改變輸出**，`card-detail-test.js` 必紅 → 這次不是「改動前版本重拍」的情況：重拍基準之前寫腳本把新舊基準各自拆成「回饋率＋上限＋期間＋通路＋條件（＋登錄連結有無／門檻／徽章）」的集合，要求兩邊相等（舊基準的通路文字是截斷的，比「新清單以舊的前 N 個開頭、總數相同」），並逐類統計預期差異，確認沒有任何數值改變才重拍。重拍後基準的格式也變了（同方案卡存語意欄位），之後的差異對照舊基準要先轉換格式。凡是「有意改輸出」的改動，commit 說明裡要逐類列出差異與筆數
+
+- [2026-11-17] `card-detail-test.js` 單獨跑偶發紅燈，`console.error: ⏱️ Firebase 載入逾時（4000ms）` 掉進某張卡的取樣視窗 → Firebase 替身缺 `setUserProperties`（index.html 起 import 它），整支 analytics 模組載入失敗、4 秒後吐逾時錯誤，測試一超過 4 秒就落進視窗 → 替身缺符號時**症狀是計時型噪音**，先看頁面載入時有沒有 "does not provide an export named" 的 pageerror；補法見上面 2026-11-19 那條（只在 run-regression.js 一處補）

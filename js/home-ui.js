@@ -542,19 +542,52 @@ function formatSpotlightCap(cap) {
     return formatCapText(cap, { unlimitedWhen: 'nullishOrNaN' });
 }
 
-// 卡片詳情 ⓘ 與立即申辦按鈕：置於 modal header 標題（卡名）下方（openSpotlightModal
-// 動態插入 header），卡名只在 header 標題顯示、body 不重複。
+// 卡片詳情 ⓘ 按鈕：置於 modal header 標題（卡名）下方（openSpotlightModal 動態插入 header），
+// 卡名只在 header 標題顯示、body 不重複。
+// 2026-11-23 拿掉原本並排的「立即申辦」（GA4 spotlight_apply）：06/07～11/21 共 168 天只有 15 次點擊，
+// 10 月起佔全站申辦點擊 2%（89 次裡 2 次），而打開 modal 的「詳情」同期有 158 次。
+// 申辦入口改由 modal 最下面的新戶膠囊（→ /promos/<id>）與 ⓘ 卡片詳情頁的兩顆申辦鈕承接。
 function buildSpotlightModalActions(item, card) {
-    const applyCta = (cardsData && cardsData.cardApplyCtas && item.card_id) ? cardsData.cardApplyCtas[item.card_id] : null;
-    // 鐵則 3：動態 href 先 sanitizeUrl（escapeHtml 擋不住 javascript: scheme）
-    const applyLink = applyCta ? sanitizeUrl(applyCta.link) : '';
-    const applyCtaHtml = applyLink
-        ? `<a class="promo-apply-cta-btn spotlight-apply-cta-btn" href="${escapeHtml(applyLink)}" target="_blank" rel="noopener noreferrer" data-card-id="${escapeHtml(item.card_id || '')}" data-card-name="${escapeHtml(getSpotlightCardName(item))}" data-merchant="${escapeHtml(item.merchant || '')}">立即申辦<svg class="promo-apply-cta-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7"/><path d="M8 1h3v3"/><path d="M11 1 6 6"/></svg></a>`
-        : '';
-    const cardDetailBtn = card
+    return card
         ? `<button type="button" class="card-detail-peek-btn spotlight-carddetail-btn" data-card-id="${escapeHtml(card.id)}" aria-label="卡片詳情" title="卡片詳情">ⓘ</button>`
         : '';
-    return `${cardDetailBtn}${applyCtaHtml}`;
+}
+
+// 推薦活動 modal 最下面一行「新戶」連到這張卡的新戶活動單卡頁 /promos/<id>（2026-11-22 站長選 R4 樣式、R1 位置）。
+// 只在：這張卡有進行中的新戶活動（過期的載入時已濾掉）、id 合法（＝單卡頁存在，規則同 cards-export.gs 的
+// pmcCardPagePath_）、使用者沒有持有這張卡（持卡人不是新戶，同詳情頁申辦膠囊的規則）時出現。
+// 文字規則同詳情頁申辦膠囊（setupCardDetailApply）：「{類型} NT$金額／回饋率」，首刷禮多選一加「N 選 1」。
+// GA4：click 落入 js/quick-options-misc.js 的 button_click delegation，button_type = spotlight_promo
+// （2026-11-23 起；data-card-name／data-merchant 跟其他按鈕帶同一組參數，GA4_各卡點擊 才分得出卡與通路）。
+function buildSpotlightPromoLink(card, item) {
+    if (!card || !/^[a-z0-9][a-z0-9-]*$/.test(card.id || '')) return '';
+    if (typeof myOwnedCards !== 'undefined' && myOwnedCards && myOwnedCards.has(card.id)) return '';
+    const promos = getActiveCardholderPromos(card.id).filter(p => Array.isArray(p.promo_types) && p.promo_types[0]);
+    if (!promos.length) return '';
+    const promo = promos[0];
+    const type = String(promo.promo_types[0]);
+    let emphasis = '';
+    if (promo.voucher_amount) emphasis = `NT$${Math.round(Number(promo.voucher_amount)).toLocaleString()}`;
+    else if (promo.bonus_rate != null && promo.bonus_rate !== '') emphasis = formatBonusRate(promo.bonus_rate);
+    else {
+        const opts = String(promo.gift_content || '').split(/\n|[①②③④⑤⑥⑦⑧⑨]/).map(x => x.trim()).filter(Boolean);
+        if (opts.length > 1) emphasis = `${opts.length} 選 1`;
+    }
+    // 第二行：「新戶活動」或「共 N 檔新戶活動」＋最快截止
+    let sub = promos.length > 1 ? `共 ${promos.length} 檔新戶活動` : '新戶活動';
+    const ends = promos.map(p => (p.period_end ? String(p.period_end).replace(/\//g, '-') : '')).filter(Boolean).sort();
+    if (ends.length) {
+        const parts = ends[0].split('-');
+        if (parts[1] && parts[2]) sub += `・至 ${Number(parts[1])}/${Number(parts[2])}`;
+    }
+    // 外觀比照詳情頁手機申辦膠囊 .cd-fab（站長 2026-11-22）：白底黃框膠囊、黃色禮物圓圈、右邊黃色按鈕。
+    // 整顆是一個連結；它不浮動，固定在 modal 內文最下面
+    return `<a class="spotlight-promo-link" href="/promos/${escapeHtml(card.id)}" data-card-id="${escapeHtml(card.id)}" ` +
+        `data-card-name="${escapeHtml(card.name || '')}" data-merchant="${escapeHtml((item && item.merchant) || '')}">` +
+        `<span class="cd-gift" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg></span>` +
+        `<span class="spotlight-promo-text"><span class="spotlight-promo-main">${escapeHtml(type)}${emphasis ? ` <b>${escapeHtml(emphasis)}</b>` : ''}</span>` +
+        `<span class="spotlight-promo-sub">${escapeHtml(sub)}</span></span>` +
+        `<span class="cd-apply-btn spotlight-promo-btn">看活動</span></a>`;
 }
 
 function buildSpotlightModalBody(item, card) {
@@ -663,7 +696,7 @@ function openSpotlightModal(index) {
     // Modal 標題改為卡片名稱（原為通路名稱）
     if (titleEl) titleEl.textContent = getSpotlightCardName(item) || item.merchant || '活動詳情';
 
-    // 卡片詳情/立即申辦按鈕：放在 header 卡名下方（動態插入 .modal-header，第一次開啟時建立）
+    // 卡片詳情 ⓘ 按鈕：放在 header 卡名下方（動態插入 .modal-header，第一次開啟時建立）
     let actionsEl = document.getElementById('spotlight-modal-actions');
     if (!actionsEl && titleEl && titleEl.parentElement) {
         actionsEl = document.createElement('div');
@@ -673,7 +706,7 @@ function openSpotlightModal(index) {
     }
     if (actionsEl) actionsEl.innerHTML = buildSpotlightModalActions(item, card);
 
-    bodyEl.innerHTML = buildSpotlightModalBody(item, card);
+    bodyEl.innerHTML = buildSpotlightModalBody(item, card) + buildSpotlightPromoLink(card, item);
 
     // ⓘ「卡片詳情」按鈕 → 開啟卡片詳情頁（疊在本 modal 之上）；卡名本身不再可點
     const cardDetailBtn = (actionsEl || bodyEl).querySelector('.spotlight-carddetail-btn');
@@ -1506,17 +1539,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!data || data.type !== 'pmc-open-card') return;
             const cardId = data.cardId;
             if (cardId && cardsData && cardsData.cards.some(c => c.id === cardId)) {
-                showCardDetail(cardId);
-                // data.section（2026-09-17）：新戶活動頁的「查看全部 ›」要求開完詳情
-                // 直接捲到指定區塊（目前只用 card-special-section＝指定通路回饋）。
-                // 刻意重用詳情頁自己的導覽鈕而不是另寫一套捲動：那顆鈕已經處理好
-                // sticky header 的偏移與 active 狀態同步。showCardDetail 是 async、
-                // 內容要等渲染完才捲得到，所以放在 requestAnimationFrame 後面。
+                // data.section（2026-09-17）：新戶活動頁的「查看全部 ›」要求開完詳情直接落在指定區塊
+                // （目前只用 card-special-section＝指定通路回饋）。2026-11-17 詳情頁改頁籤後，
+                // 一律走 cardDetailGoToSection()：它切到「包含該區塊的頁籤」再捲到位。
+                // 要等 showCardDetail（async）把內容畫完才找得到區塊與頁籤，所以接在它的 promise 後面。
+                const opened = showCardDetail(cardId);
                 if (data.section) {
-                    requestAnimationFrame(() => {
-                        const navBtn = document.querySelector(
-                            '#card-detail-nav .card-detail-nav-btn[data-section="' + data.section + '"]');
-                        if (navBtn) navBtn.click();
+                    Promise.resolve(opened).then(() => {
+                        requestAnimationFrame(() => {
+                            if (typeof cardDetailGoToSection === 'function') cardDetailGoToSection(data.section);
+                        });
                     });
                 }
             }
@@ -1933,7 +1965,12 @@ function setupEventListeners() {
     });
     
     // Enter key support (disabled when any modal is open)
+    // 焦點在按鈕／連結／下拉／多行文字框等可操作元素上時，Enter 是在操作那個元素（例：鍵盤使用者在結果卡上
+    // 按「加到小抄」「詳情」或回饋率），不要再觸發計算——否則會重算、重畫結果區，剛按的東西像沒反應（2026-11-23）。
+    // 在輸入框（商家、金額）裡按 Enter 照舊計算。
+    const ENTER_OWN_ACTION = 'button, a[href], select, textarea, summary, [role="button"], [role="switch"], [role="tab"], [contenteditable="true"]';
     document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && e.target && e.target.closest && e.target.closest(ENTER_OWN_ACTION)) return;
         if (e.key === 'Enter' && !calculateBtn.disabled) {
             const anyModalOpen = document.querySelector('[id$="-modal"][style*="display: flex"], [id$="-modal"][style*="display:flex"]');
             if (anyModalOpen) return;

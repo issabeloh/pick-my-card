@@ -35,7 +35,7 @@
 | C4 的「上限 NT$無」 | ✅ 完成 | 改成「無上限」（站長同意） |
 | B4 防呆用的退路分支 | ⏳ 待站長確認 | |
 | B6-3 `debugGSC`、B6-4 `importHistoricalData`＋`writeHistoricalImportLog`、B6-5 `createDailyTrigger` | ✅ 刪除（2026-11-23，站長同意） | `pmc-analytics-sync.gs` 是手動貼，線上版要站長在《PMC 行銷數據集中》的 Apps Script 另外刪 |
-| B6-6 `publishChangelog` | ✅ 保留（站長同意） | 3 行轉呼叫，留著防舊觸發器／書籤斷掉；`tools/test-changelog.js` 也還呼叫它 |
+| B6-6 `publishChangelog` | ✅ 刪除（2026-11-23） | 站長截圖確認「PMC 資料自動化」的觸發條件只有兩條 `checkWatchlist`（週四、週日），選單直接叫 `processInboxRows`；測試改呼叫 `processInboxRows`。此檔自動部署，合併進 main 後線上會跟著刪 |
 | B6-8 `domesticBonusPeriod`／`overseasBonusPeriod` | ✅ 前端改讀（2026-11-23） | 站長決定：和其他活動一樣依期間到期。`applyBonusPeriods()`（`js/core-utils.js`）過期／未開始 → 加碼率歸零；詳情頁加碼卡顯示活動期間 |
 | B6-8 `levelSettings.*.cap_hide`／`rate_hide` | ✅ 文件已清 | 站長確認試算表已無此欄，下次匯出自然消失；前端本來就不讀，只清掉文件與註解裡的提及 |
 | B6-8 `benefits[]` 的空字串鍵 | ⏳ 待站長確認 | 查證後更正：不是雜訊。那是「Card Benefits」表裡**沒有表頭的一欄**，18 筆停車權益裡 5 筆放的是官網網址、1 筆是 `true`。給它表頭（如 `source_url`）或刪掉該欄，二擇一 |

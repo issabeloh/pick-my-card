@@ -6,7 +6,7 @@
  * 為什麼存在：Apps Script 的程式只有貼進 Google Sheets 才跑得起來，改完到發現寫壞
  * 中間隔著「貼回 Sheets → 手動按選單」。這支用 node 的 vm 把 SpreadsheetApp /
  * Utilities / Logger 幾個全域物件假造出來，直接在 repo 裡跑 `readChangelog()`、
- * `publishChangelog()`、`appendToInbox_()` 的真實程式碼，驗那些「看不到才最痛」的
+ * `processInboxRows()`（舊名 publishChangelog）、`appendToInbox_()` 的真實程式碼，驗那些「看不到才最痛」的
  * 邊界：取最新 5 筆、由新到舊、active=FALSE 排除、工作表不存在時安全降級、
  * 多卡列自動拆列、重複按不重寫、驗證失敗的列不寫入。
  *
@@ -186,7 +186,7 @@ res = runExport([header, ['b-card', 'not-a-date', '壞日期', true]]);
 check('日期解析失敗的列被略過', JSON.stringify(res) === '{}', res);
 
 // ============================================================
-// B. publishChangelog（benefits-parser.gs）
+// B. processInboxRows（benefits-parser.gs，舊名 publishChangelog）
 // ============================================================
 const INBOX_HEADER = ['日期時間', 'card_id', '銀行', '網址', '實質變動', 'AI摘要', '變動類型',
   '信心', '變動段落', '舊文字', '新文字', '狀態', '公開摘要', '公開卡片', '公開'];
@@ -207,7 +207,7 @@ function runPublish(inboxRows, cardsDataRows, existingChangelog) {
   const ctx = vm.createContext(baseSandbox(autoSS));
   vm.runInContext(fs.readFileSync(path + 'watchlist-monitor.gs', 'utf8'), ctx);   // splitList_
   vm.runInContext(fs.readFileSync(path + 'benefits-parser.gs', 'utf8'), ctx);
-  vm.runInContext('publishChangelog()', ctx);
+  vm.runInContext('processInboxRows()', ctx);
   return { inbox: autoSheets['2-變動通知'].rows, inboxSheet: autoSheets['2-變動通知'], changelog: dataSS.getSheetByName('變動紀錄'), alerts: alerts.slice() };
 }
 
@@ -236,9 +236,9 @@ let ctxRows = null;
   const ctx = vm.createContext(baseSandbox(autoSS));
   vm.runInContext(fs.readFileSync(path + 'watchlist-monitor.gs', 'utf8'), ctx);
   vm.runInContext(fs.readFileSync(path + 'benefits-parser.gs', 'utf8'), ctx);
-  vm.runInContext('publishChangelog()', ctx);
+  vm.runInContext('processInboxRows()', ctx);
   const afterFirst = dataSS.getSheetByName('變動紀錄').rows.length;
-  vm.runInContext('publishChangelog()', ctx);   // 再按一次
+  vm.runInContext('processInboxRows()', ctx);   // 再按一次
   const afterSecond = dataSS.getSheetByName('變動紀錄').rows.length;
   check('重複按選單不會重寫（1 筆 → 還是 1 筆）', afterFirst === 2 && afterSecond === 2, { afterFirst, afterSecond });
   check('第二次跳「沒有任何指示」提示', alerts[alerts.length - 1].indexOf('沒有任何指示') >= 0, alerts[alerts.length - 1]);
@@ -324,7 +324,7 @@ check('第 13 欄已有站長自己的欄位 → 不覆蓋，缺的欄接在它�
   r.inbox[0][12] === '我的備註' && r.inbox[1][12] === '別動我' &&
   JSON.stringify(r.inbox[0].slice(13)) === JSON.stringify(PUBLISH_TAIL), r.inbox[0]);
 
-// B6: 效能防呆——publishChangelog 不可以整張表讀進來。
+// B6: 效能防呆——processInboxRows 不可以整張表讀進來。
 // 「舊文字／新文字」各上限 4 萬字，log 長到幾百列時 getDataRange() 會吞進數十 MB，
 // 愈按愈慢、最終撞 Apps Script 單次執行 6 分鐘上限。這條擋的是「哪天有人圖方便改回
 // getDataRange()」——功能測試全綠也看不出來，只會在一年後變成「選單怎麼卡住了」。
@@ -339,7 +339,7 @@ const reads = r.inboxSheet.reads;
 const BIG_COLS = [9, 10, 11];   // 變動段落／舊文字／新文字（1-indexed）
 const touchedBig = reads.filter(x => x.numRows > 1 &&
   BIG_COLS.some(c => c >= x.col && c < x.col + x.numCols));
-check('publishChangelog 沒有整張表讀進來（getDataRange 未被呼叫）',
+check('processInboxRows 沒有整張表讀進來（getDataRange 未被呼叫）',
   !reads.some(x => x.full), reads.filter(x => x.full));
 check('沒有讀到「變動段落／舊文字／新文字」的資料列',
   touchedBig.length === 0, touchedBig);
