@@ -170,7 +170,7 @@ header {
     background: #1e40af;
     color: white;
     padding: 10px calc(var(--page-gutter) + 20px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    /* 陰影 2026-11-23 拿掉（首頁 11-16 起本來就沒有，FAQ／隱私權／使用須知比照） */
 }
 
 .header-top {
@@ -2032,7 +2032,7 @@ input[type="number"]:focus {
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .calculate-btn.compact {
@@ -2045,15 +2045,14 @@ input[type="number"]:focus {
 }
 
 .calculate-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    /* 2026-11-23 站長同意：原本往上浮 2px＋大片藍色光暈，改成只換亮一階的藍 */
+    background: var(--ui-brand-bright);
 }
 
 .calculate-btn:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+    background: var(--ui-brand);
 }
 
 /* Results section */
@@ -2305,13 +2304,7 @@ input[type="number"]:focus {
     border: 1px solid #3b82f6;
     border-radius: 8px;
     padding: 16px;
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    transition: all 0.3s ease;
-}
-
-.parking-benefit-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    background: #eff6ff;   /* 2026-11-23 漸層改單色，hover 不再浮起 */
 }
 
 .parking-header {
@@ -2335,7 +2328,6 @@ input[type="number"]:focus {
     font-weight: 700;
     text-align: center;
     margin: 12px 0;
-    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
 .parking-details {
@@ -4588,7 +4580,7 @@ input[type="number"]:focus {
     background: #fff;
     border-radius: var(--ui-radius-md);
     padding: 10px 12px;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--ui-shadow-2);
     max-width: min(320px, calc(100vw - 24px));
     width: max-content;
     z-index: 1200;   /* fallback 用（原生 popover 在 top layer，不吃 z-index） */
@@ -6517,8 +6509,6 @@ mark.cashback-search-hl {
 .social-link:hover {
     background: #fff;
     border-color: #d1d5db;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .social-link.threads:hover {
@@ -6528,7 +6518,7 @@ mark.cashback-search-hl {
 }
 
 .social-link.sponsor:hover {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #6d5dc9;
     border-color: transparent;
     color: white;
 }
@@ -6536,19 +6526,19 @@ mark.cashback-search-hl {
 /* 站內頁連結 hover 上色（2026-07-16 站長要求：有顏色、不要動態）。
    新戶活動＝品牌琥珀黃、FAQ＝主站藍、關於＝薄荷綠。 */
 .social-link.promos:hover {
-    background: linear-gradient(180deg, #ffe066 0%, #ffc933 100%);
+    background: #ffd34d;
     border-color: transparent;
     color: #7a4e00;
 }
 
 .social-link.faq:hover {
-    background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+    background: var(--ui-brand);
     border-color: transparent;
     color: white;
 }
 
 .social-link.about:hover {
-    background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+    background: #059669;
     border-color: transparent;
     color: white;
 }
@@ -9975,7 +9965,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     display: grid; place-items: center; cursor: pointer;
 }
 /* 頁面說明卡：三步驟 */
-.mp-intro { max-width: 738px; margin: 0 auto 14px; background: linear-gradient(180deg, #eff6ff, #f7faff); border: 1px solid #dbeafe; border-radius: 16px; padding: 12px 14px; box-sizing: border-box; }
+.mp-intro { max-width: 738px; margin: 0 auto 14px; background: #eff6ff; border: 1px solid #dbeafe; border-radius: 16px; padding: 12px 14px; box-sizing: border-box; }
 .mp-steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .mp-steps[hidden] { display: none; }
 /* 使用教學的收合鈕（預設收合） */

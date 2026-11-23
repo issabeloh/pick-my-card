@@ -1344,8 +1344,6 @@ a {
 .social-link:hover {
   background: #fff;
   border-color: #d1d5db;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .social-link.threads:hover {
@@ -1355,7 +1353,7 @@ a {
 }
 
 .social-link.sponsor:hover {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #6d5dc9;
   border-color: transparent;
   color: white;
 }
@@ -1367,13 +1365,13 @@ a {
    首頁那顆的黃色 hover 由 styles.css 自己那條負責，與這裡無關。 */
 
 .social-link.faq:hover {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background: #1e40af;
   border-color: transparent;
   color: white;
 }
 
 .social-link.about:hover {
-  background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+  background: #059669;
   border-color: transparent;
   color: white;
 }
