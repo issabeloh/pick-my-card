@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 登入時「要把這台裝置上的設定存進帳號嗎？」— 功能回歸測試（2026-11-23 新增）
+ * 登入時「這些設定是你的嗎？」— 功能回歸測試（2026-11-23 新增）
  *
  * 為什麼存在：共用電腦上，前一位訪客留下的設定（額度、級別、持有卡、刷卡小抄…）以前會被
  * 靜默寫進下一位登入者的帳號。現在登入時只要這台裝置上有訪客資料，就先跳確認
@@ -11,8 +11,8 @@
  *
  * 守的機制：
  *   A. 這台裝置沒有訪客資料 → 不跳對話框
- *   B. 有訪客資料 → 跳對話框並列出項目；選「不要」→ 訪客 key 全清、沒有任何訪客值寫進雲端
- *   C. 選「存進我的帳號」→ 額度、持有卡、級別照舊帶入（雲端沒值才帶，規則見 storage-and-security.md 第 4 節）
+ *   B. 有訪客資料 → 跳對話框並列出項目；選「不是，清掉」→ 訪客 key 全清、沒有任何訪客值寫進雲端
+ *   C. 選「是，存進我的帳號」→ 額度、持有卡、級別照舊帶入（雲端沒值才帶，規則見 storage-and-security.md 第 4 節）
  *
  * Firebase 替身沿用 delete-account-test.js 的寫法（已登入用戶），setDoc 改成會記錄寫入內容。
  * ⚠️ index.html 的 Firebase import 清單增修時，stub() 的 export 要同步補。
@@ -114,7 +114,7 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log((ok ? ' 
   await pg.close();
 
   // ===== B. 有訪客資料，選「不要」 =====
-  console.log('\n【B】有訪客資料，選「不要，從這台裝置清掉」');
+  console.log('\n【B】有訪客資料，選「不是，清掉」');
   pg = await openWith(GUEST);
   await pg.waitForSelector('#guest-import-modal', { timeout: 15000 });
   const items = await pg.textContent('.gi-items');
@@ -133,8 +133,8 @@ const check = (name, ok, extra = '') => { results.push(ok); console.log((ok ? ' 
   check('畫面上的持有卡不含前一位訪客的卡', !(await pg.evaluate(() => myOwnedCards.has('kgi-eslite'))));
   await pg.close();
 
-  // ===== C. 有訪客資料，選「存進我的帳號」 =====
-  console.log('\n【C】有訪客資料，選「存進我的帳號」');
+  // ===== C. 有訪客資料，選「是，存進我的帳號」 =====
+  console.log('\n【C】有訪客資料，選「是，存進我的帳號」');
   pg = await openWith(GUEST);
   await pg.waitForSelector('#guest-import-modal', { timeout: 15000 });
   await pg.click('#gi-import');

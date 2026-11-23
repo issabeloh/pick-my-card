@@ -596,7 +596,7 @@ header {
    隱私權政策第 8.1 節的自助刪除途徑。設計刻意「不好按」：紅色主鈕、確認文字
    輸入、逐項列出會失去什麼。改版時不要把這些關卡當成阻力拿掉。
    ========================================================================== */
-/* 登入時「要把這台裝置上的設定存進帳號嗎？」對話框（2026-11-23，js/auth-user-data.js askGuestDataImport）。
+/* 登入時「這些設定是你的嗎？」對話框（2026-11-23，js/auth-user-data.js askGuestDataImport）。
    DOM 由 JS 動態建立；外層沿用 .modal 的遮罩與置中，z-index 拉高到詳情頁（1100）之上——登入可能發生在詳情頁開著時。
    沒有關閉鈕：一定要二選一。class 一律 gi- 前綴 */
 .gi-modal { z-index: 1200; padding: 16px; box-sizing: border-box; }
@@ -612,7 +612,7 @@ header {
 .gi-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; line-height: 1.4; }
 .gi-lead { margin: 0 0 6px; font-size: 0.95rem; color: #374151; }
 .gi-items {
-    margin: 0 0 12px;
+    margin: 0 0 18px;
     padding: 10px 12px;
     background: var(--ui-fill);
     border-radius: var(--ui-radius-md);
@@ -620,7 +620,6 @@ header {
     font-size: 0.95rem;
     line-height: 1.6;
 }
-.gi-hint { margin: 0 0 18px; font-size: 0.875rem; color: #6b7280; line-height: 1.6; }
 .gi-actions { display: flex; flex-direction: column; gap: 10px; }
 .gi-btn {
     width: 100%;

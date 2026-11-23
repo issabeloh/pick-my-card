@@ -418,8 +418,8 @@ function ensureAuthSubscribed() {
             }
 
             // Load user's selected cards and payments using unified data.
-            // 訪客資料的處理原則：登入時已先問過用戶（resolveGuestDataOnLogin）；選「不要」的話
-            // 訪客 key 已清掉，下面什麼都帶不進去。選「存進帳號」才會走到：雲端有值 → 雲端為準；
+            // 訪客資料的處理原則：登入時已先問過用戶（resolveGuestDataOnLogin）；選「不是，清掉」的話
+            // 訪客 key 已清掉，下面什麼都帶不進去。選「是，存進我的帳號」才會走到：雲端有值 → 雲端為準；
             // 雲端沒值 → 帶入訪客值並上傳；訪客 key 兩種情況都會被消化移除。
             await loadCardsInComparison(userData);
             await loadMyOwnedCards(userData);
@@ -529,8 +529,8 @@ async function loadUserData() {
 // ========== 登入時先問：這台裝置上的訪客資料要不要帶進帳號（2026-11-23） ==========
 // 以前是靜默帶入：共用電腦上，前一位訪客留下的額度、級別、刷卡小抄會被寫進下一位登入者的帳號，
 // 站長認定不可接受。現在登入時只要這台裝置上有訪客資料，就先跳一次確認：
-//   「存進我的帳號」→ 照舊走各 load 函數與 absorbGuestPersonalData 的帶入規則（雲端有值仍以雲端為準）
-//   「不要，從這台裝置清掉」→ 先把訪客 key 全刪，後面的帶入程式自然什麼都找不到
+//   「是，存進我的帳號」→ 照舊走各 load 函數與 absorbGuestPersonalData 的帶入規則（雲端有值仍以雲端為準）
+//   「不是，清掉」→ 先把訪客 key 全刪，後面的帶入程式自然什麼都找不到
 // 沒有訪客資料就不問（大部分登入都是這樣）。對話框沒有關閉鈕，一定要二選一，免得「關掉」被誤當成同意。
 
 // 掃這台裝置上的訪客資料。回傳 { keys: 要清掉的 key, parts: 給用戶看的項目（如「我的信用卡 3 張」） }。
@@ -578,13 +578,12 @@ function askGuestDataImport(parts) {
         wrap.setAttribute('aria-labelledby', 'gi-title');
         wrap.innerHTML =
             '<div class="gi-box">' +
-                '<div class="gi-title" id="gi-title">要把這台裝置上的設定存進帳號嗎？</div>' +
+                '<div class="gi-title" id="gi-title">這些設定是你的嗎？</div>' +
                 '<p class="gi-lead">這台裝置上有未登入時留下的設定：</p>' +
                 '<p class="gi-items">' + escapeHtml(parts.join('、')) + '</p>' +
-                '<p class="gi-hint">是你剛剛設定的，就存進帳號。如果這台電腦有別人用過、這些不是你的，選「不要」，這些設定會從這台裝置清掉，不會進你的帳號。</p>' +
                 '<div class="gi-actions">' +
-                    '<button type="button" class="gi-btn gi-btn-primary" id="gi-import">存進我的帳號</button>' +
-                    '<button type="button" class="gi-btn" id="gi-discard">不要，從這台裝置清掉</button>' +
+                    '<button type="button" class="gi-btn gi-btn-primary" id="gi-import">是，存進我的帳號</button>' +
+                    '<button type="button" class="gi-btn" id="gi-discard">不是，清掉</button>' +
                 '</div>' +
             '</div>';
         document.body.appendChild(wrap);
