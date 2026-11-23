@@ -612,7 +612,7 @@ header {
 .da-lead {
     margin: 0 0 16px;
     font-size: 15px;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .da-lead strong {
@@ -620,9 +620,9 @@ header {
 }
 
 .da-list-title {
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     margin-bottom: 6px;
 }
 
@@ -641,9 +641,9 @@ header {
 }
 
 .da-note {
-    border-left: 3px solid #f59e0b;
+    border-left: 3px solid var(--ui-yellow);
     background: #fffbeb;
-    border-radius: 0 6px 6px 0;
+    border-radius: 0 var(--ui-radius-sm) var(--ui-radius-sm) 0;
     padding: 10px 12px;
     margin-bottom: 18px;
     font-size: 12.5px;
@@ -659,7 +659,7 @@ header {
 .da-reauth-hint {
     margin: 0 0 14px;
     font-size: 12.5px;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     line-height: 1.6;
 }
 
@@ -671,8 +671,8 @@ header {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 14px;
+    border-radius: var(--ui-radius-md);
+    font-size: var(--ui-text-14);
     font-family: inherit;
     box-sizing: border-box;
     transition: border-color 0.2s;
@@ -685,8 +685,8 @@ header {
 }
 
 .da-code {
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
+    background: var(--ui-fill);
+    border: 1px solid var(--ui-line);
     border-radius: 4px;
     padding: 1px 6px;
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -696,7 +696,7 @@ header {
 
 .da-status {
     margin-top: 14px;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     line-height: 1.6;
     min-height: 1em;
 }
@@ -706,7 +706,7 @@ header {
 }
 
 .da-status.loading {
-    color: #2563eb;
+    color: var(--ui-brand-bright);
 }
 
 .da-status.error {
@@ -722,7 +722,7 @@ header {
    disabled 態要明顯——確認文字沒打對之前它就該看起來按不下去。 */
 .danger-btn {
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     border: none;
     font-weight: 500;
     cursor: pointer;
@@ -947,14 +947,14 @@ header h1 {
 }
 
 .announcement-modal-close:hover {
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .announcement-modal-content .modal-body {
     padding: 20px;
     font-size: 0.95rem;
     line-height: 1.6;
-    color: #374151;
+    color: var(--ui-ink-2);
     word-wrap: break-word;
 }
 
@@ -978,7 +978,7 @@ header h1 {
 }
 
 .announcement-modal-content .modal-body a {
-    color: #2563eb;
+    color: var(--ui-brand-bright);
     text-decoration: underline;
 }
 
@@ -987,15 +987,15 @@ header h1 {
     gap: 12px;
     justify-content: flex-end;
     padding: 16px 20px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, #1e40af, #3b82f6);
+    background: linear-gradient(135deg, var(--ui-brand), #3b82f6);
     color: white;
     padding: 10px 20px;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     font-size: 0.9rem;
     cursor: pointer;
     text-decoration: none;
@@ -1246,7 +1246,7 @@ main {
 .modal-section h4 {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     margin-bottom: 12px;
 }
 
@@ -1291,7 +1291,7 @@ main {
 
 .hint-text {
     font-size: 0.85rem;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     margin-top: 8px;
     margin-bottom: 0;
 }
@@ -1304,9 +1304,9 @@ main {
     gap: 8px;
     min-height: 48px;
     padding: 12px;
-    background: #f9fafb;
+    background: var(--ui-bg);
     border: 1px dashed #d1d5db;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
 }
 
 .selected-tags-container {
@@ -1327,7 +1327,7 @@ main {
     gap: 4px;
     padding: 4px 10px;
     background: white;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--ui-line);
     border-radius: 16px;
     font-size: 0.85rem;
     cursor: grab;
@@ -1355,7 +1355,7 @@ main {
 
 .tag-name {
     font-weight: 500;
-    color: #374151;
+    color: var(--ui-ink-2);
     font-size: 0.85rem;
 }
 
@@ -1386,7 +1386,7 @@ main {
 }
 
 .tag-add-btn {
-    color: #10b981;
+    color: var(--ui-green);
     margin-right: 2px;
 }
 
@@ -1414,7 +1414,7 @@ main {
     width: 22px;
     height: 22px;
     border-radius: 50%;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 1.05rem;
     line-height: 1;
     transition: transform 0.2s, color 0.15s, background 0.15s;
@@ -1424,13 +1424,13 @@ main {
 }
 
 .tag-expand-btn:hover {
-    color: #374151;
+    color: var(--ui-ink-2);
     background: #e5e7eb;
 }
 
 .tag-expand-btn.expanded {
     transform: rotate(180deg);
-    color: #2563eb;
+    color: var(--ui-brand-bright);
     background: #dbeafe;
 }
 
@@ -1438,9 +1438,9 @@ main {
 .tag-merchants-panel {
     display: none;
     font-size: 0.75rem;
-    color: #6b7280;
-    background: #f3f4f6;
-    border-radius: 6px;
+    color: var(--ui-ink-3);
+    background: var(--ui-fill);
+    border-radius: var(--ui-radius-sm);
     padding: 4px 10px;
     line-height: 1.5;
     max-width: 280px;
@@ -1463,11 +1463,11 @@ main {
 
 /* Custom options */
 .add-custom-btn {
-    background: #f3f4f6;
+    background: var(--ui-fill);
     border: 1px dashed #9ca3af;
-    color: #374151;
+    color: var(--ui-ink-2);
     padding: 10px 16px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1493,7 +1493,7 @@ main {
     gap: 4px;
     padding: 4px 10px;
     background: white;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--ui-line);
     border-radius: 16px;
     font-size: 0.85rem;
     transition: all 0.2s ease;
@@ -1613,15 +1613,15 @@ main {
 .custom-option-form {
     margin-top: 16px;
     padding: 16px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
 }
 
 .custom-option-form h4 {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     margin-bottom: 12px;
 }
 
@@ -1641,7 +1641,7 @@ main {
     width: 100%;
     padding: 8px 12px;
     border: 1px solid #d1d5db;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     font-size: 0.9rem;
 }
 
@@ -1662,7 +1662,7 @@ main {
     flex: 1;
     padding: 12px;
     border: 2px dashed #d1d5db;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     background: white;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1689,7 +1689,7 @@ main {
     background: #ef4444;
     color: white;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     cursor: pointer;
     font-size: 0.85rem;
     transition: background 0.2s ease;
@@ -1704,9 +1704,9 @@ main {
     grid-template-columns: repeat(8, 1fr);
     gap: 8px;
     padding: 12px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     max-height: 200px;
     overflow-y: auto;
     margin-top: 8px;
@@ -1716,7 +1716,7 @@ main {
     font-size: 1.5rem;
     padding: 8px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     transition: all 0.2s ease;
     text-align: center;
     background: white;
@@ -3405,7 +3405,7 @@ input[type="number"]:focus {
 
     .card-checkbox {
         padding: 8px;
-        font-size: 12px;
+        font-size: var(--ui-text-12);
     }
 }
 
@@ -3433,7 +3433,7 @@ input[type="number"]:focus {
 
 .modal-content {
     background: white;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     width: 90%;
     max-width: 500px;
     max-height: 80vh;
@@ -3448,12 +3448,12 @@ input[type="number"]:focus {
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ui-line);
 }
 
 .modal-header h3 {
     margin: 0;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-size: 1.25rem;
 }
 
@@ -3461,7 +3461,7 @@ input[type="number"]:focus {
     background: none;
     border: none;
     font-size: 24px;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     cursor: pointer;
     padding: 0;
     width: 30px;
@@ -3472,7 +3472,7 @@ input[type="number"]:focus {
 }
 
 .close-modal:hover {
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 /* Spotlight (and other) modals use .modal-close — give it a comfortably
@@ -3482,12 +3482,12 @@ input[type="number"]:focus {
     border: none;
     font-size: 32px;
     line-height: 1;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     cursor: pointer;
     padding: 0;
     width: 44px;
     height: 44px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -3495,7 +3495,7 @@ input[type="number"]:focus {
 }
 
 .modal-close:hover {
-    color: #111827;
+    color: var(--ui-ink-1);
     background: rgba(107, 114, 128, 0.12);
 }
 
@@ -3522,9 +3522,9 @@ input[type="number"]:focus {
 .search-modal-input[type="text"] {
     flex: 1;
     padding: 8px 8px 8px 30px; /* 左 30px 讓開放大鏡背景圖示 */
-    border: 2px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 13px;
+    border: 2px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
+    font-size: var(--ui-text-13);
     line-height: 1.3;
     transition: border-color 0.2s ease;
     /* 單色放大鏡 SVG（同 promos 搜尋框的 Bootstrap search icon，取代原本 placeholder
@@ -3543,7 +3543,7 @@ input[type="number"]:focus {
 
 .search-modal-input::placeholder {
     color: #9ca3af;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
 }
 
 .modal-action-buttons {
@@ -3556,14 +3556,14 @@ input[type="number"]:focus {
 
 .toggle-all-btn {
     background: #e5e7eb;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     border: 1px solid #d1d5db;
     padding: 6px 14px;
     /* 任何寬度都只能一行（2026-10-14 站長：手機「全選」被擠成兩行）；讓搜尋框去縮 */
     white-space: nowrap;
     flex-shrink: 0;
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--ui-radius-sm);
+    font-size: var(--ui-text-12);
     font-weight: 400;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -3571,7 +3571,7 @@ input[type="number"]:focus {
 
 .toggle-all-btn:hover {
     background: #d1d5db;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .toggle-all-btn:active {
@@ -3582,9 +3582,9 @@ input[type="number"]:focus {
 .tag-filter-section {
     margin-bottom: 16px;
     padding: 12px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
 }
 
 .tag-filter-toggle {
@@ -3596,7 +3596,7 @@ input[type="number"]:focus {
     border: none;
     padding: 0;
     cursor: pointer;
-    color: #374151;
+    color: var(--ui-ink-2);
     font: inherit;
 }
 
@@ -3608,7 +3608,7 @@ input[type="number"]:focus {
     transition: transform 0.2s ease;
     font-size: 20px;
     line-height: 1;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .tag-filter-section:not(.collapsed) .tag-filter-toggle-icon {
@@ -3616,9 +3616,9 @@ input[type="number"]:focus {
 }
 
 .tag-filter-label {
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .tag-filter-chips {
@@ -3637,7 +3637,7 @@ input[type="number"]:focus {
     align-items: center;
     padding: 4px 10px;
     border-radius: 12px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -3658,8 +3658,8 @@ input[type="number"]:focus {
 
 .modal-description {
     margin-bottom: 20px;
-    color: #6b7280;
-    font-size: 14px;
+    color: var(--ui-ink-3);
+    font-size: var(--ui-text-14);
     line-height: 1.5;
 }
 
@@ -3681,14 +3681,14 @@ input[type="number"]:focus {
     align-items: flex-start;
     gap: 8px;
     padding: 10px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-sm);
     cursor: pointer;
     transition: all 0.2s ease;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
 }
 .card-checkbox-image {
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     height: 56px;
     width: auto;
     max-width: 110px;
@@ -3761,8 +3761,8 @@ input[type="number"]:focus {
     content: '詳情';
 }
 .card-detail-peek-btn:hover {
-    color: #111827;
-    background: #f3f4f6;
+    color: var(--ui-ink-1);
+    background: var(--ui-fill);
     border-color: #9ca3af;
 }
 
@@ -3812,10 +3812,10 @@ input[type="number"]:focus {
 .calc-breakdown-popup {
     margin: 12px -16px -16px;
     padding: 12px 16px;
-    background: #f3f4f6;
+    background: var(--ui-fill);
     border-top: 1px solid #d1d5db;
-    border-radius: 0 0 8px 8px;
-    font-size: 13px;
+    border-radius: 0 0 var(--ui-radius-md) var(--ui-radius-md);
+    font-size: var(--ui-text-13);
     overflow-x: auto;
     animation: breakdownSlideDown 0.15s ease;
 }
@@ -3829,8 +3829,8 @@ input[type="number"]:focus {
     margin: 10px 0 0;
     padding: 9px 12px;
     border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 12px;
+    border-radius: var(--ui-radius-md);
+    font-size: var(--ui-text-12);
 }
 .cashback-detail-item .calc-breakdown-popup .breakdown-table td {
     padding: 3px 8px 3px 0;
@@ -3842,7 +3842,7 @@ input[type="number"]:focus {
 .breakdown-table td,
 .breakdown-table th {
     padding: 4px 10px 4px 0;
-    color: #374151;
+    color: var(--ui-ink-2);
     white-space: nowrap;
     vertical-align: middle;
 }
@@ -3854,11 +3854,11 @@ input[type="number"]:focus {
     font-size: 0.92em;
     text-align: left;
     padding-bottom: 5px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ui-line);
 }
 .breakdown-table td.bd-name { font-weight: 500; }
 .breakdown-table td.bd-amt,
-.breakdown-table td.bd-rate { color: #6b7280; }
+.breakdown-table td.bd-rate { color: var(--ui-ink-3); }
 /* 每層自己的上限（2026-09-30 新增第 5 欄）：灰字不搶戲，封頂時轉紅呼應（封頂）標記。
    欄距比其他欄窄——5 欄要在 360px 手機上一列排得下，見下方 @media 的緊縮設定 */
 .breakdown-table td.bd-cap {
@@ -3874,7 +3874,7 @@ input[type="number"]:focus {
 /* 手機（5 欄擠一列）：縮字級與欄距，讓常見的一列在 360px 寬排得下不必橫向捲。
    仍保留 nowrap——寧可長名稱的那幾列橫向捲，也不要一個活動被折成兩行。 */
 @media (max-width: 430px) {
-    .calc-breakdown-popup { font-size: 12px; }
+    .calc-breakdown-popup { font-size: var(--ui-text-12); }
     .breakdown-table td,
     .breakdown-table th { padding-right: 6px; }
     .breakdown-table .bd-cap { padding-right: 5px; }
@@ -3891,22 +3891,22 @@ input[type="number"]:focus {
     padding-top: 7px;
     font-weight: 700;
 }
-.breakdown-table .bd-total .bd-name { color: #374151; }
-.breakdown-table .bd-total .bd-amt { color: #374151; }
+.breakdown-table .bd-total .bd-name { color: var(--ui-ink-2); }
+.breakdown-table .bd-total .bd-amt { color: var(--ui-ink-2); }
 .breakdown-table .bd-total .bd-cash { color: #059669; }
 
 .card-checkbox-label {
     flex-grow: 1;
     font-weight: 400;
-    color: #374151;
-    font-size: 13px;
+    color: var(--ui-ink-2);
+    font-size: var(--ui-text-13);
     line-height: 1.2;
 }
 /* Bold card names in card-selection modals (not payments) */
 #cards-selection .card-checkbox-label,
 #owned-cards-selection .card-checkbox-label {
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 /* --- My Owned Cards overview (layer 1) --- */
@@ -3921,17 +3921,17 @@ input[type="number"]:focus {
     gap: 6px;
     padding: 8px 16px;
     border: 1px solid #6bb6ff;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     background: #fff;
-    color: #1e40af;
-    font-size: 14px;
+    color: var(--ui-brand);
+    font-size: var(--ui-text-14);
     font-weight: 600;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 .manage-owned-btn:hover {
     background: #f0f9ff;
-    border-color: #1e40af;
+    border-color: var(--ui-brand);
 }
 
 .owned-cards-overview {
@@ -3949,23 +3949,23 @@ input[type="number"]:focus {
     height: 30px;
     padding: 0 12px;
     border: 1px solid #d1d5db;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     background: #fff;
-    color: #374151;
-    font-size: 13px;
+    color: var(--ui-ink-2);
+    font-size: var(--ui-text-13);
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
 .ow-manage-btn:hover {
-    background: #f3f4f6;
+    background: var(--ui-fill);
     border-color: #9ca3af;
 }
 
 #my-owned-cards-modal .modal-body {
     background: #ffffff;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 var(--ui-radius-lg) var(--ui-radius-lg);
     padding: 0;
 }
 #my-owned-cards-modal .modal-content,
@@ -3986,7 +3986,7 @@ input[type="number"]:focus {
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
 }
 .sel-footer[hidden] { display: none; }
-.sel-dirty { margin-right: auto; font-size: 13.5px; font-weight: 600; color: #374151; }
+.sel-dirty { margin-right: auto; font-size: 13.5px; font-weight: 600; color: var(--ui-ink-2); }
 
 .ow-count-badge {
     color: #94a3b8;
@@ -4026,8 +4026,8 @@ input[type="number"]:focus {
     justify-content: center;
     padding: 12px;
     font-weight: 700;
-    font-size: 14px;
-    color: #374151;
+    font-size: var(--ui-text-14);
+    color: var(--ui-ink-2);
     text-align: center;
     background: linear-gradient(135deg, #e2e8f0, #f8fafc);
 }
@@ -4038,23 +4038,23 @@ input[type="number"]:focus {
     grid-template-columns: 0.75fr 1.35fr 1.2fr;
     margin: 0;
     background: #f8fafc;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ui-line);
 }
 .ow-sum > div {
     padding: 11px 12px 12px;
     min-width: 0;
 }
 .ow-sum > div:first-child { padding-left: 20px; }
-.ow-sum > div + div { border-left: 1px solid #e5e7eb; }
+.ow-sum > div + div { border-left: 1px solid var(--ui-line); }
 .ow-sum dt {
     font-size: 11.5px;
     color: #4b5563;
 }
 .ow-sum dd {
     margin: 1px 0 0;
-    font-size: 16px;
+    font-size: var(--ui-text-16);
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
@@ -4107,13 +4107,13 @@ input[type="number"]:focus {
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.16);
 }
 .ow-tile:focus-visible {
-    outline: 2px solid #1e40af;
+    outline: 2px solid var(--ui-brand);
     outline-offset: 4px;
     border-radius: 9px;
 }
 .ow-ok {
     display: block;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 700;
     line-height: 1.5;
     color: #047857;
@@ -4124,11 +4124,11 @@ input[type="number"]:focus {
     font-size: 13.5px;
     font-weight: 700;
     line-height: 1.4;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 .ow-meta {
     display: block;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.5;
     color: #4b5563;
 }
@@ -4139,7 +4139,7 @@ input[type="number"]:focus {
     aspect-ratio: 1.586;
     border: 1.5px dashed #cbd5e1;
     border-radius: 9px;
-    color: #1e40af;
+    color: var(--ui-brand);
     font-size: 13.5px;
     font-weight: 700;
     transition: background 0.15s ease;
@@ -4148,9 +4148,9 @@ input[type="number"]:focus {
 /* 卡片格：有填結帳日／繳款日才多這一行（2026-11-22） */
 .ow-dates {
     display: block;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.5;
-    color: #2563eb;
+    color: var(--ui-brand-bright);
 }
 
 /* --- 單卡面板（2026-11-22）：點卡片後同一個視窗換成該卡的個人設定。
@@ -4172,17 +4172,17 @@ input[type="number"]:focus {
 .ow-panel[hidden] { display: none; }
 .ow-panel-hd { display: flex; align-items: center; gap: 14px; }
 .ow-panel-pic { flex: none; width: 112px; }
-.ow-panel-pic .ow-frame { border-radius: 8px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.1); }
+.ow-panel-pic .ow-frame { border-radius: var(--ui-radius-md); box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.1); }
 .ow-panel-tx { min-width: 0; }
-.ow-panel-name { font-size: 16px; font-weight: 700; line-height: 1.4; color: #111827; }
+.ow-panel-name { font-size: var(--ui-text-16); font-weight: 700; line-height: 1.4; color: var(--ui-ink-1); }
 .ow-panel-more {
     margin-top: 2px;
     padding: 2px 0;
     border: 0;
     background: none;
-    color: #2563eb;
+    color: var(--ui-brand-bright);
     font: inherit;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
     cursor: pointer;
 }
@@ -4221,7 +4221,7 @@ input[type="number"]:focus {
     font-size: 17px;
     font-weight: 600;
     line-height: 20px;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 .cd-pan-set > .cd-set-box { margin-top: 12px; }
 
@@ -4234,9 +4234,9 @@ input[type="number"]:focus {
     align-items: flex-end;
     min-width: 0;
     max-width: 100%;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 20px;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     text-align: right;
 }
 .cd-sv-l { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
@@ -4246,7 +4246,7 @@ input[type="number"]:focus {
 .cd-sv[data-state="local"] .cd-sv-ic { color: #d97706; }
 .cd-sv[data-state="err"] { color: #991b1b; }
 .cd-sv[data-state="err"] .cd-sv-ic { color: #dc2626; }
-.cd-sv-d { font-size: 12px; line-height: 1.5; color: #991b1b; }
+.cd-sv-d { font-size: var(--ui-text-12); line-height: 1.5; color: #991b1b; }
 .cd-sv-d[hidden], .cd-sv-t2[hidden] { display: none; }
 .cd-sv-spin {
     width: 12px;
@@ -4281,11 +4281,11 @@ input[type="number"]:focus {
 
 /* 組標題：「計算條件」＋灰字副標 */
 .cd-set-sec { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0 8px; margin: 16px 4px 8px; }
-.cd-set-sec-t { margin: 0; font-size: 14px; font-weight: 600; color: #374151; }
-.cd-set-sec-s { font-size: 12px; color: #6b7280; }
+.cd-set-sec-t { margin: 0; font-size: var(--ui-text-14); font-weight: 600; color: var(--ui-ink-2); }
+.cd-set-sec-s { font-size: var(--ui-text-12); color: var(--ui-ink-3); }
 
 /* 一組一個白底灰框盒子；一欄一列：標籤左、控制項右、說明小字在下一行（跨兩欄） */
-.cd-set-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+.cd-set-box { background: #fff; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-md); }
 .cd-st-r {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -4298,14 +4298,14 @@ input[type="number"]:focus {
 #card-personal-section .cd-st-l label {
     display: block;
     margin: 0;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 600;
     line-height: 1.4;
-    color: #111827;
+    color: var(--ui-ink-1);
     cursor: pointer;
 }
 .cd-st-c { display: flex; justify-content: flex-end; }
-.cd-st-s { grid-column: 1 / -1; font-size: 12px; line-height: 1.5; color: #6b7280; }
+.cd-st-s { grid-column: 1 / -1; font-size: var(--ui-text-12); line-height: 1.5; color: var(--ui-ink-3); }
 .cd-st-s:empty { display: none; }
 /* 單一級別且沒有備註時沒有「i」按鈕，備註節點（切級別時就地改寫的目標）一定存在但不佔位 */
 .cd-st-l > .level-help-note:empty { display: none; }
@@ -4320,12 +4320,12 @@ input[type="number"]:focus {
     margin: 0;
     padding: 0 8px;
     border: 1px solid #d1d5db;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     background-color: #fff;
     box-shadow: none;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-family: inherit;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 400;
     text-align: right;
     text-align-last: right;
@@ -4339,7 +4339,7 @@ input[type="number"]:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
-#card-personal-section .cd-st-sel:disabled { background-color: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+#card-personal-section .cd-st-sel:disabled { background-color: var(--ui-fill); color: #9ca3af; cursor: not-allowed; }
 
 /* 筆記：整列寬的 textarea（標題在上） */
 .cd-st-notes .cd-st-l { grid-column: 1 / -1; }
@@ -4351,15 +4351,15 @@ input[type="number"]:focus {
     margin: 4px 0 0;
     padding: 8px 10px;
     border: 1px solid #d1d5db;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     background: #fff;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-family: inherit;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     line-height: 1.5;
     resize: vertical;
 }
-#card-personal-section .cd-st-ta::placeholder { color: #9ca3af; font-size: 14px; }
+#card-personal-section .cd-st-ta::placeholder { color: #9ca3af; font-size: var(--ui-text-14); }
 
 /* 字級整理（2026-11-23 站長：有些字特別大、看起來亂）。
    手機的輸入框／下拉被全站規則固定 16px（低於 16px 時 iPhone 聚焦會自動放大畫面，見檔尾「Prevent iOS/Android auto-zoom」），
@@ -4368,13 +4368,13 @@ input[type="number"]:focus {
    停用的下拉（訪客的生日月份「需先登入」）聚焦不了、不會觸發放大，可以縮成 14px */
 #card-personal-section .cd-st-sel,
 #card-personal-section input[type="text"].cd-st-inp,
-#card-personal-section .cd-st-ta { color: #374151; }
-#card-personal-section input.cd-st-inp::placeholder { font-size: 14px; }
+#card-personal-section .cd-st-ta { color: var(--ui-ink-2); }
+#card-personal-section input.cd-st-inp::placeholder { font-size: var(--ui-text-14); }
 @media (max-width: 768px) {
     #card-personal-section .cd-st-l label { font-size: 15px; }
     #card-personal-section .cd-st-sel,
     #card-personal-section input[type="text"].cd-st-inp { height: 38px; }
-    #card-personal-section .cd-st-sel:disabled { font-size: 14px !important; }
+    #card-personal-section .cd-st-sel:disabled { font-size: var(--ui-text-14) !important; }
 }
 
 /* 開關：仍是 input type=checkbox（id 不變；Tab 聚焦、空白鍵切換），只換外觀 */
@@ -4414,7 +4414,7 @@ input[type="number"]:focus {
     #card-personal-section input[type="checkbox"].cd-sw::after { transition: none; }
 }
 
-.cd-set-foot { padding: 12px 4px 0; font-size: 12px; line-height: 1.5; color: #6b7280; }
+.cd-set-foot { padding: 12px 4px 0; font-size: var(--ui-text-12); line-height: 1.5; color: var(--ui-ink-3); }
 
 /* ============================================
    新戶活動票券（#card-promos-content，2026-11-17 第三輪；js/card-detail.js renderCardDetailPromoTickets）
@@ -4431,8 +4431,8 @@ input[type="number"]:focus {
     display: grid;
     grid-template-columns: 78px minmax(0, 1fr);
     background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-lg);
     overflow: hidden;
 }
 .cd-tk::before,
@@ -4444,7 +4444,7 @@ input[type="number"]:focus {
     height: 16px;
     border-radius: 50%;
     background: #f3f4f6;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--ui-line);
 }
 .cd-tk::before { top: -9px; }
 .cd-tk::after { bottom: -9px; }
@@ -4457,7 +4457,7 @@ input[type="number"]:focus {
     padding: 8px 4px;
     background: #ffd84a;
     color: #7a4e00;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 800;
     line-height: 1.3;
     text-align: center;
@@ -4474,49 +4474,49 @@ input[type="number"]:focus {
 .cd-pt-chips span {
     padding: 0 6px;
     border-radius: 4px;
-    background: #f3f4f6;
-    color: #6b7280;
+    background: var(--ui-fill);
+    color: var(--ui-ink-3);
     font-size: 11px;
     font-weight: 600;
     line-height: 1.7;
 }
 .cd-pt-chips .cd-pt-soon { background: #fef3c7; color: #92400e; }
 .cd-hz-amt { display: flex; align-items: baseline; gap: 6px; line-height: 1.15; }
-.cd-hz-amt b { font-size: 30px; font-weight: 800; color: #111827; font-variant-numeric: tabular-nums; }
-.cd-hz-amt small { font-size: 13px; font-weight: 600; color: #374151; }
-.cd-gname { font-size: 17px; font-weight: 800; line-height: 1.35; color: #111827; }
+.cd-hz-amt b { font-size: 30px; font-weight: 800; color: var(--ui-ink-1); font-variant-numeric: tabular-nums; }
+.cd-hz-amt small { font-size: var(--ui-text-13); font-weight: 600; color: var(--ui-ink-2); }
+.cd-gname { font-size: 17px; font-weight: 800; line-height: 1.35; color: var(--ui-ink-1); }
 .cd-gopts {
     display: flex;
     flex-direction: column;
     gap: 2px;
     margin: 2px 0 0;
     padding-left: 1.5em;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
-.cd-tk-main .cd-ch { font-size: 12px; color: #6b7280; }
-.cd-pt-sum { margin: 0; font-size: 13px; line-height: 1.5; color: #374151; }
+.cd-tk-main .cd-ch { font-size: var(--ui-text-12); color: var(--ui-ink-3); }
+.cd-pt-sum { margin: 0; font-size: var(--ui-text-13); line-height: 1.5; color: var(--ui-ink-2); }
 .cd-pt-img {
     display: block;
     width: 100%;
     max-height: 140px;
     margin-top: 2px;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     object-fit: contain;
     cursor: zoom-in;
 }
 
 /* 票券下方的說明區：標題、白底灰框盒子、黃色圓圈數字的步驟、備註條列 */
-.cd-pm-h { margin: 18px 4px 8px; font-size: 17px; font-weight: 600; color: #374151; }
+.cd-pm-h { margin: 18px 4px 8px; font-size: 17px; font-weight: 600; color: var(--ui-ink-2); }
 .cd-pm-box, .cd-pm-d {
     box-sizing: border-box;
     padding: 14px 16px;
     background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
 }
-.cd-steps { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.5; color: #374151; }
+.cd-steps { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.5; color: var(--ui-ink-2); }
 .cd-steps li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; }
 .cd-steps i {
     display: grid;
@@ -4526,14 +4526,14 @@ input[type="number"]:focus {
     border-radius: 50%;
     background: #ffd84a;
     color: #7a4e00;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-style: normal;
     font-weight: 800;
 }
-.cd-step-sub { display: block; margin-top: 2px; color: #6b7280; }
-.cd-pt-plain { margin: 0; font-size: 12.5px; line-height: 1.5; color: #374151; }
+.cd-step-sub { display: block; margin-top: 2px; color: var(--ui-ink-3); }
+.cd-pt-plain { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--ui-ink-2); }
 .cd-kv { display: flex; flex-direction: column; gap: 10px; }
-.cd-notes { display: flex; flex-direction: column; gap: 3px; margin: 0; padding-left: 1.2em; font-size: 12.5px; line-height: 1.5; color: #6b7280; }
+.cd-notes { display: flex; flex-direction: column; gap: 3px; margin: 0; padding-left: 1.2em; font-size: 12.5px; line-height: 1.5; color: var(--ui-ink-3); }
 .cd-pm-box > .cd-kv:not(:first-child) { margin-top: 10px; }
 
 /* 多筆活動：每張票券下的「達成條件與備註 ⌄」膠囊（和「顯示全部」「展開」同一種灰框小膠囊） */
@@ -4544,16 +4544,16 @@ input[type="number"]:focus {
     margin: 8px 0 0;
     padding: 0 5px 0 9px;
     border: 1px solid #d1d5db;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     background: #fff;
-    color: #374151;
+    color: var(--ui-ink-2);
     font: inherit;
     font-size: 11.5px;
     font-weight: 600;
     line-height: 18px;
     cursor: pointer;
 }
-#card-detail-modal .cd-pm-t:hover { background: #f9fafb; }
+#card-detail-modal .cd-pm-t:hover { background: var(--ui-bg); }
 #card-detail-modal .cd-pm-t:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
 .cd-pm-t[aria-expanded="true"] .cd-chev { transform: rotate(180deg); }
 .cd-pm-d { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
@@ -4564,8 +4564,8 @@ input[type="number"]:focus {
     margin: 16px 0 0;
     padding: 0 4px;
     background: none;
-    color: #6b7280;
-    font-size: 12px;
+    color: var(--ui-ink-3);
+    font-size: var(--ui-text-12);
     font-weight: 400;
     text-align: left;
 }
@@ -4591,7 +4591,7 @@ input[type="number"]:focus {
     border-radius: 50%;
     width: 18px;
     height: 18px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 700;
     font-style: italic;
     cursor: pointer;
@@ -4613,9 +4613,9 @@ input[type="number"]:focus {
     display: none;
     margin: 0;
     inset: auto;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--ui-line);
     background: #fff;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     padding: 10px 12px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
     max-width: min(320px, calc(100vw - 24px));
@@ -4628,14 +4628,14 @@ input[type="number"]:focus {
 }
 
 .level-help-rates-title {
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     margin-bottom: 4px;
 }
 .level-help-rate-line {
     font-size: 11.5px;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     line-height: 1.6;
     word-wrap: break-word;
 }
@@ -4654,7 +4654,7 @@ input[type="number"]:focus {
    所以節點一定存在，不能靠「有沒有渲染」來決定間距 */
 .level-help-note {
     font-size: 11.5px;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     line-height: 1.6;
     word-wrap: break-word;
     white-space: normal;
@@ -4674,7 +4674,7 @@ input[type="number"]:focus {
     text-align: center;
 }
 .owned-overview-empty-text {
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 15px;
     margin: 0;
 }
@@ -4683,13 +4683,13 @@ input[type="number"]:focus {
     display: flex;
     gap: 12px;
     padding: 20px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
     justify-content: flex-end;
 }
 
 .save-btn, .cancel-btn {
     padding: 10px 20px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     border: none;
     font-weight: 500;
     cursor: pointer;
@@ -4703,7 +4703,7 @@ input[type="number"]:focus {
 }
 
 .save-btn:hover {
-    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    background: linear-gradient(135deg, var(--ui-brand-bright) 0%, var(--ui-brand) 100%);
     box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
     transform: translateY(-1px);
 }
@@ -4717,12 +4717,12 @@ input[type="number"]:focus {
 #save-cards-btn:hover,
 #save-payments-btn:hover,
 #submit-feedback-btn:hover {
-    background: #2563eb;
+    background: var(--ui-brand-bright);
 }
 
 .cancel-btn {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--ui-fill);
+    color: var(--ui-ink-2);
     border: 1px solid #d1d5db;
 }
 
@@ -4764,8 +4764,8 @@ input[type="number"]:focus {
     display: flex;
     flex-direction: column;
     background: #f3f4f6;
-    color: #111827;
-    font-size: 14px;
+    color: var(--ui-ink-1);
+    font-size: var(--ui-text-14);
     line-height: 1.5;
     -webkit-overflow-scrolling: touch;
 }
@@ -4782,7 +4782,7 @@ input[type="number"]:focus {
     gap: 6px;
     min-height: 48px;
     padding: 0 12px 0 4px;
-    background: #1e40af;
+    background: var(--ui-brand);
     color: #fff;
 }
 .cd-back {
@@ -4823,7 +4823,7 @@ input[type="number"]:focus {
     gap: 4px;
     flex: none;
     padding: 8px 18px;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     border-bottom: 2px solid #f2bd16;
     background: #ffd84a;
     color: #7a4e00;
@@ -4840,7 +4840,7 @@ input[type="number"]:focus {
 .cd-apply-header-btn {
     display: none;            /* 手機（≤768px）用 .cd-fab */
     padding: 5px 14px;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
 }
 
 /* --- 摘要（手機：藍底、跟著捲走；桌機：左欄白卡） --- */
@@ -4851,7 +4851,7 @@ input[type="number"]:focus {
     flex-direction: column;
     gap: 12px;
     padding: 2px 16px 14px;
-    background: #1e40af;
+    background: var(--ui-brand);
     color: #fff;
 }
 .cd-id { display: flex; align-items: center; gap: 12px; }
@@ -4866,7 +4866,7 @@ input[type="number"]:focus {
 }
 .cd-thumb[hidden] { display: none; }
 .cd-id-tx { min-width: 0; }
-.cd-bank { font-size: 14px; font-weight: 700; line-height: 1.4; }
+.cd-bank { font-size: var(--ui-text-14); font-weight: 700; line-height: 1.4; }
 .cd-type { font-size: 12.5px; line-height: 1.5; color: rgba(255, 255, 255, 0.82); }
 /* 官網連結沿用 #card-official-site-link（GA4 detail_official_site），這裡只改顏色與位置 */
 #card-detail-modal .cd-type .card-official-site-link {
@@ -4892,7 +4892,7 @@ input[type="number"]:focus {
     cursor: pointer;
     font-size: 13.5px;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 .cd-reward-info > summary::-webkit-details-marker { display: none; }
 .cd-reward-info > summary::after {
@@ -4911,14 +4911,14 @@ input[type="number"]:focus {
     margin: 10px 0 0;
     padding: 4px 14px;
     background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
 }
 .cd-reward-info dl > div { padding: 9px 0; }
 .cd-reward-info dl > div + div { border-top: 1px solid #f0f1f3; }
 .cd-reward-info dl > div[hidden] { display: none; }
-.cd-reward-info dt { font-size: 11px; font-weight: 500; color: #6b7280; }
-.cd-reward-info dd { margin: 2px 0 0; font-size: 13.5px; line-height: 1.6; color: #111827; }
+.cd-reward-info dt { font-size: 11px; font-weight: 500; color: var(--ui-ink-3); }
+.cd-reward-info dd { margin: 2px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--ui-ink-1); }
 @media (prefers-reduced-motion: reduce) { .cd-reward-info > summary::after { transition: none; } }
 
 .cd-facts {
@@ -4932,7 +4932,7 @@ input[type="number"]:focus {
     padding: 8px 10px;
     background: rgba(255, 255, 255, 0.13);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
 }
 .cd-fact dt { margin: 0; font-size: 11px; font-weight: 500; color: rgba(255, 255, 255, 0.8); }
 .cd-fact dd {
@@ -4970,7 +4970,7 @@ input[type="number"]:focus {
     border: 0;
     border-radius: 0;
     color: #fff;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 500;
     line-height: 1.65;
 }
@@ -4993,7 +4993,7 @@ input[type="number"]:focus {
     z-index: 11;
     order: 2;
     flex: none;
-    background: #1e40af;
+    background: var(--ui-brand);
     padding: 0 8px;
 }
 .cd-tabs {
@@ -5011,7 +5011,7 @@ input[type="number"]:focus {
     gap: 3px;
     padding: 9px 2px 8px;
     border: 0;
-    border-radius: 12px 12px 0 0;
+    border-radius: var(--ui-radius-lg) var(--ui-radius-lg) 0 0;
     background: rgba(255, 255, 255, 0.16);
     color: rgba(255, 255, 255, 0.92);
     font: inherit;
@@ -5024,7 +5024,7 @@ input[type="number"]:focus {
 .cd-tab[hidden] { display: none; }
 .cd-tab[aria-selected="true"] {
     background: #f3f4f6;
-    color: #1e40af;
+    color: var(--ui-brand);
     font-weight: 800;
     padding-top: 11px;
 }
@@ -5062,7 +5062,7 @@ input[type="number"]:focus {
     margin: 18px 4px 8px;
     font-size: 17px;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 /* --- 「回饋」頁籤最上面：近期異動（一行通知）＋搜尋框 --- */
@@ -5077,16 +5077,16 @@ input[type="number"]:focus {
     margin: 0 -12px;
     padding: 10px 16px;
     border: 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ui-line);
     border-radius: 0;
     background: none;
-    color: #374151;
+    color: var(--ui-ink-2);
     font: inherit;
     font-size: 12.5px;
     text-align: left;
     cursor: pointer;
 }
-.cd-news-icon { flex: none; color: #374151; }
+.cd-news-icon { flex: none; color: var(--ui-ink-2); }
 .cd-news-date { flex: none; color: #9ca3af; font-variant-numeric: tabular-nums; }
 .cd-news-tx { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cd-news-more { margin-left: auto; flex: none; color: #3b82f6; font-weight: 600; }
@@ -5120,14 +5120,14 @@ input[type="number"]:focus {
     margin: 0;
     padding: 0 34px 0 40px;
     border: 1px solid #d1d5db;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     background-color: #fff;
     background-position: 14px center;
     background-size: 16px 16px;
-    font-size: 14px;
-    color: #111827;
+    font-size: var(--ui-text-14);
+    color: var(--ui-ink-1);
 }
-#card-detail-modal input[type="text"].cashback-search-input::placeholder { font-size: 14px; color: #9ca3af; }
+#card-detail-modal input[type="text"].cashback-search-input::placeholder { font-size: var(--ui-text-14); color: #9ca3af; }
 #card-detail-modal .input-clear-wrap[data-for="cashback-search-input"] { margin-bottom: 0; }
 #card-detail-modal .cashback-search-bar .cashback-search-empty { margin: 10px 0 0; }
 /* 回饋頁籤沒命中、領券・停車有命中時的提示 */
@@ -5137,11 +5137,11 @@ input[type="number"]:focus {
     margin: 10px 0 0;
     padding: 9px 12px;
     border: 1px solid #bfdbfe;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     background: #eff6ff;
     color: #1d4ed8;
     font: inherit;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
     text-align: left;
     cursor: pointer;
@@ -5162,7 +5162,7 @@ input[type="number"]:focus {
     padding: 6px 6px 6px 8px;
     background: #fff;
     border: 1.5px solid #ffe184;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     box-shadow: 0 6px 18px rgba(122, 78, 0, 0.2);
     color: #7a4e00;
     font-size: 13.5px;
@@ -5197,7 +5197,7 @@ input[type="number"]:focus {
     text-decoration-thickness: 1px;
     text-underline-offset: 4px;
 }
-.cd-fab-trust { display: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; color: #6b7280; }
+.cd-fab-trust { display: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; color: var(--ui-ink-3); }
 .cd-fab.is-open { border-radius: 26px; }
 .cd-fab.is-open .cd-fab-trust { display: block; margin-top: 3px; }
 .cd-fab-tx b { font-size: 15.5px; font-weight: 800; }
@@ -5237,7 +5237,7 @@ input[type="number"]:focus {
     .cd-tabs { grid-auto-columns: max-content; gap: 6px; }
     .cd-tab { padding: 11px 28px 10px; font-size: 15px; border-radius: 14px 14px 0 0; gap: 6px; }
     .cd-tab[aria-selected="true"] { padding-top: 13px; }
-    .cd-tab-n { font-size: 12px; }
+    .cd-tab-n { font-size: var(--ui-text-12); }
     .cd-sum,
     #card-detail-modal .cd-pan {
         padding-left: calc(var(--page-gutter) + 20px);
@@ -5258,11 +5258,11 @@ input[type="number"]:focus {
         display: block;
         background-image: linear-gradient(to right,
             #fff calc(var(--page-gutter) + 316px),
-            #e5e7eb calc(var(--page-gutter) + 316px) calc(var(--page-gutter) + 317px),
+            var(--ui-line) calc(var(--page-gutter) + 316px) calc(var(--page-gutter) + 317px),
             transparent calc(var(--page-gutter) + 317px));
     }
     .cd-top { min-height: 58px; }
-    .cd-name { font-size: 19px; }
+    .cd-name { font-size: var(--ui-text-19); }
     .cd-tabsbar { padding-left: calc(var(--page-gutter) + 330px); }
     .cd-tab[data-tab="set"] { display: none; }
 
@@ -5294,25 +5294,25 @@ input[type="number"]:focus {
         order: 0;
         padding: 2px 0 16px;
         background: none;
-        color: #111827;
+        color: var(--ui-ink-1);
         border: 0;
-        border-bottom: 1px solid #e5e7eb;
+        border-bottom: 1px solid var(--ui-line);
         border-radius: 0;
     }
-    .cd-thumb { width: 104px; height: 65px; border-color: #e5e7eb; }
-    .cd-type { color: #6b7280; }
-    #card-detail-modal .cd-type .card-official-site-link:hover { color: #2563eb; }
+    .cd-thumb { width: 104px; height: 65px; border-color: var(--ui-line); }
+    .cd-type { color: var(--ui-ink-3); }
+    #card-detail-modal .cd-type .card-official-site-link:hover { color: var(--ui-brand-bright); }
     /* 桌機左欄每格內容只有約 63px，年費小字「次年 NT$1,800」（11px 約 72px）會折成兩行、整格三行。
        縮字要到 9.5px 才放得下，低於可讀下限 → 改讓年費那格寬一點（2026-11-22 站長） */
     .cd-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.4fr); }
-    .cd-fact { background: #f9fafb; border-color: #e5e7eb; }
-    .cd-fact dt { color: #6b7280; }
-    .cd-fact dd { font-size: 19px; }
+    .cd-fact { background: var(--ui-bg); border-color: var(--ui-line); }
+    .cd-fact dt { color: var(--ui-ink-3); }
+    .cd-fact dd { font-size: var(--ui-text-19); }
     .cd-fact-fee dd.is-raw { font-size: 11.5px; }
-    #card-detail-modal .cd-sum .card-use-case { color: #374151; }
+    #card-detail-modal .cd-sum .card-use-case { color: var(--ui-ink-2); }
     #card-detail-modal .cd-sum .card-use-case::before,
-    #card-detail-modal .cd-sum .card-use-case::after { color: #1e40af; opacity: 1; }
-    #card-detail-modal .cd-sum .card-use-case-cite { color: #6b7280; }
+    #card-detail-modal .cd-sum .card-use-case::after { color: var(--ui-brand); opacity: 1; }
+    #card-detail-modal .cd-sum .card-use-case-cite { color: var(--ui-ink-3); }
 
     /* 個人設定：桌機常駐左欄，不受頁籤切換影響（.cd-pan-set 的 hidden 在桌機不生效） */
     #card-detail-modal .cd-pan { padding: 0; }
@@ -5325,20 +5325,20 @@ input[type="number"]:focus {
     .cd-side #card-personal-section {
         margin-top: 16px;
         padding: 12px 12px 14px;
-        background: #f9fafb;
-        border: 1px solid #e5e7eb;
+        background: var(--ui-bg);
+        border: 1px solid var(--ui-line);
         border-radius: 10px;
     }
     .cd-side .cd-set-hd { margin: 0; }
-    .cd-side .cd-set-box { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; }
+    .cd-side .cd-set-box { background: #fff; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-md); }
     .cd-side .cd-pan-set > .cd-set-box { margin-top: 10px; }
     .cd-side .cd-st-r { padding: 9px 12px; }
     .cd-side .cd-set-sec { margin: 6px 2px 8px; }
     .cd-side .cd-set-foot { padding: 10px 2px 0; }
-    .cd-side .cd-st-l label { font-size: 14px; }
+    .cd-side .cd-st-l label { font-size: var(--ui-text-14); }
     #card-detail-modal .cd-side .cd-st-sel,
-    #card-detail-modal .cd-side input[type="text"].cd-st-inp { width: 120px; height: 32px; font-size: 14px; }
-    #card-detail-modal .cd-side .cd-st-ta { min-height: 60px; font-size: 14px; }
+    #card-detail-modal .cd-side input[type="text"].cd-st-inp { width: 120px; height: 32px; font-size: var(--ui-text-14); }
+    #card-detail-modal .cd-side .cd-st-ta { min-height: 60px; font-size: var(--ui-text-14); }
 
     /* 近期異動自己一整排（下方細線），展開的清單接在它下面；搜尋框換到下一排、與下方回饋卡同寬。
        2026-11-19 站長：原本兩者同一排，通知被擠窄，搜尋框也像是公告的一部分；搜尋的對象是下面的回饋，
@@ -5356,7 +5356,7 @@ input[type="number"]:focus {
 .card-info-section {
     margin-bottom: 24px;
     padding-bottom: 0;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ui-line);
 }
 
 /* 卡片用途（cardUseCase，2026-09-21）：一句話講這張卡適合什麼情境，擺在詳情頁最上面。
@@ -5369,8 +5369,8 @@ input[type="number"]:focus {
     padding: 9px 12px;
     background: #f8fafc;
     border-left: 3px solid #1e3a8a;
-    border-radius: 0 8px 8px 0;
-    font-size: 14px;
+    border-radius: 0 var(--ui-radius-md) var(--ui-radius-md) 0;
+    font-size: var(--ui-text-14);
     line-height: 1.65;
     color: #1e3a5f;
 }
@@ -5383,7 +5383,7 @@ input[type="number"]:focus {
 
 .card-info-section h4 {
     margin: 0 0 16px 0;
-    color: #374151;
+    color: var(--ui-ink-2);
     font-size: 1.1rem;
     font-weight: 600;
 }
@@ -5442,15 +5442,15 @@ input[type="number"]:focus {
 }
 
 .info-label {
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 500;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     text-transform: uppercase;
 }
 
 .info-value {
-    font-size: 14px;
-    color: #374151;
+    font-size: var(--ui-text-14);
+    color: var(--ui-ink-2);
     line-height: 1.4;
 }
 
@@ -5472,8 +5472,8 @@ input[type="number"]:focus {
 
 .cashback-detail-item {
     background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     padding: 16px;
     margin-bottom: 12px;
 }
@@ -5484,7 +5484,7 @@ input[type="number"]:focus {
 
 /* Best cashback style for payment detail items */
 .cashback-detail-item.best-cashback {
-    border-color: #10b981;
+    border-color: var(--ui-green);
     background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
@@ -5503,9 +5503,9 @@ input[type="number"]:focus {
 .cashback-search-label {
     display: block;
     margin-bottom: 8px;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
-    color: #1e40af;
+    color: var(--ui-brand);
 }
 .cashback-search-bar .cashback-search-input {
     margin-bottom: 0;
@@ -5520,8 +5520,8 @@ input[type="number"]:focus {
     padding: 5px 10px 5px 30px; /* 左 30px 讓開放大鏡背景圖示 */
     margin-bottom: 12px;
     border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--ui-radius-sm);
+    font-size: var(--ui-text-12);
     box-sizing: border-box;
     transition: border-color 0.2s, box-shadow 0.2s;
     /* 單色放大鏡 SVG（同上，取代 placeholder 的彩色 🔍 emoji，2026-07-22） */
@@ -5605,11 +5605,11 @@ input[type="text"].cashback-search-input {
 .cashback-search-empty {
     text-align: center;
     color: #9ca3af;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-style: italic;
     padding: 16px;
-    background: #f9fafb;
-    border-radius: 6px;
+    background: var(--ui-bg);
+    border-radius: var(--ui-radius-sm);
     margin-bottom: 12px;
 }
 
@@ -5668,7 +5668,7 @@ mark.cashback-search-hl {
 
 .cashback-rate {
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     margin-bottom: 8px;
     font-size: 15px;
 }
@@ -5699,7 +5699,7 @@ mark.cashback-search-hl {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    color: #2563eb;
+    color: var(--ui-brand-bright);
     font-weight: 600;
     text-decoration: underline;
 }
@@ -5723,9 +5723,9 @@ mark.cashback-search-hl {
     list-style: none;
     margin: 0;
     padding: 0 12px;
-    background: #f9fafb;
+    background: var(--ui-bg);
     border: 1px solid #edeff2;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
 }
 
 .card-changelog-item {
@@ -5733,7 +5733,7 @@ mark.cashback-search-hl {
     gap: 10px;
     align-items: baseline;
     padding: 9px 0;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     line-height: 1.6;
 }
 
@@ -5748,23 +5748,23 @@ mark.cashback-search-hl {
     margin: 6px -6px;
     padding-left: 10px;
     padding-right: 10px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     background: #fff;
     box-shadow: 0 0 0 1px #dbe3ef, 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 .card-changelog-item.is-arrived + .card-changelog-item { border-top-color: transparent; }
-.card-changelog-item.is-arrived .card-changelog-text { color: #111827; font-weight: 600; }
+.card-changelog-item.is-arrived .card-changelog-text { color: var(--ui-ink-1); font-weight: 600; }
 
 .card-changelog-date {
     flex: 0 0 auto;
     color: #9ca3af;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-variant-numeric: tabular-nums;   /* 日期直排對齊，不會因數字寬度不同歪掉 */
     white-space: nowrap;
 }
 
 .card-changelog-text {
-    color: #374151;
+    color: var(--ui-ink-2);
     min-width: 0;   /* flex 子項預設 min-width:auto，長句不加這行不會換行、會撐破容器 */
 }
 
@@ -5810,7 +5810,7 @@ mark.cashback-search-hl {
     border: none;
     color: #3b82f6;
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     padding: 2px 4px;
     margin-left: 5px;
     text-decoration: underline;
@@ -5860,7 +5860,7 @@ mark.cashback-search-hl {
 .rate-card-title {
     font-size: 15px;
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
     line-height: 1.4;
     min-width: 0;
 }
@@ -5913,7 +5913,7 @@ mark.cashback-search-hl {
     font-size: 15px;
     font-weight: 700;
     line-height: 1.4;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 .cd-rc-name { min-width: 0; }
@@ -5922,8 +5922,8 @@ mark.cashback-search-hl {
     font-size: 11px;
     font-weight: 500;
     line-height: 1.7;
-    color: #6b7280;
-    background: #f3f4f6;
+    color: var(--ui-ink-3);
+    background: var(--ui-fill);
     border-radius: 4px;
     padding: 0 6px;
     white-space: nowrap;
@@ -5955,22 +5955,22 @@ mark.cashback-search-hl {
     font-size: 11px;
     font-weight: 500;
     line-height: 1.5;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .cd-val {
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
     line-height: 1.5;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-variant-numeric: tabular-nums;
 }
 
 /* 標題下方一行灰字（CUBE 慶生月註記）；不要斜體 */
 .cd-rc-note {
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.5;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 .cd-rc-note-bday { color: #be185d; }
 
@@ -6000,15 +6000,15 @@ mark.cashback-search-hl {
     font-size: 24px;
     font-weight: 800;
     line-height: 1.2;
-    color: #111827;
+    color: var(--ui-ink-1);
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
 }
 
 .cd-lvl {
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.4;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .cd-rr-r {
@@ -6016,12 +6016,12 @@ mark.cashback-search-hl {
     display: flex;
     flex-direction: column;
     gap: 3px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.5;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
-.cd-sub { color: #6b7280; }
+.cd-sub { color: var(--ui-ink-3); }
 
 .cd-rr-r .spend-threshold-note { margin-top: 0; }
 
@@ -6033,7 +6033,7 @@ mark.cashback-search-hl {
     padding-left: 0;
     margin-bottom: 0;
 }
-.cd-rr-r .cashback-register-link { color: #2563eb; }
+.cd-rr-r .cashback-register-link { color: var(--ui-brand-bright); }
 
 /* 適用通路：最多三行（line-height 18px × 3＝54px）。完整內容先畫出來，由 cdFitChannel 在量得到寬度時
    收成「前幾個通路 … 顯示全部N個」；量不到（元素還在 display:none）時就靠這個 max-height 夾住，不會是空白 */
@@ -6090,9 +6090,9 @@ mark.cashback-search-hl {
     margin: -2px 0;
     padding: 0 4px 0 7px;
     border: 1px solid #d1d5db;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     background: #fff;
-    color: #374151;
+    color: var(--ui-ink-2);
     font: inherit;
     font-size: 11px;
     font-weight: 600;
@@ -6102,7 +6102,7 @@ mark.cashback-search-hl {
     cursor: pointer;
     vertical-align: 1px;
 }
-#card-detail-modal .cd-pill:hover { background: #f9fafb; }
+#card-detail-modal .cd-pill:hover { background: var(--ui-bg); }
 #card-detail-modal .cd-pill[hidden] { display: none; }
 #card-detail-modal .cd-ch .cd-pill { margin-left: 2px; }
 .cd-chev { flex: none; transition: transform 0.15s; }
@@ -6125,15 +6125,15 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 6px;
     margin: -2px 4px 10px;
-    font-size: 12px;
-    color: #6b7280;
+    font-size: var(--ui-text-12);
+    color: var(--ui-ink-3);
 }
 .cd-cc[hidden] { display: none; }
 .cd-cc-v {
     padding: 0 7px;
     border-radius: 4px;
     background: #e5e7eb;
-    color: #374151;
+    color: var(--ui-ink-2);
     font-weight: 600;
     line-height: 20px;
 }
@@ -6300,13 +6300,13 @@ mark.cashback-search-hl {
     align-self: flex-start; /* .info-item 是直向 flex，不加會撐滿整欄寬、整條都可點 */
     gap: 3px;
     margin-top: -2px; /* .info-item 的 gap 4px，收回一點讓它貼著銀行名稱 */
-    font-size: 13px;
-    color: #6b7280;
+    font-size: var(--ui-text-13);
+    color: var(--ui-ink-3);
     text-decoration: none;
 }
 
 .card-official-site-link:hover {
-    color: #2563eb;
+    color: var(--ui-brand-bright);
     text-decoration: underline;
 }
 
@@ -6485,7 +6485,7 @@ mark.cashback-search-hl {
 
 /* Tag color definitions - 按類別分組配色 */
 /* 顏色1：旅遊、娛樂 - 淺藍色系 */
-.card-tag.tag-travel { background: #dbeafe; color: #1e40af; }          /* 旅遊 */
+.card-tag.tag-travel { background: #dbeafe; color: var(--ui-brand); }          /* 旅遊 */
 .card-tag.tag-entertainment { background: #bfdbfe; color: #1e3a8a; }   /* 娛樂 */
 
 /* 顏色2：開車族、交通 - 淺綠色系 */
@@ -7015,7 +7015,7 @@ mark.cashback-search-hl {
     gap: 8px;
     font-weight: 700;
     font-size: 1.1rem;
-    color: #111827;
+    color: var(--ui-ink-1);
     margin-bottom: 10px;
 }
 
@@ -7317,7 +7317,7 @@ mark.cashback-search-hl {
     max-width: 92vw;
     max-height: 92vh;
     object-fit: contain;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
 }
 
@@ -7354,7 +7354,7 @@ mark.cashback-search-hl {
 }
 
 #feedback-modal .modal-description {
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 0.875rem;
     margin-bottom: 20px;
     text-align: center;
@@ -7365,7 +7365,7 @@ mark.cashback-search-hl {
     width: 100%;
     padding: 12px;
     border: 1px solid #d1d5db;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     font-family: inherit;
     font-size: 0.875rem;
     resize: vertical;
@@ -7383,7 +7383,7 @@ mark.cashback-search-hl {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid #d1d5db;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     font-family: inherit;
     font-size: 0.875rem;
     transition: border-color 0.2s;
@@ -7403,17 +7403,17 @@ mark.cashback-search-hl {
 /* Image Upload Area */
 .image-upload-area {
     border: 2px dashed #d1d5db;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     padding: 20px;
     text-align: center;
     transition: all 0.3s ease;
     cursor: pointer;
-    background: #f9fafb;
+    background: var(--ui-bg);
 }
 
 .image-upload-area:hover {
     border-color: #667eea;
-    background: #f3f4f6;
+    background: var(--ui-fill);
 }
 
 .image-upload-area.drag-over {
@@ -7426,7 +7426,7 @@ mark.cashback-search-hl {
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .upload-placeholder svg {
@@ -7458,10 +7458,10 @@ mark.cashback-search-hl {
 .image-preview-item {
     position: relative;
     aspect-ratio: 1;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     overflow: hidden;
-    border: 1px solid #e5e7eb;
-    background: #f9fafb;
+    border: 1px solid var(--ui-line);
+    background: var(--ui-bg);
 }
 
 .image-preview-item img {
@@ -7484,7 +7484,7 @@ mark.cashback-search-hl {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     transition: background 0.2s;
 }
 
@@ -7509,7 +7509,7 @@ mark.cashback-search-hl {
 .feedback-status {
     margin-top: 12px;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     font-size: 0.875rem;
     display: none;
 }
@@ -7531,7 +7531,7 @@ mark.cashback-search-hl {
 .feedback-status.loading {
     display: block;
     background: #dbeafe;
-    color: #1e40af;
+    color: var(--ui-brand);
     border: 1px solid #93c5fd;
 }
 
@@ -7541,7 +7541,7 @@ mark.cashback-search-hl {
     width: 14px;
     height: 14px;
     border: 2px solid #93c5fd;
-    border-top-color: #1e40af;
+    border-top-color: var(--ui-brand);
     border-radius: 50%;
     animation: spinner-rotate 0.6s linear infinite;
     margin-right: 8px;
@@ -7566,7 +7566,7 @@ mark.cashback-search-hl {
 .loading-content {
     background: white;
     padding: 32px 48px;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     display: flex;
     flex-direction: column;
@@ -7577,14 +7577,14 @@ mark.cashback-search-hl {
 .loading-spinner-large {
     width: 48px;
     height: 48px;
-    border: 4px solid #e5e7eb;
+    border: 4px solid var(--ui-line);
     border-top-color: #3b82f6;
     border-radius: 50%;
     animation: spinner-rotate 0.8s linear infinite;
 }
 
 .loading-text {
-    color: #374151;
+    color: var(--ui-ink-2);
     font-size: 1rem;
     font-weight: 500;
 }
@@ -7658,7 +7658,7 @@ mark.cashback-search-hl {
     border-radius: 4px;
     background: white;
     color: #3c4043;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 500;
     cursor: pointer;
     display: flex;
@@ -7688,12 +7688,12 @@ mark.cashback-search-hl {
     position: absolute;
     top: -10px;
     right: -8px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 600;
     line-height: 1;
     color: #ffffff;
     background: #1e8e3e;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     padding: 5px 9px;
     box-shadow: 0 2px 6px rgba(30, 142, 62, 0.35);
     pointer-events: none;
@@ -7715,7 +7715,7 @@ mark.cashback-search-hl {
     align-items: center;
     margin: 24px 0;
     color: #80868b;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
 }
 
 .auth-divider::before,
@@ -7736,7 +7736,7 @@ mark.cashback-search-hl {
     padding: 12px;
     border: 1px solid #dadce0;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     transition: all 0.2s ease;
     box-sizing: border-box;
 }
@@ -7759,7 +7759,7 @@ mark.cashback-search-hl {
     display: block;
     margin-bottom: 6px;
     color: #3c4043;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 500;
 }
 
@@ -7768,17 +7768,17 @@ mark.cashback-search-hl {
 .auth-link-note {
     margin: 4px 0 12px;
     padding: 10px 12px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.6;
     color: #1e3a8a;
     background: #eff6ff;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
 }
 
 /* 登入視窗底部的信任說明（2026-10-13） */
 .auth-trust-note {
     margin: 16px 0 0;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.6;
     color: #5f6368;
 }
@@ -7797,7 +7797,7 @@ mark.cashback-search-hl {
     background: #fce8e6;
     color: #c5221f;
     border-radius: 4px;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     margin-bottom: 16px;
 }
 
@@ -7816,8 +7816,8 @@ mark.cashback-search-hl {
 #auth-submit-btn {
     padding: 12px 16px;
     border: none;
-    border-radius: 8px;
-    background: #1e40af;
+    border-radius: var(--ui-radius-md);
+    background: var(--ui-brand);
     color: #ffffff;
     font-size: 15px;
     font-weight: 600;
@@ -7838,7 +7838,7 @@ mark.cashback-search-hl {
 .auth-footer {
     margin-top: 24px;
     text-align: center;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     color: #5f6368;
 }
 
@@ -8419,9 +8419,9 @@ mark.cashback-search-hl {
 }
 
 .solution-section {
-    background: #f3f4f6;
+    background: var(--ui-fill);
     padding: 16px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     margin-bottom: 20px;
 }
 
@@ -8435,7 +8435,7 @@ mark.cashback-search-hl {
 .solution-steps {
     margin: 0;
     padding-left: 20px;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .solution-steps li {
@@ -8446,7 +8446,7 @@ mark.cashback-search-hl {
 .alternative-section {
     background: #eff6ff;
     padding: 12px 16px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     border-left: 4px solid #3b82f6;
     margin-bottom: 16px;
 }
@@ -8454,7 +8454,7 @@ mark.cashback-search-hl {
 .alternative-text {
     margin: 0;
     font-size: 0.9375rem;
-    color: #1e40af;
+    color: var(--ui-brand);
     line-height: 1.5;
 }
 
@@ -8462,7 +8462,7 @@ mark.cashback-search-hl {
     padding: 12px;
     background: #d4edda;
     color: #155724;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     text-align: center;
     font-size: 0.9375rem;
     font-weight: 500;
@@ -9116,7 +9116,7 @@ mark.cashback-search-hl {
 #my-payments-modal .section-title {
     font-size: 0.9rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     opacity: 1;
 }
 
@@ -9142,8 +9142,8 @@ mark.cashback-search-hl {
     margin-top: 8px;
     font-size: 0.85rem;
     padding: 8px 14px;
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--ui-fill);
+    color: var(--ui-ink-2);
     border-color: #d1d5db;
     width: 100%;
 }
@@ -9153,12 +9153,12 @@ mark.cashback-search-hl {
 }
 
 #my-payments-modal .manage-cards-btn {
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 #my-payments-modal .manage-cards-btn:hover {
-    background: #f3f4f6;
-    color: #374151;
+    background: var(--ui-fill);
+    color: var(--ui-ink-2);
 }
 
 /* Sidebar still uses the same card chip overrides (cards only) */
@@ -10102,7 +10102,7 @@ html.pmc-onboard #search-hints-container {
 .spotlight-modal-desc {
     font-size: 1rem;
     font-weight: 600;
-    color: #111827;
+    color: var(--ui-ink-1);
     line-height: 1.5;
     margin: 0 0 16px;
 }
@@ -10117,7 +10117,7 @@ html.pmc-onboard #search-hints-container {
     padding: 6px 6px 6px 8px;
     background: #fff;
     border: 1.5px solid #ffe184;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     box-shadow: 0 4px 12px rgba(122, 78, 0, 0.12);
     color: #7a4e00;
     text-decoration: none;
@@ -10127,7 +10127,7 @@ html.pmc-onboard #search-hints-container {
 .spotlight-promo-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .spotlight-promo-main { font-size: 13.5px; }
 .spotlight-promo-main b { font-size: 15.5px; font-weight: 800; }
-.spotlight-promo-sub { font-size: 11.5px; color: #6b7280; }
+.spotlight-promo-sub { font-size: 11.5px; color: var(--ui-ink-3); }
 .spotlight-promo-btn { padding: 7px 14px; font-size: 13.5px; }
 .spotlight-promo-link:hover .spotlight-promo-btn { filter: brightness(1.03); }
 .spotlight-promo-link:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
@@ -10135,7 +10135,7 @@ html.pmc-onboard #search-hints-container {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: #f9fafb;
+    background: var(--ui-bg);
     border-radius: 10px;
     padding: 14px 16px;
     margin-bottom: 14px;
@@ -10144,7 +10144,7 @@ html.pmc-onboard #search-hints-container {
     display: flex;
     gap: 10px;
     font-size: 0.9rem;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 .spotlight-modal-label {
     color: #9ca3af;
@@ -10197,7 +10197,7 @@ html.pmc-onboard #search-hints-container {
 /* 回饋率旁的 category：低調灰字註記（非膠囊、非按鈕，避免與卡片詳情/立即申辦混淆），
    以中點與「回饋」分隔 */
 .spotlight-rate-category {
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 0.82rem;
     font-weight: 500;
 }
