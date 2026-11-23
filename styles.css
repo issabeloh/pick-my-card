@@ -3130,8 +3130,14 @@ input[type="number"]:focus {
 }
 .card-result .pin-btn:not(.pinned) {
     background: #fff;
-    border-color: #d1d5db;
+    border-color: var(--ui-line);
     color: var(--ui-ink-2);
+}
+/* 結果卡（含領券卡）的「詳情」鈕框線跟小抄鈕一樣用 --ui-line（2026-11-23 站長看對照圖同意，原本 #d1d5db）。
+   同一顆 .card-detail-peek-btn 也出現在選卡 modal 與推薦活動，那兩區還沒換，輪到時再一起看 */
+.card-result .card-detail-peek-btn,
+.coupon-item .card-detail-peek-btn {
+    border-color: var(--ui-line);
 }
 .card-result .pin-btn:not(.pinned):hover {
     background: #f3f4f6;
@@ -3196,6 +3202,15 @@ input[type="number"]:focus {
 .matched-merchant .activity-name {
     color: var(--ui-ink-1);
     font-weight: 700;
+}
+
+/* 資訊區的「標籤｜內容」行（renderInfoRow，2026-11-23 2-5 文案，站長從 A／B 兩案選 A）：
+   標籤不帶冒號、自成一欄，內容起點對齊，條件很長換行時第二行也對齊內容、不會跑到標籤底下。
+   欄寬 4.6em＝放得下四個字（匹配通路／活動期間）再留一點空。標籤與內容同色，靠對齊分開 */
+.matched-merchant .info-row {
+    display: grid;
+    grid-template-columns: 4.6em minmax(0, 1fr);
+    column-gap: 4px;
 }
 
 /* 回饋率下方的「(分級: Level 1)」：兩段各自不折行，避免只剩「1)」掉到下一行 */
@@ -6035,6 +6050,14 @@ mark.cashback-search-hl {
 .cd-ch strong {
     color: #3b82f6;
     font-weight: 700;
+}
+
+/* 詳情頁回饋卡的「適用通路」「條件」標籤（2026-11-23 2-5 文案，站長選 B 案：不帶冒號、標籤淺灰、與內容空 8px、不對齊）。
+   搜尋結果卡用的是 A 案（一欄對齊，.info-row），兩邊刻意不同：詳情頁條件預設一行省略、通路是長清單，對齊欄會吃掉寬度 */
+.cd-ch-lb,
+.cd-cond-lb {
+    color: #9ca3af;
+    margin-right: 8px;
 }
 
 /* 條件：預設一行省略，旁邊「展開」；展開後顯示全文、按鈕變「收起」 */

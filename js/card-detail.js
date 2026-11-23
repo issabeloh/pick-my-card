@@ -1585,7 +1585,7 @@ function renderCdChannels(merchants, label) {
     const items = merchants && merchants.items ? [...new Set(merchants.items)] : [];
     if (items.length === 0) return '';
     return `<div class="cd-ch" data-n="${items.length}">` +
-        `<span class="cd-ch-lb">${escapeHtml(label || '適用通路')}: </span>` +
+        `<span class="cd-ch-lb">${escapeHtml(label || '適用通路')}</span>` +
         `<strong class="merchant-list">${escapeHtml(items.join('、'))}</strong>` +
         `<span class="cd-ch-ell" hidden>… </span>` +
         `<button type="button" class="cd-pill cd-more" aria-expanded="false" hidden><span class="cd-pill-t">顯示全部${items.length}個</span>${CD_CHEV_SVG}</button>` +
@@ -1595,7 +1595,7 @@ function renderCdChannels(merchants, label) {
 // 條件：預設一行省略，超出才長「展開」（cdFitCond）。
 // ⚠️ 條件文字照舊原樣輸出、不 escape——與搜尋結果、舊版詳情頁一向如此，改了可能動到 Sheets 裡刻意的格式
 function renderCdCondition(text) {
-    return `<div class="cd-cond-w"><div class="cd-cond">條件: ${text}</div>` +
+    return `<div class="cd-cond-w"><div class="cd-cond"><span class="cd-cond-lb">條件</span>${text}</div>` +
         `<button type="button" class="cd-pill cd-cond-t" aria-expanded="false" hidden><span class="cd-pill-t">展開</span>${CD_CHEV_SVG}</button></div>`;
 }
 
