@@ -200,6 +200,9 @@ if (card.hasLevels) {
 // 加碼的上限欄：舊版沒填 cap 時整行不顯示（沒說無上限也沒說有上限），
 // 改成固定欄位後沿用 formatRateCardCap，沒填一律顯示「無上限」——與計算一致
 // （resolveBonusComponent 的 bonusCap 為 null 時套用整筆金額）
+// 有加碼期間的：過期或未開始的率在載入時已歸零（applyBonusPeriods，core-utils.js），走不到這裡；
+// 期間內的照其他活動顯示「活動期間」＋「即將結束」
+const bonusPeriods = card.bonusPeriods || {};
 if (domesticBonusRate) {
     basicContent += renderRateCard({
         rate: domesticBonusRate,
@@ -207,6 +210,8 @@ if (domesticBonusRate) {
         capText: formatRateCardCap(domesticBonusCap),
         title: '國內加碼',
         titleIsDisplay: true,
+        period: bonusPeriods.domestic ? bonusPeriods.domestic.period : '',
+        endingSoonEnd: bonusPeriods.domestic ? bonusPeriods.domestic.periodEnd : null,
         conditions: domesticConditions
     });
 }
@@ -218,6 +223,8 @@ if (overseasBonusRate) {
         capText: formatRateCardCap(overseasBonusCap),
         title: '海外加碼',
         titleIsDisplay: true,
+        period: bonusPeriods.overseas ? bonusPeriods.overseas.period : '',
+        endingSoonEnd: bonusPeriods.overseas ? bonusPeriods.overseas.periodEnd : null,
         conditions: overseasConditions
     });
 }

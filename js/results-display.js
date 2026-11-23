@@ -1634,7 +1634,9 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             if (isBasicCashback && !isUpcoming) {
                 return renderActivityInfo({
                     matchHtml: '一般消費回饋率',
-                    conditions: result.card.domesticBonusConditions
+                    // 國內加碼期間已過（或未開始）時，它的條件也不該再出現（applyBonusPeriods，core-utils.js）
+                    conditions: (result.card.endedBonuses && result.card.endedBonuses.domestic)
+                        ? null : result.card.domesticBonusConditions
                 });
             } else if (result.matchedItem) {
                 // 活動期間／條件／登錄連結／滿額門檻——一律以「命中的槽位」matchedRateGroup 為準。

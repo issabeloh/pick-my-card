@@ -36,9 +36,9 @@
 - **雲端有值 → 雲端為準**；**雲端沒值 → 靜默帶入訪客值並上傳**
 - 訪客 key 兩種情況都會被「消化移除」（避免留在共用電腦洩漏給下一位使用者）
 - 信用卡/行動支付/我的信用卡：在各自的 load 函數內處理
-- 配卡表/級別/筆記/免年費/結帳日/CUBE 發卡組織：統一在 `absorbGuestPersonalData(userData)`
+- 配卡表/級別/筆記/免年費/我的額度/結帳日/CUBE 發卡組織：統一在 `absorbGuestPersonalData(userData)`
 - **例外：刷卡小抄（`spendingMappings`）是合併、不是雲端為準**（2026-10-14 起訪客也能加小抄）：現讀雲端為底，補上訪客清單裡雲端沒有的「cardId × merchant」；雲端讀不到或寫入失敗 → 保留訪客 key 下次重試，絕不拿 userData 覆寫。小抄的訪客自訂名稱 `merchantAliases_guest`（雲端沒有的商家才帶入）與標題 `mappingsTitle_guest`（雲端沒設才帶入）best-effort，處理完即移除
-- 高價值資料（級別、筆記）上傳失敗時**保留 key 下次重試**；低價值資料 best-effort
+- 高價值資料（級別、筆記、我的額度）上傳失敗時**保留 key 下次重試**；低價值資料 best-effort
 
 ## 5. 登出清理
 
@@ -83,3 +83,4 @@
 - [2026-10-03] 密碼登入從畫面拿掉（登入視窗只剩 Google＋Email 登入連結；`openAuthModal()` 任何模式都開成 emailLink）。**不能在 Firebase console 關掉 Email/Password**：Email 連結登入掛在同一個開關底下，關了連結登入也一起停。安全性不受影響：新的密碼註冊由 guardSignup 在伺服器端擋；既有密碼帳號理論上仍可用密碼打 API 登入，但只有知道密碼的本人做得到
 - [2026-10-04] 新戶活動圖全部不顯示 → 10/1 改寫 storage.rules 時只開了 feedback/、其餘「一律拒絕」，漏了公開讀取的 `promo-images/`（站上用 `...?alt=media` 不帶 token 直接載入）；App Check 圖表上的大量「unknown origin」其實就是訪客載入新戶活動圖被拒 → 補上 promo-images 公開讀、禁止寫。**改 Storage／Firestore 規則前，先列出網站實際讀寫的所有路徑**（grep HTML／js／cards.data 裡的 firebasestorage 網址）再寫規則，且要求站長貼規則前先把 console 舊規則貼給我比對
 - [2026-11-17] 清理死碼時發現 `saveCardLevel()` 的「大小寫／空格正規化」呼叫點只存在於 specialItems 計算分支 → 那條分支的資料形狀早已停用，隨分支一起刪除 → 現在程式裡沒有任何正規化存回的呼叫點；第 2 節第 2 條仍是「允許」的情況，但日後若要加回正規化，寫在 `resolveCardLevel()` 旁並沿用同樣的註解，不要散在計算路徑裡
+- [2026-11-23] 訪客填的「我的額度」登入後消失 → `absorbGuestPersonalData` 帶入了級別、筆記、免年費、結帳日，唯獨漏了 `creditLimit_local_*`（額度功能 2026-07-07 才加，沒人回頭補這裡）；登出清理清單卻有它，於是訪客值先被晾著、登出時再被刪 → 補上第 4b 段。**新增任何訪客可寫的個人 key 時，三處一起改**：寫入函式、`absorbGuestPersonalData`、`clearPersonalLocalDataOnSignOut` 的清單

@@ -1238,7 +1238,7 @@ Gemini 呼叫。沒跑完會在結果視窗說「還有 N 列沒跑」，**再�
   |---|---|---|
   | 玉山 Uni／凱基誠品 | `{rate, cap, period, level-note}` | ✅ 自動產出 |
   | 國泰 CUBE | `{specialRate, level-note}`（分級改的是指定通路的率） | ❌ 留空給人填 |
-  | 永豐大戶卡 | `{rate_1, cap_1, rate_14, cap_hide, overseasBonusRate…}` 共 11 個 key（逐槽覆寫） | ❌ 留空給人填 |
+  | 永豐大戶卡 | `{rate_1, cap_1, rate_14, overseasBonusRate…}` 等多個 key（逐槽覆寫） | ❌ 留空給人填 |
 
   後兩種由 AI 舉手（`levels_beyond_simple=true`，prompt 規則 7a）→ `levelSettings` 留空、
   在「AI想問的問題」欄寫明要手填並指出參考寫法、各級別原文留在 `levelSettings原文引用` 欄。

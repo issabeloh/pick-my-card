@@ -85,7 +85,6 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
 
 - `hideInDisplay`：標記不在詳情頁顯示的 cashbackRate（Sheet 一般編號槽位加 `hideInDisplay_N=TRUE`；舊 `_hide`/`_hide_1` 專用欄位已於 2026-07-11 併入一般槽位並刪除），主要用於國外消費／一般國內消費（避免與詳情頁其他區塊重複）。**仍然可被搜尋，計算邏輯與一般活動完全相同**
 - **rate=0 是明確語義：「此活動沒有指定通路加碼成分」**。stacking 模型允許 rate=0（只算基準＋加碼成分，`if (rate > 0 || shouldUseStackedCalculation)`）；rate=0 配空 model 或 `rate`/waterfall 沒有意義（會算出 0）
-- `rate_hide` 覆寫已於 2026-07-09 移除；levelSettings 的 `rate_hide`/`cap_hide` 欄位已退役，前端不再讀取
 - **隱藏活動標準配方**（大戶卡為例，值自動跟用戶選的級別；N 為該活動所在槽位）：
   - 一般國內消費：`rate_N=0`、`cashbackModel_N=basic+domesticBonusRate`、cap 留空、`hideInDisplay_N=TRUE`
   - 國外：`rate_N=0`、`cashbackModel_N=overseasCashback+overseasBonusRate`、cap 留空、`hideInDisplay_N=TRUE`（stacking 基準層由 `resolveBaseRate` 決定，海外模型自動用 overseasCashback；卡片沒有 overseasBonusRate 也適用——成分為 0 的層自動跳過，總率＝overseasCashback）
@@ -139,6 +138,8 @@ if (card.basicExclusions && card.basicExclusions.length > 0)
 - 無匹配 fallback：`buildBasicCashbackResult(card, amount)`（**只算 `basicCashback`，不加 `domesticBonusRate`**——2026-10-13 站長決定；國內加碼只在 cashbackModel 明確列出的槽才算）；搜尋結果合併：`mergeResultsByActivity(resultList)`
 
 **計算明細（計算機按鈕）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），按鈕永遠顯示。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（`js/results-display.js`）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
+
+**加碼期間**（2026-11-23）：卡片層的 `domesticBonusPeriod`／`overseasBonusPeriod`（`YYYY/M/D~YYYY/M/D`）由 `applyBonusPeriods()`（`js/core-utils.js`，在 `filterExpiredRates` 裡跑，和活動過期同一個時機）處理：未開始或已過期 → 卡片層與**每個級別**的 `domesticBonusRate`／`overseasBonusRate` 一律歸零，下游（計算三種模型、`getDisplayRate`、回饋組成、詳情頁加碼卡）全部自然看到 0；期間內的記在 `card.bonusPeriods[kind]` 給詳情頁顯示「活動期間」與「即將結束」；歸零的記在 `card.endedBonuses[kind]`（搜尋結果「一般消費回饋率」卡據此不再顯示加碼條件）。沒填期間＝長期有效。**新增任何讀加碼率的地方不必自己判斷期間**；但要讀加碼的「條件」「上限」等非率欄位時，要看 `endedBonuses`。
 
 **分層計算的觸發**（`calculateCardCashback()` 內）：卡片有 `levelSettings` 且含 `overseasBonusRate` 或 `domesticBonusRate`。
 

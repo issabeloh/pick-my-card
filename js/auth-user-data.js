@@ -503,7 +503,7 @@ async function loadUserData() {
 }
 
 // 登入時消化「訪客期間留下的其餘個人資料」：消費配卡表、卡片級別、筆記、
-// 免年費、結帳日、CUBE 發卡組織。（信用卡/行動支付在各自的 load 函數內處理。）
+// 免年費、我的額度、結帳日、CUBE 發卡組織。（信用卡/行動支付在各自的 load 函數內處理。）
 // 原則：雲端有值 → 雲端為準；雲端沒值 → 靜默帶入訪客值並上傳（不彈窗）。
 // 訪客 key 處理完即移除，避免留在共用電腦上被下一位使用者「繼承」——
 // 這正是過去卡片級別跨用戶洩漏的根源。
@@ -641,6 +641,36 @@ async function absorbGuestPersonalData(userData) {
             }, { merge: true });
             console.log('🔀 帶入訪客的免年費設定:', Object.keys(feeWaiverUpdates));
         } catch (e) { console.error('帶入訪客免年費失敗:', e); }
+    }
+
+    // 4b. 我的額度（訪客 key: creditLimit_local_<cardId>；雲端是 users 文件的 creditLimits map）
+    //     2026-11-23 補：以前漏了這段，訪客填的額度登入後消失，登出時再被清理清單刪掉。
+    //     雲端這張卡有額度 → 雲端為準；沒有 → 帶入訪客值。額度是用戶親手打的數字，比照級別／筆記
+    //     算高價值：寫入失敗保留訪客 key，下次登入重試（其餘情況處理完即移除）。
+    const cloudLimits = (userData && userData.creditLimits && typeof userData.creditLimits === 'object') ? userData.creditLimits : {};
+    const limitUpdates = {};
+    const limitKeys = [];
+    for (const key of allKeys.filter(k => k.startsWith('creditLimit_local_'))) {
+        const cardId = key.slice('creditLimit_local_'.length);
+        let amount = null;
+        try { amount = parseCreditLimit(localStorage.getItem(key)); } catch (e) { continue; }
+        if (amount !== null && knownCardIds.has(cardId) && parseCreditLimit(cloudLimits[cardId]) === null) {
+            limitUpdates[cardId] = amount;
+            limitKeys.push(key);   // 要上傳的先留著，寫入成功才移除
+        } else {
+            try { localStorage.removeItem(key); } catch (e) { /* ignore */ }
+        }
+    }
+    if (Object.keys(limitUpdates).length > 0 && canWrite) {
+        try {
+            await window.setDoc(window.doc(window.db, 'users', currentUser.uid), {
+                creditLimits: { ...cloudLimits, ...limitUpdates },
+                updatedAt: new Date().toISOString()
+            }, { merge: true });
+            if (userData) userData.creditLimits = { ...cloudLimits, ...limitUpdates };
+            limitKeys.forEach(k => { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } });
+            console.log('🔀 帶入訪客的我的額度:', Object.keys(limitUpdates));
+        } catch (e) { console.error('帶入訪客我的額度失敗（保留本機，下次登入重試）:', e); }
     }
 
     // 5. 結帳日期（訪客 key: billingDates_local_<cardId>；雲端是 users 文件的 billingDates map）

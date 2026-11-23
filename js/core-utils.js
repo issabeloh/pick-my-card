@@ -537,6 +537,43 @@ function getBenefitStatus(benefit) {
     return getRateStatus(start, end);
 }
 
+// 國內／海外加碼的活動期間（2026-11-23 站長要求：和其他活動一樣依期間到期）。
+// 匯出端欄位是卡片層的 domesticBonusPeriod／overseasBonusPeriod（"YYYY/M/D~YYYY/M/D"，
+// 一張卡兩種加碼各一個，分級卡各級別共用卡片層的期間）。沒填＝長期有效，照舊。
+//
+// 為什麼在載入時把率歸零、而不是在每個讀率的地方判斷期間：加碼率有 6 個讀取點
+// （resolveBonusComponent、getDisplayRate、buildRateCompositionRows、calculateStackedCashback、
+// 空白 model 的舊預設、詳情頁一般回饋區），逐處加判斷一定會漏。這裡跟 cashbackRates 過期濾除
+// 在同一個時機、同一套 getRateStatus，下游全部自然看到 0：不算、不顯示、組成表不列。
+// 卡片層與每個級別的加碼率一起歸零——級別讀不到才退回卡片層（`ls.x || card.x`），只歸一邊會漏。
+//
+// 還在期間內的，期間記在 card.bonusPeriods[kind]，詳情頁回饋卡拿來顯示「活動期間」與「即將結束」。
+// 未開始的加碼只歸零、不預告（目前資料的加碼期間都從年初起算，沒有這種案例）。
+function applyBonusPeriods(card) {
+    ['domestic', 'overseas'].forEach(kind => {
+        const raw = card[kind + 'BonusPeriod'];
+        if (!raw) return;
+        const p = { period: String(raw) };
+        backfillPeriodBounds(p);
+        if (!p.periodStart && !p.periodEnd) return; // 期間格式不認得：當作沒填，不隱藏
+        const status = getRateStatus(p.periodStart, p.periodEnd);
+        if (status === 'active' || status === 'always') {
+            if (!card.bonusPeriods) card.bonusPeriods = {};
+            card.bonusPeriods[kind] = p;
+            return;
+        }
+        const rateKey = kind + 'BonusRate';
+        // 記下來給只讀條件、不讀率的地方用（搜尋結果「一般消費回饋率」卡的加碼條件）
+        if (!card.endedBonuses) card.endedBonuses = {};
+        card.endedBonuses[kind] = status;
+        console.log(`🕒 ${card.name}: ${status === 'expired' ? '加碼已過期' : '加碼未開始'}，${rateKey} 歸零 (${p.period})`);
+        if (card[rateKey] != null) card[rateKey] = 0;
+        Object.values(card.levelSettings || {}).forEach(ls => {
+            if (ls && ls[rateKey] != null) ls[rateKey] = 0;
+        });
+    });
+}
+
 // Filter expired rates from cards data (keep active and upcoming within 30 days)
 function filterExpiredRates(cardsData) {
     if (!cardsData || !cardsData.cards) {
@@ -555,6 +592,8 @@ function filterExpiredRates(cardsData) {
             console.warn(`⚠️ ${card.name}: hasLevels=true 但 levelSettings 為空（可能所有級別已過期），改以一般卡處理`);
             card.hasLevels = false;
         }
+
+        applyBonusPeriods(card); // 加碼期間過了（或還沒到）→ 加碼率歸零，見函式說明
 
         // Filter cashbackRates - keep active and upcoming (within 30 days)
         if (card.cashbackRates && Array.isArray(card.cashbackRates)) {
