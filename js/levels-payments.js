@@ -664,7 +664,7 @@ async function loadUserPayments(userData = null) {
             return;
         }
 
-        // 雲端沒有設定：若訪客期間有儲存過選擇 → 靜默帶入並上傳（不彈窗）
+        // 雲端沒有設定：若訪客期間有儲存過選擇 → 帶入並上傳（用戶已在登入時同意，見 resolveGuestDataOnLogin）
         const guestPayments = readLocalJSON('selectedPayments_guest', null);
         if (guestPayments !== null) localStorage.removeItem('selectedPayments_guest');
         if (Array.isArray(guestPayments) && guestPayments.length > 0) {

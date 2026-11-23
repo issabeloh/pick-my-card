@@ -159,7 +159,10 @@ if (require.main === module) (async () => {
     p = await open(true);
     await p.evaluate(c => { localStorage.setItem('childrenEligible_guest', 'false'); if (c !== undefined) __docs['users/testuid'] = { isChildrenEligible: c }; }, cloud);
     await p.evaluate(() => { __AUTH.currentUser = { uid: 'testuid', email: 't@example.com', displayName: '測試', photoURL: '', providerData: [{ providerId: 'google.com' }] }; __authCbs.forEach(cb => cb(__AUTH.currentUser)); });
-    await p.waitForFunction(() => typeof currentUser !== 'undefined' && currentUser, null, { timeout: 10000 }); await p.waitForTimeout(1500);
+    await p.waitForFunction(() => typeof currentUser !== 'undefined' && currentUser, null, { timeout: 10000 });
+    // 2026-11-23 起登入時這台裝置有訪客資料會先問（resolveGuestDataOnLogin）；這裡測的是同意帶入之後的規則
+    // （選「不要」的路徑由 guest-import-prompt-test.js 守）
+    await p.waitForSelector('#guest-import-modal', { timeout: 10000 }); await p.click('#gi-import'); await p.waitForTimeout(1500);
     const r = await p.evaluate(() => ({ key: localStorage.getItem('childrenEligible_guest'), v: isChildrenEligible, sets: __sets.filter(x => x.path === 'users/testuid' && 'isChildrenEligible' in x.data).map(x => x.data.isChildrenEligible) }));
     if (cloud === undefined) check('雲端沒值 → 帶入訪客的「關」、寫入 Firestore、移除訪客 key', r.key === null && r.v === false && r.sets.includes(false), JSON.stringify(r));
     else check('雲端有值 → 以雲端為準、不寫入、移除訪客 key', r.key === null && r.v === true && r.sets.length === 0, JSON.stringify(r));
