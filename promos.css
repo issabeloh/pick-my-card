@@ -2831,7 +2831,10 @@ a {
   background: #fbfcfe;
 }
 .promo-feat-modal-foot .promo-feat-all {
-  display: block;
+  display: flex;              /* 文字＋svg 箭頭置中（2026-11-23 改「看完整回饋與權益 ›」） */
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   margin: 0;
   padding: 11px 16px;
   border-radius: 10px;
@@ -3807,6 +3810,30 @@ body.has-fav-bar .promos-back-to-top-btn { bottom: 84px; }
   background: var(--pmc-white);
 }
 .pmc-cp-feat-sec .promo-feat-head > b { display: none; }   /* 標題已經是這一節的 h2 */
+/* 「看完整回饋與權益 ›」（站長 2026-11-23 選 mockup A2；promos.js 的 moveCardPageDetailLink() 搬過來）。
+   淡藍底＝主站 Spotlight「活動詳情」／「比較」那組次要按鈕的配色（#eff6ff／#1d4ed8／hover #dbeafe），
+   跟頁首實心藍的「立即申辦」分得出主次。選擇器帶 .pmc-cp-feat-foot，蓋過 .promo-feat-all 的連結樣式 */
+.pmc-cp-feat-foot { margin: 12px 0 4px; }
+.pmc-cp-feat-foot .promo-feat-all {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 14.5px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background .2s, color .2s;
+}
+.pmc-cp-feat-foot .promo-feat-all:hover { background: #dbeafe; color: #1e3a8a; text-decoration: none; }
+.pmc-cp-feat-foot .promo-feat-all:focus-visible { outline: 2px solid var(--pmc-blue-deep); outline-offset: 2px; }
+@media (min-width: 769px) {
+  .pmc-cp-feat-foot .promo-feat-all { max-width: 340px; margin: 0 auto; }
+}
 /* 卡片用途＝大師點評引言（2026-11-22，比照詳情頁 .card-use-case 桌機版，見 ui-display.md 1q）：
    不要色條與框，中文引號「」框住整句（品牌藍），下一行靠右小字署名 */
 .pmc-cp-feat-sec .promo-feat-usage {

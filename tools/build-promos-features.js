@@ -233,18 +233,24 @@ function rowHtml(r) {
     '<span class="promo-feat-cap">' + escapeHtml(capText(r.cap)) + '</span></li>';
 }
 
+const CHEVRON = '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true">' +
+  '<path d="M7.5 4.5L13 10l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
 function blockHtml(cardId, feat, usage) {
   if (!feat.rows.length && !feat.base.length) return '';
   const lv = feat.level
     ? '<span class="promo-feat-level">以「' + escapeHtml(feat.level) + '」計</span>' : '';
   // 原本是卡名旁那顆 ⓘ（2026-09-17 改成「查看全部 ›」文字連結）；
   // 2026-09-21 站長：在 modal 裡改當 CTA 按鈕、移到最下方、文字改「查看卡片詳情」。
+  // 2026-11-23 站長：文字改「看完整回饋與權益 ›」（清單頁 modal 與單卡頁一起改）——讓人分得出
+  // 新戶活動頁看的是新戶活動、詳情頁才是平常刷卡的完整回饋與權益。箭頭用 svg 而不是「›」字元，
+  // 兩頁的按鈕都是置中 flex，字元箭頭的基線會偏。
   // 這裡仍然輸出在 .promo-feat-head 裡——promos.js 的 openFeatModal() 會把這個節點
   // 搬到 modal 的 footer 再套 CTA 樣式，注入器不必知道它最後長什麼樣子。
   // href 保留深連結當 fallback；promos.js 攔截後開內嵌詳情並捲到「指定通路回饋」。
   const all = '<a class="promo-feat-all" href="' + escapeHtml('/?start&card=' + cardId) +
     '" data-card-id="' + escapeHtml(cardId) + '" data-section="card-special-section"' +
-    ' target="_blank" rel="noopener noreferrer">查看卡片詳情</a>';
+    ' target="_blank" rel="noopener noreferrer">看完整回饋與權益' + CHEVRON + '</a>';
   // 卡片用途：Sheets 的 cardUseCase 欄，沒填就整行不出現（站長 2026-09-17，可以慢慢填）
   // 署名「— 大師點評」：單卡頁比照詳情頁的引言樣式顯示（2026-11-22）；清單頁 modal 仍是色條樣式、
   // promos.css 把署名藏起來。兩頁吃同一份注入結果，所以署名一律輸出、由 CSS 決定顯示與否。
