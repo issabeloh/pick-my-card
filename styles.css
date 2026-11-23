@@ -3989,7 +3989,7 @@ input[type="number"]:focus {
 .sel-dirty { margin-right: auto; font-size: 13.5px; font-weight: 600; color: var(--ui-ink-2); }
 
 .ow-count-badge {
-    color: #94a3b8;
+    color: var(--ui-ink-3);
     font-size: 13.5px;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -4002,7 +4002,7 @@ input[type="number"]:focus {
     border-radius: var(--ui-radius-lg);
     overflow: hidden;
     position: relative;
-    background: #f1f5f9;
+    background: var(--ui-fill);
 }
 .ow-img {
     display: block;
@@ -4029,7 +4029,7 @@ input[type="number"]:focus {
     font-size: var(--ui-text-14);
     color: var(--ui-ink-2);
     text-align: center;
-    background: linear-gradient(135deg, #e2e8f0, #f8fafc);
+    background: linear-gradient(135deg, var(--ui-line), var(--ui-bg));
 }
 
 /* 摘要列 */
@@ -4037,7 +4037,7 @@ input[type="number"]:focus {
     display: grid;
     grid-template-columns: 0.75fr 1.35fr 1.2fr;
     margin: 0;
-    background: #f8fafc;
+    background: var(--ui-bg);
     border-bottom: 1px solid var(--ui-line);
 }
 .ow-sum > div {
@@ -4137,7 +4137,7 @@ input[type="number"]:focus {
     align-items: center;
     justify-content: center;
     aspect-ratio: 1.586;
-    border: 1.5px dashed #cbd5e1;
+    border: 1.5px dashed var(--ui-line);
     border-radius: var(--ui-radius-md);
     color: var(--ui-brand);
     font-size: 13.5px;
