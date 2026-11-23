@@ -2831,7 +2831,10 @@ a {
   background: #fbfcfe;
 }
 .promo-feat-modal-foot .promo-feat-all {
-  display: block;
+  display: flex;              /* 文字＋svg 箭頭置中（2026-11-23 改「看完整回饋與權益 ›」） */
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
   margin: 0;
   padding: 11px 16px;
   border-radius: 10px;

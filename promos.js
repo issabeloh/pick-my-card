@@ -774,7 +774,7 @@
     // 綁在節點上的事件（「查看全部」走 document 委派），所以複製 HTML 就夠，
     // 不必把節點搬進搬出——搬動會讓收合狀態與 DOM 順序變得難以推理。
     featModalBody.innerHTML = drawer.innerHTML;
-    // 「查看卡片詳情」從內容區搬到 footer 當 CTA（站長 2026-09-21）。
+    // 「看完整回饋與權益」（原「查看卡片詳情」）從內容區搬到 footer 當 CTA（站長 2026-09-21）。
     // 搬的是節點本身，所以 setupCardDetailOverlay 的 document 委派照常收得到點擊。
     var all = featModalBody.querySelector('.promo-feat-all');
     featModalFoot.innerHTML = '';
@@ -1409,14 +1409,12 @@
   // 「查看卡片詳情」→ 卡片特色框框最下方的「看完整回饋與權益 ›」按鈕（站長 2026-11-23 選 mockup A2）。
   // 用意：單卡頁講新戶活動，詳情頁講平常刷卡的回饋與權益——按鈕要讓人看出是「去另一個地方看完整的」。
   // 跟清單頁 modal 同一招：搬**節點本身**（setupCardDetailOverlay 的 document 委派才收得到點擊），
-  // 注入器的輸出不必改。只有這裡改字，清單頁 modal 仍是「查看卡片詳情」。
+  // 按鈕文字與箭頭由注入器 tools/build-promos-features.js 輸出（清單頁 modal 同一份），這裡只搬位置。
   function moveCardPageDetailLink(feat) {
     var all = feat.querySelector('.promo-feat-all');
     if (!all) return;
     var foot = document.createElement('div');
     foot.className = 'pmc-cp-feat-foot';
-    all.textContent = '看完整回饋與權益';
-    all.insertAdjacentHTML('beforeend', '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M7.5 4.5L13 10l-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>');
     foot.appendChild(all);
     feat.appendChild(foot);
     // 抬頭剩下的 <b> 在單卡頁被 CSS 藏起來；沒有級別標籤時整列空了，藏掉免得多一段空白
