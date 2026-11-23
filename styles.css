@@ -9868,8 +9868,8 @@ html.pmc-onboard #search-hints-container {
     align-items: center;
     justify-content: center;
     background: none;
-    border: 1px solid #e5e7eb;
-    color: #6b7280;
+    border: 1px solid var(--ui-line);
+    color: var(--ui-ink-3);
     cursor: pointer;
     width: 34px;
     height: 34px;
@@ -9909,7 +9909,7 @@ html.pmc-onboard #search-hints-container {
     /* grid 項目預設 min-width:auto，資訊列 nowrap 時會把欄位撐寬、兩欄變得不等寬 */
     min-width: 0;
     background: #ffffff;
-    border: 1px solid #e5e7eb;
+    border: 1px solid var(--ui-line);
     border-radius: 14px;
     padding: 12px 12px 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -9938,7 +9938,7 @@ html.pmc-onboard #search-hints-container {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    border-radius: 6px;   /* 卡片圖一律圓角 */
+    border-radius: var(--ui-radius-sm);   /* 卡片圖一律圓角 */
     display: block;
 }
 .spotlight-rate-row {
@@ -9952,7 +9952,7 @@ html.pmc-onboard #search-hints-container {
     font-weight: 800;
     line-height: 1;
     letter-spacing: -0.02em;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-variant-numeric: tabular-nums;
 }
 /* 顏色由「標籤的兩種樣式」統一給（Grep 該標題）。四種類型原本各一色（hype-top／god／excl／easy，
@@ -9970,7 +9970,7 @@ html.pmc-onboard #search-hints-container {
     font-weight: 700;
     line-height: 1.3;
     margin-top: 5px;
-    color: #111827;
+    color: var(--ui-ink-1);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -10020,7 +10020,7 @@ html.pmc-onboard #search-hints-container {
 .spotlight-end,
 .spotlight-days-badge { flex-shrink: 0; }
 .spotlight-info-row b {
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-weight: 600;
 }
 .spotlight-days-badge {
@@ -10042,7 +10042,7 @@ html.pmc-onboard #search-hints-container {
     height: 34px;
     background: #eff6ff;
     border: none;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     padding: 0 8px;
     font-size: 0.8rem;
     font-weight: 600;
@@ -10061,10 +10061,10 @@ html.pmc-onboard #search-hints-container {
     width: 34px;
     height: 34px;
     padding: 0;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     background: #ffffff;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 0.9rem;
     white-space: nowrap;
     cursor: pointer;
@@ -10089,7 +10089,7 @@ html.pmc-onboard #search-hints-container {
     padding: 0;
     transition: background .2s, transform .2s;
 }
-.spotlight-dot.active { background: #1e40af; transform: scale(1.25); }
+.spotlight-dot.active { background: var(--ui-brand); transform: scale(1.25); }
 
 /* Spotlight detail modal */
 .spotlight-modal-content { max-width: 460px; }
