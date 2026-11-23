@@ -44,7 +44,7 @@
 
 ## 3. 每次改動的必做流程
 
-1. 改前：`cp <檔案> docs/archive/<檔名>-<YYYY-MM-DD>.bak`（僅整段改寫時；追加教訓不用）
+1. 改前不另存備份——**git 歷史即備份**（2026-11-17 起不再 cp .bak 到 `docs/archive/`，那樣只會一直累積）。整段改寫的 commit 訊息要寫明改了哪一節，日後要找舊版靠 `git log -p <檔案>`
 2. 改後：檔內交叉引用的路徑跑 `ls` 驗證；改了 CLAUDE.md 或 agents 定義 → 派 verifier read-back
 3. **commit + push**——短命容器，沒 push 的維護等於沒做
 4. commit message 用 `docs(ops):` / `docs(project):` 前綴，一句話說清「為什麼改」

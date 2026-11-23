@@ -3,7 +3,8 @@
 此資料夾存放 Google Sheets Apps Script 專案的程式備份副本，目前涵蓋兩個**不同**的 Sheet 專案：
 **「PMC 管理系統」**（cards.data 匯出／權益監控／權益解析）與 **「PMC數據集中」**
 （GA4+GSC+Clarity 分析同步，見 `pmc-analytics-sync.gs`）。
-**實際執行的版本都在各自的 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步。
+**實際執行的版本都在各自的 Google Sheets 裡**（試算表 → 擴充功能 → Apps Script），改動時兩邊請同步；
+但 `deploy.json` 列的檔案在 main 變動後會由 GitHub 自動推上去（見「自動部署」一節），其餘仍是手動貼。
 
 ## 匯出主程式（`cards-export.gs`）
 
@@ -228,6 +229,19 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
 假試算表測不到的三件事，請在真的表上各看一眼：寫進空槽後 `periodStart_N`／`periodEnd_N` 是**日期**（靠右對齊）不是文字；
 補上的 `period_N` 公式顯示出期間；新戶新增的那一列 `active` 是勾選框、`bonus_rate` 是數字。
 
+## 用詞統一（`term-unify.gs`，2026-10-14 新增）
+
+**用途**：站長在「PMC 管理系統」的「統一詞」工作表維護商家統一寫法（品牌原大小寫、中英不空格、臺→台；欄位＝統一詞／其他寫法／搜尋別名／備註），這支把表套回試算表本身，並檢查寫法有沒有分岔。
+**安裝**：貼進「PMC 管理系統」專案（不在 `deploy.json` 名單上，維持手動貼）。`cards-export.gs` 與自動化檔的 `benefits-parser.gs`（`pmcUnifyList_`，同規則各一份）也讀同一張統一詞表。
+
+| 函數 | 做什麼 |
+|---|---|
+| `previewTermUnify` | 只看不改：把「會改哪些格、改前改後」寫進「用詞統一預覽」工作表 |
+| `applyTermUnify` | 預覽沒問題後真的改（整項等於某個寫法才換；忽略大小寫／空白／全半形／臺台；MerchantPages 刻意不掃），改完預覽表標「已套用」 |
+| `termConsistencyIssues_` | 寫法一致性檢查，`exportToJSON` 每次匯出自動跑，同一個名字有兩種以上寫法就跳提醒、不擋匯出 |
+
+使用順序：`previewTermUnify` → 看過 → `applyTermUnify` → 再跑一次 `exportToJSON`。設計背景與為什麼要在源頭統一見 `docs/project/data-pipeline.md` 的「統一詞」（12d）。
+
 ## pmc-analytics-sync 完整同步腳本（`pmc-analytics-sync.gs`，2026-07-22 新增）
 
 > ⚠️ **貼進 Sheets 前先確認拿對版本**（2026-09-03 實際踩到：從 `main` 取檔，貼下去等於
@@ -246,7 +260,8 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
 > 不再單獨保留（避免同一函數存兩處日後漂移）。
 
 - **主流程**：`updateAllReports()`——每天**下午 5 點**（`atHour(17)`，實際落在 17:00–18:00 之間）
-  由時間驅動觸發器叫醒（`createDailyTrigger`，它會先刪掉同名舊觸發器再建，重跑不會長出兩個）。
+  由時間驅動觸發器叫醒。觸發條件是在 Apps Script「觸發條件」畫面手動建的（每天約 17:37），要改時間就去那裡改
+  （2026-11-23 刪掉了會先刪光再重建觸發條件的 `createDailyTrigger`）。
   ⚠️ 2026-09-14 更正：這裡原本寫「每天 6 點」，與程式不符（`atHour(17)`）——**以程式為準**。
   **2026-07-31 起改為容錯式執行**：`syncClarityData()` 移到**最前面**（唯一「今天沒抓到就永遠
   沒有」的資料源），其餘每個報表各自包 `runStep_()` try/catch、互不拖累，最後**無論成敗一定**
@@ -488,8 +503,8 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
       把熱門搜尋表截斷。
   - 空框送出（GA4 的 `(not set)`）不列入——那是沒輸入，不是覆蓋缺口。
   - **「未覆蓋」＝全站所有卡片都沒有這個項目，與用戶選了哪幾張卡無關**（站長 2026-09-14 問過）：
-    `findMatchingItem()` 掃的是整個 `cardsData.cards`（`js/search-match.js:377`），比對範圍是每張卡的
-    `cashbackRates.items` ＋ `specialItems` ＋ `generalItems`（連隱藏 rate 也算），
+    `findMatchingItem()` 掃的是整個 `cardsData.cards`（`js/search-match.js`），比對範圍是每張卡的
+    `cashbackRates.items`（連隱藏 rate 也算）與領券商家，
     只要**任何一張卡**對得上 `has_match` 就是 true。所以這張表上的詞是真正的資料缺口，
     不會因為用戶剛好沒勾到那張卡而被誤記。
   - **剛標成已覆蓋的詞，「最近視窗未對到次數」不會馬上歸零**：來源是滾動 30 天，補好之前那些
@@ -1226,7 +1241,7 @@ Gemini 呼叫。沒跑完會在結果視窗說「還有 N 列沒跑」，**再�
   |---|---|---|
   | 玉山 Uni／凱基誠品 | `{rate, cap, period, level-note}` | ✅ 自動產出 |
   | 國泰 CUBE | `{specialRate, level-note}`（分級改的是指定通路的率） | ❌ 留空給人填 |
-  | 永豐大戶卡 | `{rate_1, cap_1, rate_14, cap_hide, overseasBonusRate…}` 共 11 個 key（逐槽覆寫） | ❌ 留空給人填 |
+  | 永豐大戶卡 | `{rate_1, cap_1, rate_14, overseasBonusRate…}` 等多個 key（逐槽覆寫） | ❌ 留空給人填 |
 
   後兩種由 AI 舉手（`levels_beyond_simple=true`，prompt 規則 7a）→ `levelSettings` 留空、
   在「AI想問的問題」欄寫明要手填並指出參考寫法、各級別原文留在 `levelSettings原文引用` 欄。

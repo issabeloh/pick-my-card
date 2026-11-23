@@ -126,7 +126,6 @@
     var s1 = scenes[0];
     var brainBar = document.getElementById('lp-brain-bar');
     var brainPct = document.getElementById('lp-brain-pct');
-    var skipBtn = document.getElementById('lp-skip');
 
     function clamp01(v) { return v < 0 ? 0 : (v > 1 ? 1 : v); }
 

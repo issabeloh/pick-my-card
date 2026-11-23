@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/quick-options-misc.js（載入順序 12/12）
+ * Pick My Card — js/quick-options-misc.js（載入順序第 12 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 快捷選項管理 modal         → "openManageQuickOptionsModal" / "renderQuickOptionsModal"
  *  - 標籤拖曳排序（含觸控）     → "handleDragStart" / "handleTouchStart"

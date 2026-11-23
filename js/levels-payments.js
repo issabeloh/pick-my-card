@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/levels-payments.js（載入順序 11/12）
+ * Pick My Card — js/levels-payments.js（載入順序第 11 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * ⚠️ 本檔含 saveCardLevel()——CLAUDE.md 鐵則 1（🔒 最高等級）：
  * 只有「用戶親自點選」與「大小寫/空格正規化」兩個合法呼叫場景。
  * 區塊目錄（Grep 關鍵字）：
@@ -130,7 +130,7 @@ function describeSaveError(error) {
 // Save user's birthday month to Firestore and update pre-computed flag
 async function saveBirthdayMonth(month) {
     userBirthdayMonth = month;
-    isBirthdayMonth = month !== null && month === (new Date().getMonth() + 1);
+    isBirthdayMonth = month !== null && month === getTaiwanMonth();
 
     // 訪客：生日月份只有登入後才能設定（詳情頁的下拉是 disabled），這裡不會有東西要存
     if (!auth || !auth.currentUser) return { ok: true, volatile: true };
@@ -276,8 +276,6 @@ function openMyPaymentsModal() {
         modal.style.display = 'none';
         enableBodyScroll();
     };
-    window.closeMyPaymentsModal = closeModal;
-
     closeBtn.onclick = closeModal;
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
@@ -289,8 +287,6 @@ function openManagePaymentsModal() {
     const paymentsSelection = document.getElementById('payments-selection');
     const saveBtn = document.getElementById('save-payments-btn');
     const toggleAllBtn = document.getElementById('toggle-all-payments');
-
-    const isLoggedIn = currentUser !== null;
 
     paymentsSelection.innerHTML = '';
 

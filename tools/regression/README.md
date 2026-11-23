@@ -1,6 +1,6 @@
 # 自動化回歸測試
 
-把 `docs/ops/regression.md` 的 12 組檢查跑成機器比對：起本機伺服器 → headless Chromium 逐組搜尋 →
+把 `docs/ops/regression.md` 的檢查清單（現為 13 組，以腳本 `CHECKS` 為準）跑成機器比對：起本機伺服器 → headless Chromium 逐組搜尋 →
 抓「卡名／回饋率／回饋金額／匹配說明／停車／領券／console error」→ 與 `baseline.json` 逐字比對。
 
 ## 用法（repo 根目錄）
@@ -13,7 +13,7 @@ node tools/regression/run-regression.js --update-fixture  # 重拍凍結資料�
 node tools/regression/run-regression.js --live            # 用線上 cards.data 跑（資料驗證，不比對基準）
 ```
 
-標準流程：**改 script.js 的計算/搜尋/顯示邏輯之前**先跑一次比對模式確認綠燈（基準有效）→ 改動 → 再跑比對模式。
+標準流程：**改 js/ 的計算/搜尋/顯示邏輯之前**先跑一次比對模式確認綠燈（基準有效）→ 改動 → 再跑比對模式。
 改動「本來就預期改變結果」時：先確認差異報告裡的每一條都是預期內的，再 `--update-baseline` 並把新基準連同改動一起 commit。
 
 另有獨立的 `card-detail-test.js`（卡片詳情頁，2026-10-06 新增）與 `mappings-page-test.js`、`delete-account-test.js`，
@@ -50,6 +50,6 @@ node tools/regression/run-regression.js --live            # 用線上 cards.data
 
 ## 維護
 
-- 12 組檢查的「語義」（每組在守什麼機制）定義在 `docs/ops/regression.md`；腳本裡的 `CHECKS` 陣列要與它同步
+- 各組檢查的「語義」（每組在守什麼機制）定義在 `docs/ops/regression.md`；腳本裡的 `CHECKS` 陣列要與它同步
 - 改這支腳本屬 maintenance.md 的 🟡 級：改完必須重做三項驗證——連跑兩次比對模式應通過（確定性）、竄改 baseline 一個數值應 exit 1（抓得到）、還原後應 exit 0
 - `last-run.json` 是每次執行的完整輸出（gitignored），差異排查用

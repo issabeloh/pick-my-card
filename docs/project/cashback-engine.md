@@ -1,7 +1,7 @@
-# 回饋計算與搜尋引擎（script.js 核心邏輯）
+# 回饋計算與搜尋引擎（js/ 核心邏輯）
 
-> 改「搜尋、回饋計算、匹配邏輯」前必讀。行號是 2026-07-11 快照，可能漂移——
-> **一律先 Grep 關鍵字定位**（script.js 檔案頂部有區塊目錄），行號只當參考。
+> 改「搜尋、回饋計算、匹配邏輯」前必讀。舊的 `script.js:行號` 引用已隨 2026-07-20 拆分全部換成模組檔與函式名，文中若還有行號都只是快照——
+> **一律先 Grep 關鍵字定位**（`js/` 各模組檔頂部有區塊目錄；計算在 `js/cashback-engine.js`，匹配在 `js/search-match.js`）。
 
 ## 1. Placeholder 解析系統
 
@@ -27,22 +27,20 @@
 
 ## 2. 卡片分級系統（hasLevels）
 
-兩種類型：
-
-**Type A: hasLevels + specialItems**（如 DBS Eco）
-- `specialItems` 是特定通路名單；`levelSettings` 定義各級別 rate/cap
-- 顯示順序：先 cashbackRates（如果有），再 specialItems
-
-**Type B: hasLevels + cashbackRates**（如玉山 Uni Card）
-- 無 specialItems（或空陣列）；`cashbackRates` 內用 `{rate}`/`{cap}` placeholder
+只有一種形狀：**hasLevels + cashbackRates**（玉山 Uni Card、國泰 CUBE、永豐大戶、凱基誠品）
+- 所有通路都在 `cashbackRates`；槽內用 `{rate}`/`{cap}`/`{specialRate}` 等 placeholder 取 `levelSettings` 當前級別的值
 - 每個 rate 可有自己的 items 和 conditions；`category` 欄位標記條件所屬類別
 
-**鐵則——空陣列不是 falsy**：
+> **已移除的形狀（2026-11-17）**：以前還有「hasLevels + `specialItems`」（卡片層級的通路名單，級別只給一個 rate；
+> CUBE 另有 `generalItems`）。匯出端早就不產生這兩個欄位，所有卡都改用上面的形狀，前端對應的計算、索引、
+> 詳情頁分支一併刪除。Sheets 若要再表達「整張卡一份通路名單」，做法是加一個 cashbackRates 槽，不是恢復這個欄位。
+
+**鐵則——空陣列不是 falsy**（CLAUDE.md 鐵則 4）：判斷陣列欄位有沒有內容要連長度一起看。
 ```javascript
-// ❌ 錯誤
-if (!card.specialItems)
+// ❌ 錯誤：[] 是 truthy，空名單會被當成「有」
+if (card.basicExclusions)
 // ✅ 正確
-if (!card.specialItems || card.specialItems.length === 0)
+if (card.basicExclusions && card.basicExclusions.length > 0)
 ```
 
 **級別專屬槽位 `onlySlots` / `keepSlots`**（2026-10-07，國泰 CUBE「固定回饋」方案）：levelSettings 的某級別可寫
@@ -52,18 +50,18 @@ if (!card.specialItems || card.specialItems.length === 0)
 `isRateGroupInLevel()`（js/cashback-engine.js），新增任何「逐槽列出活動」的路徑都要走它，否則會出現
 「詳情頁有、搜尋沒有」。槽號用 `.slot`（Sheet 真實槽號）。
 
-## 3. 搜尋計算流程（calculateCardCashback，約 script.js:1464-1718）
+## 3. 搜尋計算流程（`calculateCardCashback`，`js/cashback-engine.js`）
 
-1. **有 specialItems 的 hasLevels 卡**：先查 cashbackRates（支援 placeholder）→ 無匹配再查 specialItems。CUBE 卡特殊處理：用 specialRate 和 generalItems
-2. **無 specialItems 的卡（含 hasLevels）**：先取 levelData（若 hasLevels）→ 查 cashbackRates 並把 levelData 傳給解析函數
-3. **一般卡（hasLevels=false）**：直接查 cashbackRates，levelData 為 null（不用 placeholder）
+單一路徑（2026-11-17 起；以前「有 specialItems 的分級卡」另有一條分支，已隨該資料形狀移除）：
+1. **分級卡（hasLevels）**：先用 `resolveCardLevel()` 取 levelData → 查 cashbackRates 並把 levelData 傳給解析函數
+2. **一般卡（hasLevels=false）**：直接查 cashbackRates，levelData 為 null（不用 placeholder）
 
 ## 3b. 搜尋三步：找、算、顯示（2026-10-17 架構調整）
 
 首頁搜尋、快捷搜尋、商家頁生成器都走同一條路，**三步各自獨立、後一步只吃前一步的輸出**：
 
 1. **找**（`findSearchHits`，`js/search-match.js`）：一次找出**完整**命中清單（商家名＋匹配品質）。去重只合併「小寫後完全相同」的名字；**不可**用統一詞／別名把不同名字併成一個，也**不可**合併只差空格的名字（下一步用名字查索引，索引是小寫全等，少一個名字＝寫那個名字的卡算不到）。快捷搜尋（多關鍵詞）＝每個關鍵詞各找一次再合併
-2. **算**（`calculateHitResults`，`js/cashback-engine.js`）：**逐個名字**對每張卡 `calculateCardCashback`，再 `mergeResultsByActivity`；進行中與即將開始一起算。不能把所有名字丟進同一次計算——分級卡（國泰 CUBE）「先 cashbackRates、沒有才 specialItems、再沒有才 generalItems」的優先順序是對每個名字各自成立的
+2. **算**（`calculateHitResults`，`js/cashback-engine.js`）：**逐個名字**對每張卡 `calculateCardCashback`，再 `mergeResultsByActivity`；進行中與即將開始一起算。不能把所有名字丟進同一次計算——`calculateCardCashback` 的介面是一次一個名字（當初的理由是分級卡 specialItems／generalItems 的優先順序要逐名字成立；那個資料形狀已於 2026-11-17 移除，逐名字計算維持不變）
 3. **顯示**（`showMatchedItem` 等）：只負責把命中清單排成文字，怎麼縮短都不影響計算
 
 - 以前「找」會把互為別名的名字併成一個（為了「✓ 匹配到」好看），「算」卻拿這份刪減過的名單重搜，被併掉的名字要靠別名剛好連得回去——2026-10-17 改掉。當時用線上資料 1,882 個詞比對：結果零差異，只有 10 個詞的「✓ 匹配到」／匹配項目多列出原本被藏起來的名字
@@ -72,9 +70,9 @@ if (!card.specialItems || card.specialItems.length === 0)
 - 還沒併進這三步的路徑（各自直接拿詞去算，第二階段再處理）：行動支付詳情／比較（`levels-payments.js`）、配卡組合頁重算（`mappings-page.js`）；停車、付款方式、導購連結用另一套嚴格比對（`merchantMatchesStrict`）
 - **改搜尋／計算邏輯前後一律跑 `node tools/regression/search-compare.js`**（加 `--ui` 連畫面一起比），看「進行中結果變了／即將開始變了」是不是 0，其餘差異逐條確認（見 docs/ops/regression.md）
 
-## 4. findMatchingItem 搜尋範圍（約 script.js:1215-1400）
+## 4. findMatchingItem 搜尋範圍（`js/search-match.js`）
 
-搜尋涵蓋：cashbackRates items、specialItems、generalItems（CUBE）、couponCashbacks merchant（逗號分隔逐一比對）、benefits merchants（停車折抵，由 displayParkingBenefits 獨立處理）。
+搜尋涵蓋：cashbackRates items、couponCashbacks merchant（逗號分隔逐一比對）、benefits merchants（停車折抵，由 displayParkingBenefits 獨立處理）。
 
 **誤傷防範**：
 - **短英數詞只認字首**（2026-10-17，`shortTermStartsWord`）：3 個字以內的純英數搜尋詞（ana、jal、gu、net）在「item 包含搜尋詞」方向要出現在字首（前面是開頭或非英文字母），搜「ana」不再誤中 jeANAsis、hANA pay；中文、數字、符號前面都算字首。4 字以上照舊任意位置（eats → UberEats）。下拉選單用同一條規則
@@ -87,7 +85,6 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 - `hideInDisplay`：標記不在詳情頁顯示的 cashbackRate（Sheet 一般編號槽位加 `hideInDisplay_N=TRUE`；舊 `_hide`/`_hide_1` 專用欄位已於 2026-07-11 併入一般槽位並刪除），主要用於國外消費／一般國內消費（避免與詳情頁其他區塊重複）。**仍然可被搜尋，計算邏輯與一般活動完全相同**
 - **rate=0 是明確語義：「此活動沒有指定通路加碼成分」**。stacking 模型允許 rate=0（只算基準＋加碼成分，`if (rate > 0 || shouldUseStackedCalculation)`）；rate=0 配空 model 或 `rate`/waterfall 沒有意義（會算出 0）
-- `rate_hide` 覆寫已於 2026-07-09 移除；levelSettings 的 `rate_hide`/`cap_hide` 欄位已退役，前端不再讀取
 - **隱藏活動標準配方**（大戶卡為例，值自動跟用戶選的級別；N 為該活動所在槽位）：
   - 一般國內消費：`rate_N=0`、`cashbackModel_N=basic+domesticBonusRate`、cap 留空、`hideInDisplay_N=TRUE`
   - 國外：`rate_N=0`、`cashbackModel_N=overseasCashback+overseasBonusRate`、cap 留空、`hideInDisplay_N=TRUE`（stacking 基準層由 `resolveBaseRate` 決定，海外模型自動用 overseasCashback；卡片沒有 overseasBonusRate 也適用——成分為 0 的層自動跳過，總率＝overseasCashback）
@@ -127,12 +124,12 @@ if (!card.specialItems || card.specialItems.length === 0)
     - 基本層（Layer 1）：`applyBase = model.includes('basic') || model.includes('overseasCashback')`（海外 model 用 `basic` 寬鬆指代 overseasCashback base，故兩者任一即算有列基準）。例：`rate+basic` 加基本；`rate+domesticBonusRate`（沒寫 basic）**不加**基本。
       - **注意 `applyBase`（要不要加基準）與 `isOverseas`（基準取哪個值）是兩個 flag，兩者都必須認 `overseasCashback`**——否則 `rate+overseasCashback` 會「加了基準層、卻用國內基準值」，少算海外基準（2026-07-21 修正的 bug 就是 `isOverseas` 漏認 `overseasCashback`，見上方 token 說明與教訓記錄）。
     - 注意「單獨 `rate`」與「留空」不走 stacking、不受此 gate：單獨 `rate`＝排除型（cap 內 rate、溢出 0，不加 basic）；留空＝簡單路徑（cap 內 rate、溢出 basic）。
-  - 三處實作必須一致（否則顯示與計算對不上）：`calculateStackedCashback()` 的 `applyBonus`/`applyBase` 參數（Layer 1/2 各自 `if (applyX && rate > 0)`，且 `totalRate` 顯示率同步 gate）、`getDisplayRate()`、`rateCompositionButtonHtml()` 都各自算這些 flag（含 `isOverseas`——三處的 `isOverseas = includes('overseasBonusRate') || includes('overseasCashback')` 也必須同步）。呼叫端（約 script.js:4040 附近）算 `stackedApplyBonus`/`stackedApplyBase`／`isOverseasModel` 傳入。跨槽引用 `rate_N` 的獨立層（extraLayers）不受此 gate 影響，一律照加（見下方「跨槽引用」節）。
+  - 三處實作必須一致（否則顯示與計算對不上）：`calculateStackedCashback()` 的 `applyBonus`/`applyBase` 參數（Layer 1/2 各自 `if (applyX && rate > 0)`，且 `totalRate` 顯示率同步 gate）、`getDisplayRate()`、`rateCompositionButtonHtml()` 都各自算這些 flag（含 `isOverseas`——三處的 `isOverseas = includes('overseasBonusRate') || includes('overseasCashback')` 也必須同步）。呼叫端（`calculateCardCashback()` 內）算 `stackedApplyBonus`/`stackedApplyBase`／`isOverseasModel` 傳入。跨槽引用 `rate_N` 的獨立層（extraLayers）不受此 gate 影響，一律照加（見下方「跨槽引用」節）。
   - 背景：舊版無條件加卡片級加碼，與「model 字串列出所有適用成分」的文法矛盾；ctbc-uniopen 改採明確槽＋跨槽引用後第一次觸發（slot1 `rate+basic` 被誤加 dbr）。詳見 `docs/project/cross-slot-ref-and-minspend-spec.md` 功能三。
   - **⚠️ 別再引用「線上 0 張卡受影響」這個數字**（2026-08-16 更正）：那是用舊 `cards.data`（20260713）掃出來的，當時 main 已到 20260716。**實際影響 9 槽**——uniopen 5 槽＋dbs-eco 4 槽（eco 品牌 12.5→10%、海外 7.5→5%，對照官網＝修正舊引擎灌水，已由資料擁有者確認）。改 stacking gate 這類邏輯**不是零風險改動**，影響範圍要用當下最新 `cards.data` 重掃。
-- `calculateLayeredCashback()`（waterfall，約 script.js:1840-1904）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700。**waterfall 不受 Fix B 影響**——加碼一律計算，未加 gate（waterfall 的加碼本來就是 model 字串裡固定的第三段，不會有「無條件加」的歧義）
+- `calculateLayeredCashback()`（waterfall，`js/cashback-engine.js`）：Layer1 指定通路(cap 內) → Layer2 基本(溢出) → Layer3 加碼(溢出，加碼 cap 內)。範例 DBS Eco 精選卡友消費 NT$30,000 到日本：基本 1.2%=360＋海外加碼 1.8%=540（上限 50000）＋指定國家 3.8%×21053=800 → 總計 1,700。**waterfall 不受 Fix B 影響**——加碼一律計算，未加 gate（waterfall 的加碼本來就是 model 字串裡固定的第三段，不會有「無條件加」的歧義）
 - 簡單路徑（無加碼卡的空白預設）：cap 內 rate_N、溢出 basicCashback
-- 選擇邏輯（約 script.js:3554 `const cashbackModel = matchedRateGroup?.cashbackModel`）：`'rate'` → 溢出 0；含 `+` → stacking；含 `>` → waterfall；空白 → 舊預設
+- 選擇邏輯（`calculateCardCashback()` 內 `const cashbackModel = matchedRateGroup ? matchedRateGroup.cashbackModel : null`）：`'rate'` → 溢出 0；含 `+` → stacking；含 `>` → waterfall；空白 → 舊預設
 
 **共用邏輯**（2026-07-06 整併完成，改動時不要再複製一份）：
 - `getOverflowRate(card)`：簡單路徑與 findUpcomingActivity 共用的溢出率＝`basicCashback`（2026-07-12 移除 `meta廣告/google廣告 → overseasCashback` 寫死特例：全部廣告槽位已改用明確 cashbackModel、走 stacking，不再進簡單路徑；海外與否一律由 cashbackModel 決定）
@@ -142,14 +139,16 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 **計算明細（回饋率按鈕，2026-11-22 起不再是計算機圖示，見 ui-display.md 1q）**：有算出金額就至少 1 層明細（`result.calculationLayers.length > 0`），回饋率永遠是可點的按鈕。明細是卡片內部抽屜（append 進 `.card-result`/`.coupon-item`），`openBreakdownBtn` 追蹤開啟狀態，`showCalcBreakdown()`（約 script.js:5249）讀 `dataset.calcLayers` 渲染。stacking/waterfall/簡單路徑都會產生 layers。
 
-**分層計算的觸發**（約 script.js:2186-2208）：卡片有 `levelSettings` 且含 `overseasBonusRate` 或 `domesticBonusRate`。
+**加碼期間**（2026-11-23）：卡片層的 `domesticBonusPeriod`／`overseasBonusPeriod`（`YYYY/M/D~YYYY/M/D`）由 `applyBonusPeriods()`（`js/core-utils.js`，在 `filterExpiredRates` 裡跑，和活動過期同一個時機）處理：未開始或已過期 → 卡片層與**每個級別**的 `domesticBonusRate`／`overseasBonusRate` 一律歸零，下游（計算三種模型、`getDisplayRate`、回饋組成、詳情頁加碼卡）全部自然看到 0；期間內的記在 `card.bonusPeriods[kind]` 給詳情頁顯示「活動期間」與「即將結束」；歸零的記在 `card.endedBonuses[kind]`（搜尋結果「一般消費回饋率」卡據此不再顯示加碼條件）。沒填期間＝長期有效。**新增任何讀加碼率的地方不必自己判斷期間**；但要讀加碼的「條件」「上限」等非率欄位時，要看 `endedBonuses`。
+
+**分層計算的觸發**（`calculateCardCashback()` 內）：卡片有 `levelSettings` 且含 `overseasBonusRate` 或 `domesticBonusRate`。
 
 **跨槽引用 `rate_N`**（2026-07-16 起，設計決策見 `docs/project/cross-slot-ref-and-minspend-spec.md`）：
 - 只在 stacking（`+`）分支有效，寫成裸 `rate_N`（無大括號），如 `rate+rate_5+rate_1+basic`。N＝同卡 `card.cashbackRates` 陣列的 1-based 槽位編號。
 - 解析為讀 `card.cashbackRates[N-1]` 的原始 rate/cap，當成獨立一層加進 stacking（自己吃自己的 cap，作用於全額）——**非遞迴**，不會執行被引用槽自己的 cashbackModel，所以不會循環引用、不會重複算 basic。
 - 與 `{rate_1}`（大括號、在 rate/cap **值欄位**、hasLevels 卡讀 levelSettings）是完全不同的兩套語法，不衝突。
 - `waterfall`（`>`）與裸 `rate` 分支不支援，偵測到會 `console.error` 並忽略該 token（不會靜默算錯）。
-- 實作：`resolveCrossSlotLayers()`、`warnIfCrossSlotRefMisused()`（約 script.js:3317-3364）；`calculateStackedCashback()` 多一個 `extraLayers` 參數；`getDisplayRate()`/`rateCompositionButtonHtml()` 已納入加總，排序與詳情頁顯示因此跟計算一致。
+- 實作：`resolveCrossSlotLayers()`、`warnIfCrossSlotRefMisused()`（`js/cashback-engine.js`）；`calculateStackedCashback()` 多一個 `extraLayers` 參數；`getDisplayRate()`/`rateCompositionButtonHtml()` 已納入加總，排序與詳情頁顯示因此跟計算一致。
 - **定位方式（2026-07-16 更正）**：`rate_N` 用 Sheet 真實槽號 `.slot` 定位（`findRateGroupBySlot()`），不是陣列位置——中間跳號（如 slot 1,3,5）時陣列位置會漂移，slot 號不會。相容：若這張卡的 `cashbackRates` 都沒有 `.slot` 欄（舊 `cards.data` 尚未重匯出），退回舊的陣列位置 `[N-1]` 邏輯。匯出端見 `apps-script/cards-export.gs` 的 `rateObj.slot = j`。
 - 安全網：`tools/check-cross-slot-refs.js`（`tools/preflight.sh` 會跑）掃 `cards.data` 抓引用不存在槽的 `rate_N`，擋 commit；同樣優先用 `.slot` 驗證存在，無 `.slot` 欄退回陣列長度。
 
@@ -173,10 +172,12 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 **期限過濾（2026-09-02 新增）**：`benefit_period` 過期的權益在載入時就被 `filterExpiredRates()` 濾掉（與 cashbackRates／couponCashbacks／新戶活動同一支），四個消費端（`displayParkingBenefits`、卡片詳情頁權益區、`showMatchedItem`／`showNoMatchMessage` 兩處搜尋提示）因此一次到位、不需各自判斷。解析走 `parseBenefitPeriod()`（core-utils）：`benefit_period` 是自由格式字串，用「抓出字串裡所有日期樣式」拆 `{start, end}`——0 個日期（如「依官網公告」）→ 不設限、**永不隱藏**（自由文字不可以被當成過期）；1 個日期 → 只當結束日（現行資料全是這種）；≥2 個 → 頭尾當起訖。只濾 `expired`，`upcoming` 留著。
 
-`displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = null)`（約 script.js:3193-3269）：
+**比對只有一支：`findMatchingParkingBenefits(searchInput, cardsToCheck, { expandAliases })`（`js/search-match.js`，2026-11-17 由四份各抄一份的迴圈合併）**，四個呼叫端共用：`showMatchedItem`、`showNoMatchMessage`、`showMatchedButNoActivityMessage`（三者是匹配狀態列的「停車折抵優惠 (N張卡片)」連結，`expandAliases` 不開，用原始輸入比）與 `displayParkingBenefits`（下方結果區塊，`expandAliases: true`，搜尋詞過 `getAllSearchVariants` 展開別名）。**這兩種用法現行行為不同、刻意原樣保留**：搜「carrefour」下方區塊有停車、狀態列沒連結；快捷搜尋狀態列傳顯示名稱、區塊傳關鍵詞，所以「所有停車」下方 14 筆、狀態列沒連結。要不要統一是產品決定（歸站長），不要順手改成一致。差異的完整說明在函式上方註解。
+- 比對：`searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)`（substring、雙向；刻意不理精準搜尋）；空輸入會比到全部，由呼叫端決定要不要擋（狀態列兩處擋，區塊不擋）
+
+`displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = null)`（`js/results-display.js`，只負責畫區塊）：
 - 快捷搜尋時 `searchKeywords` 是關鍵詞陣列（如 `["停車","嘟嘟房","台灣聯通","24TPS永固","VIVI PARK"]`），任一匹配即成功
 - 一般搜尋時只用 merchantValue
-- 匹配：`searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)`
 - **鐵則**：快捷搜尋必須傳 `currentQuickSearchOption?.merchants` 進來，否則只會拿顯示名稱（如 "所有停車"）去比對，必定失敗：
   ```javascript
   displayParkingBenefits(merchantValue, cardsToCompare, currentQuickSearchOption?.merchants);
@@ -184,8 +185,8 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 ## 8. 性能機制（改邏輯時不要破壞）
 
-- **Items Index**（約 script.js:365-426）：載入時為所有卡建 Map 索引（cashbackRates/specialItems/generalItems 的 items）。查找用 `card._itemsIndex.get(variant)`，O(1)。改搜尋邏輯時優先走索引，不要寫嵌套迴圈
-- **Rate Status Cache**（約 script.js:192-202）：`rateStatusCache` Map 快取活動期間狀態，`calculateCashback()` 開始時清空，用 `getCachedRateStatus()` 不要直接叫 `getRateStatus()`
+- **Items Index**：載入時為所有卡建 Map 索引（cashbackRates 的 items；`buildCardItemsIndex()`，`js/data-loader.js`）。查找用 `card._itemsIndex.get(variant)`，O(1)。改搜尋邏輯時優先走索引，不要寫嵌套迴圈
+- **Rate Status Cache**（`js/core-utils.js`）：`rateStatusCache` Map 快取活動期間狀態，`calculateCashback()` 開始時清空，用 `getCachedRateStatus()` 不要直接叫 `getRateStatus()`
 - **DocumentFragment**：displayResults / displayCouponCashbacks 批量 DOM，維持單次 reflow
 - 熱迴圈（每卡片/每項目路徑）不要為了 log 做額外計算（如 `.map().join()`）
 
@@ -193,7 +194,6 @@ if (!card.specialItems || card.specialItems.length === 0)
 
 - [ ] hasLevels 卡是否正確取得 levelData 並傳給解析函數？
 - [ ] placeholder 是否正確解析（不是 0、不是 NaN）？
-- [ ] `specialItems = []`（空陣列）的卡是否走對分支？
 - [ ] 停車折抵的快捷搜尋是否還帶著 searchKeywords？
 - [ ] 跑 `docs/ops/regression.md` 的回歸清單比對前後結果
 - [ ] 動到基本回饋 fallback、搜尋詞展開（`expandSearchTerms`）或狀態列訊息 → 另跑 `tools/regression/basic-exclusions-test.js`（第 10 節）
@@ -204,7 +204,7 @@ if (!card.specialItems || card.specialItems.length === 0)
 - **語義**：`card.basicExclusions`（字串陣列，Sheets 欄位見 data-pipeline.md 第 2 節）＝這張卡刷了**完全沒有回饋**的交易類型
 - **作用範圍**：基本回饋 fallback（沒匹配到、匹配到但比較中的卡沒活動）時，命中的卡標成灰卡；**有指定通路結果時**（2026-10-11 起），比較卡裡**沒有進行中活動**的那些也照名單補灰卡墊底。
   某卡對這個詞有指定活動時**永遠照常顯示活動**，名單不影響
-- **比對**（`isBasicExcludedForSearch`，`js/search-match.js`；2026-10-11 站長逐條確認）：
+- **比對**（`getBasicExclusionHits`，`js/search-match.js`；2026-10-11 站長逐條確認）：
   - 搜尋詞＝用戶輸入經 `expandSearchTerms()`（與 `findMatchingItem` 共用的 fuzzy／同義詞展開），**不含**匹配到的 item 名（商家匹配會補完短詞，會繞過下一條）
   - 搜尋詞**等於或包含**排除詞即命中；反方向不判排除（名單「路邊停車費」不影響搜「停車費」，停車場可能有回饋）
   - **可能排除**（2026-10-11 站長選 B，`getBasicExclusionMaybeHits`）：搜尋詞（≥2 字）被名單項目包含時，同樣變灰卡、標 `isMaybeExcluded`（只有標籤換成「可能屬於排除項目」，徽章與說明維持原字；搜「醫院費用」← 「臺北醫學大學附設醫院費用」），排在一般卡之後、確定排除之前；狀態列另起一行「另有 M 張卡可能排除「X」」；結果全是灰卡且含可能排除時用 `showMaybeExcludedMessage`；`allBasicExcluded` 不含可能排除；確定命中優先；勾精準搜尋時不算

@@ -55,7 +55,7 @@ python3 tools/audit/stats.py --data $D/data --session <代號末6碼> --min-turn
 
 **步驟 6：寫報告（第 5 節的模板），附 diff，停下來等站長。**
 
-**步驟 7（站長確認後）：** 照 `docs/ops/maintenance.md` 第 3 節套用（備份、驗證路徑、commit+push），
+**步驟 7（站長確認後）：** 照 `docs/ops/maintenance.md` 第 3 節套用（驗證路徑、commit+push），
 並在第 6 節「歷次結果」追加一列。
 
 ## 3. 怎麼讀數字

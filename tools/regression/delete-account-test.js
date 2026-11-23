@@ -21,13 +21,15 @@
  */
 const http=require('http'),fs=require('fs'),path=require('path');
 const REPO=require('path').resolve(__dirname,'..','..');
+const { completeFirebaseStub } = require('../lib/firebase-stub-guard');
 // 先用 repo 內裝的 playwright；沒有就用環境預裝的（雲端容器已預裝，不必每個 session 再 npm install）
 let chromium;
 try { ({ chromium } = require(path.join(REPO, 'node_modules', 'playwright'))); }
 catch (e) { ({ chromium } = require('playwright')); }
 const MIME={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.data':'text/plain','.version':'text/plain','.json':'application/json','.txt':'text/plain'};
 
-function stub(url, provider){
+function stub(url, provider){ return completeFirebaseStub(url, stubRaw(url, provider)); }
+function stubRaw(url, provider){
   const R='Promise.resolve()';
   if(url.includes('firebase-app'))return 'export function initializeApp(){return {};}';
   if(url.includes('firebase-analytics'))return 'export function getAnalytics(){return {};} export function logEvent(){} export function setUserProperties(){}';

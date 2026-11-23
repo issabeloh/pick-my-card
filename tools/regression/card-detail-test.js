@@ -39,7 +39,9 @@ async function captureAtDate(browser, base, frozenDate) {
   await page.addInitScript(freezeClockScript(frozenDate));
   const errors = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message.slice(0, 200)));
-  page.on('console', m => { if (m.type() === 'error') errors.push('console.error: ' + m.text().slice(0, 200)); });
+  // 「Failed to load resource: net::ERR_FAILED」是下面 route.abort() 擋掉外部請求造成的，落在哪張卡純看時序，
+  // 不是程式行為——不濾掉的話基準會記到雜訊、每次跑紅的卡都不一樣（2026-11-17 修；配卡組合頁測試同樣濾掉）
+  page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|net::ERR/.test(m.text())) errors.push('console.error: ' + m.text().slice(0, 200)); });
   await page.route('**/*', route => {
     const url = route.request().url();
     if (url.startsWith(base)) return route.continue();

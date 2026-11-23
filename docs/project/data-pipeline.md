@@ -199,7 +199,7 @@ bash tools/cards-query.sh '[.cards[].cashbackRates[]? | select(.rate==0 and (.hi
 
 混用時不會報錯，活動會**被靜默濾掉**（看起來像「根本沒這活動」）：ASCII `-` < `/`，原始字串比較會把任何日期誤判成「即將開始」；`.split('-')` 遇 `/` 格式解析成 `Invalid Date`，最後被 `filterExpiredRates()` 整個濾掉（2026-07-03 教訓）。
 
-**規則**：前端任何日期比較/解析，一律走 `parseISODate()` / `getRateStatus()`（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。看到「過期活動還在顯示」，先查日期解析格式，並 Grep 手刻 `.split('/')`／`.split('-')` 的日期比較（2026-07-15 舊 `parseDateString()` 只認「/」，ISO 截止日解析成 null 被當成無截止日，6/30 過期的新戶活動一直顯示；該函數已刪）。
+**規則**：前端任何日期比較/解析，一律走 `taiwanDaysUntil()`（天數差）／ `getRateStatus()`（是否進行中）（內部已用 `slashDateToISO()` 正規化），禁止對這兩欄位手刻字串比較或 `.split('-')`；新增帶日期的區塊也要沿用這套函數。
 
 ## 9. promos.html 靜態生成 → 已搬到 `docs/project/promos.md`
 
@@ -364,7 +364,7 @@ promos（key `PROMOS`）、首頁（`HOME`）、生成的商家頁（`MERCHANT_<
 - `bodyHtml` 換進去的卡名會先 `escapeHtml`（卡名可能含 `&`）；title／description 不先 escape，因為 `buildPage()` 會整串 escape
 - 標題、描述、`mc-body` 正文因此都列進 `stripDataRegions()`——會隨日期與 cards.data 變，不挖掉就會被判成「版面不一致」擋 commit
 
-**卡片清單怎麼算出來的**：`tools/lib/merchant-cards.js` 用 Node 的 `vm` 把 `js/` 那 12 個模組
+**卡片清單怎麼算出來的**：`tools/lib/merchant-cards.js` 用 Node 的 `vm` 把 `js/` 那些模組
 **原封不動載進來跑**，不另寫一套比對規則——另寫一套就是「頁面講一套、JSON-LD 講另一套」的病根。
 它照抄 `loadCardsData()` 與 `calculateCashback()` 的完整流程，四個步驟一個都不能少：
 

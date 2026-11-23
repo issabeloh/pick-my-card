@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/results-display.js（載入順序 6/12）
+ * Pick My Card — js/results-display.js（載入順序第 6 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 結果列表顯示              → "displayResults"
  *  - 未達單筆門檻的活動區      → "displayUnmetSpendResults" / "renderUnmetThresholdNote" / "renderSpendUpgradeNotes"
@@ -523,52 +523,9 @@ function displayParkingBenefits(merchantValue, cardsToCheck, searchKeywords = nu
         return;
     }
 
-    // Determine search terms to use (含 fuzzy 別名展開)
-    const searchTerms = searchKeywords
-        ? [...new Set(searchKeywords.flatMap(k => getAllSearchVariants(k)))]
-        : getAllSearchVariants(merchantValue);
-
-    if (searchKeywords) {
-        console.log(`🅿️ 使用快捷搜尋關鍵詞匹配停車折抵: [${searchTerms.join(', ')}]`);
-    } else {
-        console.log(`🅿️ 使用輸入值匹配停車折抵: "${searchTerms[0]}"`);
-    }
-
-    const matchingBenefits = [];
-
-    // Find matching benefits
-    for (const benefit of cardsData.benefits) {
-        // Skip inactive benefits
-        if (!benefit.active) continue;
-
-        // Check if merchants match using any search term
-        if (benefit.merchants && Array.isArray(benefit.merchants)) {
-            for (const merchant of benefit.merchants) {
-                const merchantItemLower = merchant.toLowerCase();
-
-                // 注意：停車的商家名稱是長描述字串、關鍵詞常在中間（如「中興嘟嘟房」⊇「嘟嘟房」、
-                // 「全台遠東百貨停車」⊇「遠東」），因此這裡刻意用 substring 而非 startsWith，
-                // 否則會漏掉大量停車場。停車資料皆為台灣停車場專名，誤匹配風險低。
-                // 刻意不理精準搜尋（2026-11-02 站長裁定）：停車場名稱是長句，只認全等等於整區關掉
-                const isMatch = searchTerms.some(searchTerm =>
-                    searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
-                );
-
-                if (isMatch) {
-                    // Check if this card is in the user's selection
-                    const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
-
-                    if (shouldShow) {
-                        matchingBenefits.push({
-                            ...benefit,
-                            matchedMerchant: merchant
-                        });
-                    }
-                    break; // Found a match for this benefit, move to next
-                }
-            }
-        }
-    }
+    // 搜尋詞含 fuzzy 別名展開；快捷搜尋時 searchKeywords 是整組關鍵詞（比對規則與選項說明見 findMatchingParkingBenefits）
+    const matchingBenefits = findMatchingParkingBenefits(
+        searchKeywords || merchantValue, cardsToCheck, { expandAliases: true });
 
     // If no matches, hide the section
     const parkingSection = document.getElementById('parking-benefits-section');
@@ -1477,7 +1434,7 @@ function createCouponResultElement(coupon, amount) {
 
     // Handle cap display - same as regular cards
     // Check if cap exists and is a valid number
-    const capText = (coupon.cap && !isNaN(coupon.cap)) ? `NT$${Math.floor(Number(coupon.cap)).toLocaleString()}` : '無上限';
+    const capText = formatCapText(coupon.cap, { unlimitedWhen: 'falsyOrNaN' });
 
     // Debug log to check cap value
     if (coupon.merchant.includes('星巴克')) {
@@ -1670,10 +1627,10 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
     // （大戶卡海外 4% 加碼受該級別 overseasBonusCap 限制，計算時確實有套）。
     // 計算層已帶著每層實際套用的 cap，取真的會咬到的那個顯示——只改顯示，金額不變。
     const displayCap = result.cap || resolveDisplayCapFromLayers(result.calculationLayers);
-    let capText = displayCap ? `NT$${Math.floor(displayCap).toLocaleString()}` : '無上限';
+    let capText = formatCapText(displayCap);
     // Special handling for Taishin Richart card cap display
     if (result.card.id === 'taishin-richart' && result.cap) {
-        capText = `NT$${Math.floor(result.cap).toLocaleString()}+`;
+        capText = formatCapText(result.cap, { suffix: '+' });
     }
     const cashbackText = result.cashbackAmount > 0 ? 
                         `NT$${result.cashbackAmount.toLocaleString()}` : 
@@ -1768,7 +1725,9 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
             if (isBasicCashback && !isUpcoming) {
                 return renderActivityInfo({
                     matchHtml: '一般消費回饋率',
-                    conditions: result.card.domesticBonusConditions
+                    // 國內加碼期間已過（或未開始）時，它的條件也不該再出現（applyBonusPeriods，core-utils.js）
+                    conditions: (result.card.endedBonuses && result.card.endedBonuses.domestic)
+                        ? null : result.card.domesticBonusConditions
                 });
             } else if (result.matchedItem) {
                 // 活動期間／條件／登錄連結／滿額門檻——一律以「命中的槽位」matchedRateGroup 為準。
@@ -1887,8 +1846,10 @@ function showCalcBreakdown(btn, cardResult) {
         // （左邊「適用金額」欄已經帶著幣別）。省下的寬度是 5 欄能在 360px 手機排下的關鍵。
         // rate=0 的層是「超過上限」那種剩餘額度桶，不是會給回饋的層——對它寫「無上限」
         // 會讀成「這段無上限地給」，正好相反，所以留白。
-        const capLabel = hasCap ? Math.floor(layer.cap).toLocaleString()
-            : (parseFloat(layer.rate) > 0 ? '無上限' : '');
+        const capLabel = formatCapText(layer.cap, {
+            unlimitedWhen: 'nonPositive', currency: false,
+            unlimitedText: parseFloat(layer.rate) > 0 ? '無上限' : ''
+        });
         // 封頂＝適用金額被上限夾住。原本在回饋金額後面掛紅字「（封頂）」，有了上限欄
         // 之後那是同一件事講兩遍（適用金額會等於上限），而 5 欄在 360px 手機上寬度吃緊——
         // 改成上限欄轉紅表示，省下約 60px。
@@ -1969,7 +1930,7 @@ function toggleRateComposition(btn) {
     const rows = comp.rows.map(r => `<tr>
         <td class="bd-name">${escapeHtml(String(r.name))}</td>
         <td class="bd-rate">${r.rate}%</td>
-        <td class="bd-amt">${r.cap ? `上限 NT$${Math.floor(r.cap).toLocaleString()}` : '無上限'}</td>
+        <td class="bd-amt">${formatCapText(r.cap, { prefix: '上限 ' })}</td>
     </tr>`).join('');
     const totalRow = `<tr class="bd-total"><td class="bd-name">合計</td><td class="bd-rate">${comp.total}%</td><td class="bd-amt"></td></tr>`;
 

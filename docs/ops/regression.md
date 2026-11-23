@@ -1,4 +1,4 @@
-# 回歸驗證（改 script.js 計算/搜尋/顯示邏輯後必跑）
+# 回歸驗證（改 js/ 計算/搜尋/顯示邏輯後必跑）
 
 > 2026-07-12 起已自動化：**優先跑腳本**，人工流程只在腳本壞掉時當備援。
 > 執行方法、基準過期判斷、維護規則見 `tools/regression/README.md`。
@@ -13,6 +13,27 @@ node tools/regression/run-regression.js   # 差異 → exit 1 並列出哪一組
 
 改動前先跑一次確認綠燈 → 改動 → 再跑。預期內的結果改變：逐條確認差異報告後
 `--update-baseline` 重拍，新基準連同改動一起 commit。
+
+## 改了哪個檔／哪類功能 → 跑哪支測試（2026-11-17 整理）
+
+`tools/` 下的測試分散在好幾處，只有前幾支在 CLAUDE.md 提到。**表裡沒列的情況＝只跑 preflight**。每支的用途與用法看它的檔頭註解。
+`tools/regression/` 的瀏覽器測試（`search-compare.js` 除外，它用線上資料比前後兩版程式）都用凍結資料＋凍結時鐘；「Firebase 替身漏 export」由 `tools/lib/firebase-stub-guard.js` 在跑的當下補洞並印警告，看到警告要去替身補上有意義的實作。
+
+| 改了什麼 | 跑什麼 | 備註 |
+|---|---|---|
+| `js/` 的搜尋、計算、顯示、placeholder（任何會改變搜尋結果的邏輯） | `node tools/regression/run-regression.js` ＋ `node tools/regression/search-compare.js --base <ref> --ui` | 前者逐字比凍結基準；後者比約 1,900 個詞的前後差異（見下節） |
+| `js/search-match.js` 的輸入建議下拉（`setupMerchantSuggest`） | `node tools/regression/merchant-suggest-test.js` | |
+| `js/search-match.js` 的一般消費排除項目（`basicExclusions`、NCCC 小額支付） | `node tools/regression/basic-exclusions-test.js` | 凍結資料沒有該欄，測試臨時塞名單 |
+| 詳情頁回饋卡（`renderRateCard()`、`js/card-detail.js`、`js/results-display.js` 的「回饋卡共用片段」） | `node tools/regression/card-detail-test.js` | 基準是 `card-detail-baseline.json`，預期內改變才 `--update-baseline` |
+| 配卡組合頁（`js/mappings-page.js`、`js/spending-mappings.js`、配卡載存） | `node tools/regression/mappings-page-test.js` | |
+| 登入／登出／刪除帳號（`js/auth-user-data.js`）、`index.html` 的 Firebase import 清單 | `node tools/regression/delete-account-test.js`（另跑 `mappings-page-test.js`） | 這兩支自帶「已登入用戶」替身；搜尋回歸是訪客，跑不到登入路徑 |
+| `firestore.rules`、`storage.rules`、前端新增寫入 Firestore 的欄位 | `tools/firestore-rules-test.js`（Firestore／Storage 模擬器，需 Java）；改前端寫入包裝另跑 `tools/rate-limit-client-test.js` | 用法在各檔檔頭 |
+| `functions/`（`dailyFeedbackDigest`、`sendLoginLink`、`guardSignup`／`guardEmails`） | `tools/feedback-digest-test.js`、`tools/login-link-test.js`、`tools/signup-guard-test.js` | 都用模擬器，不寄真信；用法看檔頭與 `functions/README.md` |
+| `apps-script/card-editor.gs`／`CardEditor.html`、`promo-editor.gs`、`activity-writer.gs`、`cards-export.gs` 的 `runQACheck` | `node tools/apps-script-tests/card-editor-test.js`、`card-editor-ui-test.js`、`promo-editor-test.js`、`activity-writer-test.js` | 假試算表在 Node vm 裡跑；不模擬自動轉型與插列繼承格式，那部分上線後在真的表上確認 |
+| `tools/activity-writer/`（`parser.js`、`app.js`、`index.html`） | `node tools/activity-writer/parser-test.js`、`ui-test.js`，再 `node tools/activity-writer/build-apps-script.js` 重生 `apps-script/ActivityWriter.html` | preflight 會檢查生成檔是不是最新 |
+| `apps-script/watchlist-monitor.gs` 的 `checkWatchlist` 分段執行 | `node tools/test-watchlist-chunking.js` | 零依賴 |
+| `apps-script/basic-exclusions-extractor.gs`（官網變動→逐項修改）、`watchlist-monitor.gs` 呼叫它的地方 | `node tools/test-basic-exclusions-changes.js` | 零依賴 |
+| `apps-script/` 的「近期異動」資料層（`readChangelog`、`publishChangelog`、`appendToInbox_`） | `node tools/test-changelog.js` | 零依賴。⚠️ 2026-11-17 現況：29 項過、**11 項紅**——測試的假環境已補齊可以跑完，但這 11 項的預期還停在 2026-08-15「公開／封存／刪除」改版前的流程，尚未逐項判定是測試過時還是程式有問題；改這塊之前先處理 |
 
 ## 為什麼測試不讀線上 cards.data（2026-09-11 改）
 
@@ -90,7 +111,7 @@ for x in r:
 | # | 搜尋詞 | 守的機制 |
 |---|---|---|
 | 1 | `日本` | waterfall 海外三層計算 ＋ levelSettings（DBS Eco 應出現） |
-| 2 | `禾乃川` | DBS Eco specialItems ＋ hideInDisplay 不干擾搜尋 |
+| 2 | `禾乃川` | DBS Eco 指定通路 ＋ hideInDisplay 不干擾搜尋 |
 | 3 | `Apple Pay`（Sport 卡 5%） | stacking（rate+basic+domesticBonusRate）加總顯示 |
 | 4 | `悠遊卡自動加值`（大戶卡） | `rate` 排除型模型：溢出算 0 不是 basic |
 | 5 | `meta廣告` | rate=0 stacking 槽有被匯出＋overseasCashback 特例 |

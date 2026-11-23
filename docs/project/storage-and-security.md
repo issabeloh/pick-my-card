@@ -5,10 +5,11 @@
 
 ## 1. localStorage 讀取一律走安全 helpers
 
-- `readLocalJSON(key, fallback)` / `readLocalJSONArray(key, fallback)`（script.js 開頭「localStorage 安全讀取 helpers」區）
+- `readLocalJSON(key, fallback)` / `readLocalJSONArray(key, fallback)`（`js/core-utils.js`「localStorage 安全讀取 helpers」區）
 - 壞資料（污染的 JSON）→ 回傳 fallback **並移除該 key**（自我修復），絕不讓 JSON.parse 拋錯中斷流程
 - **禁止**在任何新程式碼直接寫 `JSON.parse(localStorage.getItem(...))`（`tools/preflight.sh` 會擋）
 - 載入的卡片 ID 用 `filterKnownCardIds()` 過濾已下架卡片——**只在記憶體過濾，絕不回寫**
+- **寫入端**（2026-11-23）：儲存函式裡「先寫本機快取、再寫雲端」的那一步用 `writeLocal(key, value)`（同區）。裸的 `localStorage.setItem` 在空間滿了或隱私設定擋住時會拋錯，整個函式中斷、雲端那步根本沒跑——用戶看到成功，其實哪裡都沒存。本機快取寫不進去只記 `console.error`，不擋雲端
 
 ## 2. 🔒 絕對不可以擅自改寫用戶已儲存的級別（最高等級鐵則）
 
@@ -21,7 +22,7 @@
 **嚴禁的反模式**：「用戶存的級別在目前 levelSettings 找不到」時，用預設值**顯示**是對的（防詳情頁當機），
 但**絕不可以順手把預設值 saveCardLevel() 存回去**——「找不到」常是暫時的（剛更新 cards.data 的瞬間、
 匯出短暫不完整），存回去會**永久抹掉**用戶真正的選擇且無法還原。levelSettings 之後含回該級別時會自己恢復。
-參考實作：`resolveCardLevel()`（script.js 尾段）——它**刻意不**呼叫 saveCardLevel。
+參考實作：`resolveCardLevel()`（`js/levels-payments.js`）——它**刻意不**呼叫 saveCardLevel。
 
 **「防當機」與「改寫記憶」是兩件事**：防當機靠「顯示時退回預設值」，不是「把記憶改寫成預設值」。修 bug 時不要把這兩件事重新綁在一起。
 
@@ -36,10 +37,10 @@
 - **雲端有值 → 雲端為準**；**雲端沒值 → 靜默帶入訪客值並上傳**
 - 訪客 key 兩種情況都會被「消化移除」（避免留在共用電腦洩漏給下一位使用者）
 - 信用卡/行動支付/我的信用卡：在各自的 load 函數內處理
-- 配卡表/級別/筆記/免年費/結帳日/CUBE 發卡組織/童樂匯權益：統一在 `absorbGuestPersonalData(userData)`
+- 配卡表/級別/筆記/免年費/我的額度/結帳日/CUBE 發卡組織/童樂匯權益：統一在 `absorbGuestPersonalData(userData)`
 - **童樂匯權益**（2026-11-20 起訪客也存本機）：訪客 key `childrenEligible_guest`（JSON `true`/`false`，`readLocalJSON` 讀）。登入時雲端 `users/{uid}.isChildrenEligible` 有值 → 雲端為準；沒值 → 帶入訪客值。處理完移除 key（「有沒有未成年子女」不留在共用電腦）；帶入寫入失敗則保留 key 下次重試。登入狀態下不讀寫這個 key。`core-utils.js` 的初值也讀它（Firebase 逾時走訪客 UI 時才不會變回預設）
 - **例外：刷卡小抄（`spendingMappings`）是合併、不是雲端為準**（2026-10-14 起訪客也能加小抄）：現讀雲端為底，補上訪客清單裡雲端沒有的「cardId × merchant」；雲端讀不到或寫入失敗 → 保留訪客 key 下次重試，絕不拿 userData 覆寫。小抄的訪客自訂名稱 `merchantAliases_guest`（雲端沒有的商家才帶入）與標題 `mappingsTitle_guest`（雲端沒設才帶入）best-effort，處理完即移除
-- 高價值資料（級別、筆記）上傳失敗時**保留 key 下次重試**；低價值資料 best-effort
+- 高價值資料（級別、筆記、我的額度）上傳失敗時**保留 key 下次重試**；低價值資料 best-effort
 
 ## 5. 登出清理
 
@@ -83,3 +84,5 @@
 - [2026-10-03] 改成「Email 連結登入」：新用戶不能再用 email／密碼註冊（`guardSignup` 擋 `signInMethod === 'password'`），既有密碼帳號照常登入、也可直接用連結登入同一個帳號。登入信由 `functions/sendLoginLink` 自己寄（強制 App Check＋每信箱／每 IP 限量），Firebase 內建登入連結信由 `guardEmails` 一律擋——否則任何人都能拿公開 API 對陌生人信箱狂寄。同一個實體信箱（Gmail 正規化）只能開一個新帳號（`signupInboxes/`）。前端 sendLoginLink 用動態 import 載入 functions SDK（回歸測試的替身模組才不會壞）
 - [2026-10-03] 密碼登入從畫面拿掉（登入視窗只剩 Google＋Email 登入連結；`openAuthModal()` 任何模式都開成 emailLink）。**不能在 Firebase console 關掉 Email/Password**：Email 連結登入掛在同一個開關底下，關了連結登入也一起停。安全性不受影響：新的密碼註冊由 guardSignup 在伺服器端擋；既有密碼帳號理論上仍可用密碼打 API 登入，但只有知道密碼的本人做得到
 - [2026-10-04] 新戶活動圖全部不顯示 → 10/1 改寫 storage.rules 時只開了 feedback/、其餘「一律拒絕」，漏了公開讀取的 `promo-images/`（站上用 `...?alt=media` 不帶 token 直接載入）；App Check 圖表上的大量「unknown origin」其實就是訪客載入新戶活動圖被拒 → 補上 promo-images 公開讀、禁止寫。**改 Storage／Firestore 規則前，先列出網站實際讀寫的所有路徑**（grep HTML／js／cards.data 裡的 firebasestorage 網址）再寫規則，且要求站長貼規則前先把 console 舊規則貼給我比對
+- [2026-11-17] 清理死碼時發現 `saveCardLevel()` 的「大小寫／空格正規化」呼叫點只存在於 specialItems 計算分支 → 那條分支的資料形狀早已停用，隨分支一起刪除 → 現在程式裡沒有任何正規化存回的呼叫點；第 2 節第 2 條仍是「允許」的情況，但日後若要加回正規化，寫在 `resolveCardLevel()` 旁並沿用同樣的註解，不要散在計算路徑裡
+- [2026-11-23] 訪客填的「我的額度」登入後消失 → `absorbGuestPersonalData` 帶入了級別、筆記、免年費、結帳日，唯獨漏了 `creditLimit_local_*`（額度功能 2026-07-07 才加，沒人回頭補這裡）；登出清理清單卻有它，於是訪客值先被晾著、登出時再被刪 → 補上第 4b 段。**新增任何訪客可寫的個人 key 時，三處一起改**：寫入函式、`absorbGuestPersonalData`、`clearPersonalLocalDataOnSignOut` 的清單

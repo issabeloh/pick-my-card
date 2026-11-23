@@ -462,8 +462,6 @@
                  面板／存圖對話框是 position:fixed 的覆蓋層（z-index 1060），卡片詳情（1100）疊在最上面。 -->
             <!-- ===== 畫面：我的刷卡小抄（data-view="mappings"）===== -->
             <section id="mappings-page" class="mp-page app-view" data-view="mappings" hidden aria-label="我的刷卡小抄">
-                <!-- 改版告知（2026-09-30）：舊「我的配卡組合」搬到這裡；所有人都看得到 -->
-                <p class="mp-moved-note" id="mp-moved-note">原『我的配卡組合』已升級為本頁面的『我的刷卡小抄』！原本已釘選的項目也已完整搬動到這裡。</p>
                 <!-- 頁面說明：三步驟（2026-09-29 由一行字改成說明卡） -->
                 <div class="mp-intro" role="note" aria-label="我的刷卡小抄怎麼用">
                     <!-- 使用教學預設收合（2026-09-30） -->
@@ -1430,9 +1428,9 @@ Apple Pay 國內消費 2026 下半年首選永豐 Sport 卡 5%；兆豐 BT21 卡
     <!-- Firebase Configuration -->
     <!-- async（不是 defer）：module script 預設就是 deferred，若保持 defer，瀏覽器要等這個
          script 完全 fetch+執行完才會觸發 DOMContentLoaded——Firebase 網路慢（不是被擋，只是慢）
-         時，script.js 的 DOMContentLoaded handler（cardsData 載入、UI 綁定、Firebase timeout
+         時，js/home-ui.js 的主初始化 DOMContentLoaded handler（cardsData 載入、UI 綁定、Firebase timeout
          fallback 本身）會被這個 script 卡住，逾時 fallback 永遠等不到執行的機會。改 async 讓這個
-         module 獨立非同步載入，不阻塞 DOMContentLoaded；script.js 原本就用輪詢等
+         module 獨立非同步載入，不阻塞 DOMContentLoaded；js/auth-user-data.js 原本就用輪詢等
          window.firebaseAuth/window.db 就緒，不依賴執行順序，這裡只設定 window.* 屬性、不碰 DOM，
          async 對它是安全的。 -->
     <script type="module" async>

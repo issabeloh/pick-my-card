@@ -437,15 +437,6 @@ header {
     border-color: white;
 }
 
-.auth-btn.start-using {
-    background: rgba(59, 130, 246, 0.7);
-    color: white;
-    border-color: rgba(59, 130, 246, 0.9);
-}
-
-.auth-btn.start-using:hover {
-    background: rgba(59, 130, 246, 0.85);
-}
 
 .user-photo {
     width: 28px;
@@ -809,14 +800,6 @@ header h1 {
     text-decoration: underline;
 }
 
-.announcement-text.no-link {
-    cursor: default;
-}
-
-.announcement-text.no-link:hover {
-    opacity: 1;
-    text-decoration: none;
-}
 
 /* Date badge bubble（是 announcement-text 的兄弟元素，禁止塞回文字內——
    iOS Safari 對 line-clamp 元素內含 inline-block + 淡入淡出會停止重繪文字。
@@ -1007,20 +990,6 @@ header h1 {
     opacity: 0.9;
 }
 
-.btn-secondary {
-    background: #f3f4f6;
-    color: #374151;
-    padding: 10px 20px;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.btn-secondary:hover {
-    background: #e5e7eb;
-}
 
 /* Supported cards */
 .cards-header {
@@ -1037,9 +1006,6 @@ header h1 {
 }
 
 /* 行動支付區塊 */
-.header-section {
-    margin-top: 24px; /* 增加與上方信用卡區塊的間距 */
-}
 
 .section-title-row {
     display: flex;
@@ -1504,12 +1470,6 @@ main {
     transform: translateY(-1px);
 }
 
-.custom-option-info {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex: 1;
-}
 
 .custom-option-delete {
     background: none;
@@ -2437,26 +2397,6 @@ input[type="number"]:focus {
     display: none;
 }
 
-/* Desktop hover popup — uses native Popover API for top-layer rendering */
-.promo-help-popup {
-    display: none;
-    margin: 0;
-    border: 1px solid #bae6fd;
-    background: #f0f9ff;
-    border-radius: 8px;
-    padding: 10px 12px;
-    font-size: 13px;
-    line-height: 1.5;
-    color: #0c4a6e;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    max-width: 320px;
-    width: max-content;
-    inset: auto;
-}
-
-.promo-help-popup:popover-open {
-    display: block;
-}
 
 /* Help button next to "新戶活動" label */
 .promo-help-btn {
@@ -3910,11 +3850,6 @@ input[type="number"]:focus {
 }
 
 /* --- My Owned Cards overview (layer 1) --- */
-.owned-overview-actions {
-    display: flex;
-    justify-content: center;
-    margin-top: 16px;
-}
 .manage-owned-btn {
     display: inline-flex;
     align-items: center;
@@ -5414,16 +5349,6 @@ input[type="number"]:focus {
    桌機：三欄等寬（原本 repeat(auto-fit, minmax(190px,1fr)) 在寬容器下會切出 6 欄、
    三個區塊只擠在左邊 60%），欄與欄之間垂直線；手機：單欄，區塊之間水平線。 */
 
-.info-grid {
-    display: grid;
-    gap: 12px;
-}
-
-.info-grid-2col {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
 
 .info-column-left {
     display: flex;
@@ -5431,15 +5356,6 @@ input[type="number"]:focus {
     gap: 16px;
 }
 
-.info-item-full {
-    grid-column: 1 / -1;
-}
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
 
 .info-label {
     font-size: var(--ui-text-13);
@@ -5482,12 +5398,6 @@ input[type="number"]:focus {
     margin-bottom: 0;
 }
 
-/* Best cashback style for payment detail items */
-.cashback-detail-item.best-cashback {
-    border-color: var(--ui-green);
-    background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
-}
 
 /* Real-time search input above special cashback */
 /* 詳情頁搜尋框區塊（2026-10-14）：放在所有回饋區上方、自成一塊——淺藍底＋標籤，
@@ -6365,28 +6275,6 @@ mark.cashback-search-hl {
 
 /* 筆記區域額外間距 */
 
-/* .cube-level-selector / .level-label / .level-select 已於 2026-08-01 移除：
-   那是 index.html 裡寫死的 CUBE 等級下拉選單的樣式，但那段標記早就被
-   showCardDetail() 注入的級別選擇器取代（現在是 .personal-level-select），
-   三個 class 全站已無人引用。 */
-
-.level-description {
-    margin-top: 12px;
-    padding: 12px;
-    background: white;
-    border-radius: 6px;
-    border-left: 3px solid #3b82f6;
-    font-size: 13px;
-    line-height: 1.5;
-    color: #4b5563;
-    margin-bottom: 0;
-}
-
-.level-description small {
-    color: #6b7280;
-    font-size: 12px;
-    font-weight: 500;
-}
 
 /* 修復信息網格佈局 */
 .info-grid-2col {
@@ -6425,10 +6313,6 @@ mark.cashback-search-hl {
     line-height: 1.4;
 }
 
-/* 空的占位元素 */
-.empty-placeholder {
-    display: none;
-}
 
 /* 年費訊息合併顯示 */
 .fee-annual-section {
@@ -6574,12 +6458,6 @@ mark.cashback-search-hl {
     font-size: 15px;
 }
 
-.guide-intro {
-    color: #0c4a6e;
-    margin-bottom: 12px;
-    font-size: 14px;
-    line-height: 1.5;
-}
 
 .guide-list {
     list-style: none;
@@ -6834,27 +6712,6 @@ mark.cashback-search-hl {
     background: #e5e7eb;
 }
 
-/* 法務頁尾（2026-08-20 新增）：全站每頁都要有的隱私權政策入口。
-   AdSense／Analytics 服務條款要求發布商提供隱私權政策，個資法第 8 條的告知義務
-   也需要常設入口，所以這條 bar 是「每一頁都要出現」的東西，不是裝飾。 */
-.site-legal-footer {
-    max-width: 1200px;
-    margin: 12px auto 20px;
-    padding: 0 24px;
-    text-align: center;
-    font-size: 12px;
-    color: #9ca3af;
-}
-
-.site-legal-footer a {
-    color: #6b7280;
-    text-decoration: none;
-}
-
-.site-legal-footer a:hover {
-    color: #2563eb;
-    text-decoration: underline;
-}
 
 /* Data Update Footer */
 .data-update-footer {
@@ -7379,21 +7236,6 @@ mark.cashback-search-hl {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
-.feedback-input {
-    width: 100%;
-    padding: 10px 12px;
-    border: 1px solid var(--ui-line);
-    border-radius: var(--ui-radius-md);
-    font-family: inherit;
-    font-size: 0.875rem;
-    transition: border-color 0.2s;
-}
-
-.feedback-input:focus {
-    outline: none;
-    border-color: var(--ui-brand-bright);
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
 
 .required {
     color: #ef4444;
@@ -9409,21 +9251,10 @@ mark.cashback-search-hl {
     height: auto;
 }
 
-.app-layout main .quick-search-label {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #6b7280;
-    margin-top: 12px;
-    margin-bottom: 6px;
-}
 
 @media (max-width: 768px) {
     .app-layout main label {
         margin-bottom: 6px;
-    }
-    .app-layout main .quick-search-label {
-        margin-top: 6px;
-        margin-bottom: 4px;
     }
     .app-layout main input[type="text"],
     .app-layout main input[type="search"],
@@ -10648,15 +10479,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .mp-intro-toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
 .mp-steps li { display: flex; align-items: center; gap: 9px; font-size: 13.5px; line-height: 1.45; color: #374151; margin: 0; }
 .mp-steps strong { color: #1e3a8a; font-weight: 800; }
-/* 改版告知：頁面最上方一行備註（所有人） */
-.mp-moved-note { max-width: 738px; margin: 0 auto 12px; padding: 7px 4px; box-sizing: border-box; border-top: 1px dashed #cfd4dc; border-bottom: 1px dashed #cfd4dc; font: 500 12px/1.7 ui-monospace, Menlo, monospace; letter-spacing: .02em; color: #6b7280; text-align: center; }   /* 2026-09-30 站長從 5 案選 2「收據小字」：與小抄的收據風格一致 */
-/* 一次性提示：頁籤下方的說明氣泡 */
-.mp-hint-bubble { position: fixed; z-index: 1300; pointer-events: none; box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 10px 10px 10px 14px; border-radius: 12px; background: #111827; color: #fff; font-size: 13px; line-height: 1.5; box-shadow: 0 12px 30px rgba(0, 0, 0, .28); animation: mp-bubble-in .25s ease-out; }
-.mp-hint-bubble::before { content: ""; position: absolute; top: -6px; left: calc(var(--arrow-x, 50%) - 6px); border: 6px solid transparent; border-top: 0; border-bottom-color: #111827; }
-.mp-hint-bubble span { flex: 1; }
-.mp-hint-bubble button { pointer-events: auto; flex: none; width: 26px; height: 26px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .15); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
-@keyframes mp-bubble-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .mp-hint-bubble { animation: none; } }
 .mp-step-n { flex: none; width: 22px; height: 22px; border-radius: 50%; background: #1e40af; color: #fff; font: 800 12px/22px ui-monospace, Menlo, monospace; text-align: center; }
 /* 手機／平板：單欄，依序＝存圖／編輯鈕 → 搜尋 → 提示 → 設定 → 小抄 → 商家數（右側）（.mp-side/.mp-main 用 contents 把子元素攤平排序） */
 .mp-layout { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; }
@@ -10717,7 +10539,6 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 }
 .mp-seg button.on { background: #fff; color: #111827; box-shadow: 0 1px 2px rgba(0, 0, 0, .12); }
 .mp-seg button svg { width: 16px; height: 16px; }
-.mp-seg-wrap { flex-wrap: wrap; }
 .mp-a-s { font-size: 11px; }
 .mp-a-l { font-size: 16px; }
 .mp-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #374151; cursor: pointer; white-space: nowrap; }

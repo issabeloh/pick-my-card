@@ -1,18 +1,22 @@
 /* ============================================================
- * Pick My Card — js/home-ui.js（載入順序 3/12）
+ * Pick My Card — js/home-ui.js（載入順序第 3 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 本週亮點活動 Spotlight     → "renderSpotlights" / "openSpotlightModal"
- *  - 亮點期限自動匹配真實活動   → "resolveSpotlightDeadline" / "findSpotlightCardActivities"
- *  - 禮物圖 lightbox／回頂鈕   → "setupGiftImageLightbox" / "setupBackToTopButton"
- *  - 首次引導（分流 B 組的逐步導覽）→ "首次引導" / "ONBOARD_STEPS" / "beginOnboardTour"
- *  - 錯誤訊息                  → "showErrorMessage"
- *  - 主要 DOM 元素參照          → "merchantInput" / "calculateBtn"
- *  - 公告列＋公告 modal         → "setupAnnouncementBar" / "displayAnnouncement"
- *  - 主初始化（DOMContentLoaded）→ "DOMContentLoaded"
- *  - 圖片 lazy loading          → "initializeLazyLoading"
- *  - 卡片/支付 chips            → "populateCardChips" / "populatePaymentChips"
- *  - 全站事件綁定              → "setupEventListeners"
- *  - 搜尋提示                  → "checkAndShowSearchHint" / "handleMerchantInput"
+ *  - 本週亮點活動 Spotlight      → "spotlightItems" / "renderSpotlights"
+ *  - 亮點期限自動匹配真實活動    → "resolveSpotlightDeadline"
+ *  - 禮物圖 lightbox／回頂鈕     → "setupGiftImageLightbox" / "setupBackToTopButton"
+ *  - 桌機空狀態：推薦活動放搜尋框正下方 → "placeSpotlightSection" / "setupSpotlightPlacement"
+ *  - 亮點詳情 modal              → "findSpotlightCardActivities" / "openSpotlightModal"
+ *  - 計算鈕提醒 calc-nudge       → "nudgeCalculateBtn" / "nudgeIfCalcConditionsChanged"
+ *  - 商家亮點比較                → "compareSpotlightMerchant"
+ *  - 首次引導（分流 B 組的逐步導覽） → "ONBOARD_STEPS" / "beginOnboardTour" / "首次引導"
+ *  - 錯誤訊息                    → "showErrorMessage"
+ *  - 主要 DOM 元素參照           → "merchantInput" / "calculateBtn"
+ *  - 公告列＋公告 modal          → "initializeAnnouncements" / "setupAnnouncementBar" / "displayAnnouncement"
+ *  - 主初始化（DOMContentLoaded） → "DOMContentLoaded"
+ *  - 圖片 lazy loading           → "initializeLazyLoading"
+ *  - 卡片/支付 chips             → "populateCardChips" / "populatePaymentChips"
+ *  - 全站事件綁定                → "setupEventListeners"
+ *  - 搜尋提示                    → "checkAndShowSearchHint" / "handleMerchantInput"
  * ============================================================ */
 // ============ 本週亮點活動 (Spotlight) ============
 // Editorial highlights from cardsData.spotlights. Shows 3 per page in a
@@ -51,12 +55,12 @@ function spotlightTotalPages() {
     return spotlightPages.length;
 }
 
+// 亮點卡「剩 N 天」的 N 把今天算進去：到期日當天＝1、已過期＝0 或負數。
+// （比 getDaysUntilEnd 的「當天＝0」多 1，是亮點卡一直以來的算法，刻意保留。）
+// 今天＝台灣的今天，走 core-utils 的 taiwanDaysUntil，不看裝置時區。
 function getSpotlightDaysLeft(deadline) {
-    if (!deadline) return null;
-    const end = new Date(deadline);
-    if (isNaN(end.getTime())) return null;
-    end.setHours(23, 59, 59, 999);
-    return Math.ceil((end - new Date()) / (1000 * 60 * 60 * 24));
+    const days = taiwanDaysUntil(deadline);
+    return days === null ? null : days + 1;
 }
 
 // 亮點卡的期限：一律用「這張卡在這個通路的真實活動期限」（Highlights 工作表的
@@ -534,7 +538,8 @@ function getSpotlightCardName(item) {
 }
 
 function formatSpotlightCap(cap) {
-    return (cap === null || cap === undefined || isNaN(cap)) ? '無上限' : `NT$${Math.floor(cap).toLocaleString()}`;
+    // 與詳情頁不同：cap=0 或 '' 這裡會顯示「NT$0」（沿用舊行為；見 formatCapText 的 unlimitedWhen 說明）
+    return formatCapText(cap, { unlimitedWhen: 'nullishOrNaN' });
 }
 
 // 卡片詳情 ⓘ 按鈕：置於 modal header 標題（卡名）下方（openSpotlightModal 動態插入 header），
@@ -1206,7 +1211,6 @@ function initializeAnnouncements() {
 function setupAnnouncementBar() {
     const announcementBar = document.getElementById('announcement-bar');
     const announcementText = document.getElementById('announcement-text');
-    const announcementIndicator = document.getElementById('announcement-indicator');
     const prevBtn = document.getElementById('announcement-prev');
     const nextBtn = document.getElementById('announcement-next');
     const closeBtn = document.getElementById('announcement-close');

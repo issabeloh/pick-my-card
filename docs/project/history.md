@@ -4,6 +4,14 @@
 > 2026-07-11 之前的完整敘述見 `docs/archive/CLAUDE-2026-07-11-original.md`。
 > 新條目往上加，格式：`## YYYY-MM-DD 標題` ＋ 3-6 行重點。
 
+## 2026-11-17 移除 specialItems／generalItems 資料形狀（站長核定）
+- 背景：早期分級卡有「卡片層級的通路名單 `specialItems`」（CUBE 另有 `generalItems`），級別只給一個 rate。後來所有卡改成「通路都在 cashbackRates、槽內用 placeholder」，匯出端不再輸出這兩欄，前端的分支成了約 340 行死碼
+- 風險：`calculateCardCashback` 的死分支和現役分支有 60 行近乎相同的迴圈，而且已經不一致（死分支的 cap 沒經過 `parseCashbackCap`、級別解析是內聯的另一套），接手的模型很容易改錯邊
+- 刪除範圍：`js/cashback-engine.js`（計算分支，含一個 `saveCardLevel` 呼叫點）、`js/data-loader.js`（索引）、`js/card-detail.js`（詳情頁分支）、`js/search-match.js`（搜尋與輸入建議）
+- 保留：`specialRate`／`generalRate` 是 placeholder 名稱，跟這件事無關，CUBE 還在用
+- 驗證：六支回歸全綠；`search-compare.js` 用線上資料比 1,955 個搜尋詞＋265 個畫面，改動前後零差異
+- CLAUDE.md 鐵則 4 改寫成一般的陣列判斷（原本只講 specialItems）；全貌見 `docs/reviews/cleanup-audit-2026-11-17.md` B1
+
 ## 2026-11-10 首訪轉址保留來源（GA 把 Google 自然搜尋算成 Direct）＋ 商家頁標題代換字
 - 症狀：GA4 自然搜尋 6→8 月 442→366，同期 Search Console 點擊翻倍
 - 根因：`index.html` 首屏腳本把全新訪客 `location.replace` 到 landing，跑在 GA 載入之前；landing 收到的 referrer 是自己網域，GA4 忽略 → (direct)。轉址也丟掉整串查詢字串（utm_*／gclid）
@@ -35,8 +43,8 @@
 ## 2026-09-17 /promos 改版：一張卡一組 ＋ 卡片特色（站長逐輪定案）
 
 起因：站長回報資訊層級不對——「應該馬上看到獎勵，被吸引後才看到是哪張卡送的」，
-且想在活動頁直接看到卡片的常態回饋。經五輪 mockup 定案（過程與取證留在
-`docs/mockups/promos-2026-09/`，實作完成後可整包刪）。
+且想在活動頁直接看到卡片的常態回饋。經五輪 mockup 定案（過程與取證原放在
+`docs/mockups/promos-2026-09/`，實作完成後於 2026-11-17 刪除，要考古查 git 歷史）。
 
 - 一張卡一組、同卡多檔活動「卡疊卡」堆疊；排序固定依「最高可拿」倒序，**排序切換 UI 移除**
 - 三種獎勵換算成同一單位：定額＝票面金額、加碼＝`bonus_rate × bonus_cap`、首刷禮無現金定價
@@ -82,6 +90,7 @@
 - 載入順序＝依賴順序：載入期跨檔依賴只有 window.toggleMerchants/toggleConditions 賦值（與定義同檔）；其餘跨檔呼叫都在事件/DOMContentLoaded 之後，DOM ready 時 12 檔已全數載入
 - 消費者三頁：index.html＋merchant/*.html（`<base href="/">` 共用根目錄 js/）；update-version.sh 從此連 merchant 頁一起 bump（模組版本必須 lockstep），preflight 新增規則 1c 查覆蓋與順序一致
 - 每階段（P1–P5）獨立 commit＋preflight＋regression 12/12 綠；分支 claude/script-js-modularization-czrvtu
+- 原拆分計畫書 `docs/ops/script-split-plan.md`（硬約束與分階段流程）已於 2026-11-17 刪除，要考古查 git 歷史；上面幾條就是它的結論摘要（現況是 13 支，第 13 支 mappings-page 2026-09-28 新增）
 
 ## 2026-07-12 getOverflowRate 移除 meta/google 廣告寫死特例
 - 舊特例：簡單路徑溢出遇 meta/google 廣告通路改用 overseasCashback（台新 Richart 除外）——用通路名稱判斷海外的 cashbackModel 前遺物

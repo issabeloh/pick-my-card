@@ -8,7 +8,7 @@
  *   1-監控清單 / 2-變動通知 / 3-貼上原文 / 4-待審核-* 都在這本；
  *   卡片正式資料（Cards Data）在另一本「PMC 管理系統」試算表（＝資料檔），
  *   本腳本用 openById 跨檔唯讀讀取卡片 ID 清單。
- *   ⚠️ 唯一的跨檔「寫入」是 publishChangelog（2026-07-31 新增）——只 append 到資料檔的
+ *   ⚠️ 唯一的跨檔「寫入」是 processInboxRows 的發布（2026-07-31 新增，舊名 publishChangelog）——只 append 到資料檔的
  *      「變動紀錄」新表，Cards Data 等既有卡片資料一格都不碰（規劃書 §3.3／§3.4 已批准
  *      的寫回設計，且比它更安全：寫壞了只影響那張新表，版本紀錄就是復原鍵）。
  *
@@ -300,7 +300,7 @@ function ensurePastedInputStatusHeader_(sheet) {
 //    這張新表，且 Google Sheets 版本紀錄就是復原鍵（BENEFITS-AUTOMATION-PLAN.md §3.4）。
 // ⚠️ 防重複發布靠把動作欄改成「已發布」：再按一次選單不會重寫同一列。
 //
-// 舊名 publishChangelog 保留成一行轉呼叫（下面），免得誰的觸發器/書籤還指著它。
+// 舊名 publishChangelog 的轉呼叫已於 2026-11-23 刪除（站長確認觸發條件沒有指向它，選單直接叫 processInboxRows）。
 function processInboxRows() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -494,11 +494,6 @@ function processInboxRows() {
   if (!lines.length) lines.push('這次沒有任何列符合處理條件。');
 
   ui.alert('處理變動通知', lines.join('\n\n') + backfillNote, ui.ButtonSet.OK);
-}
-
-// 舊名保留：以前的選單／觸發器／筆記可能還指著 publishChangelog，讓它轉呼叫新流程就好
-function publishChangelog() {
-  processInboxRows();
 }
 
 // 動作欄算不算「要公開」：公開 / V / v / 全形Ｖ / 勾號 / 核取方塊的 true 都吃；「已發布」不算。

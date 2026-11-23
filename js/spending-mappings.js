@@ -1,13 +1,13 @@
 /* ============================================================
- * Pick My Card — js/spending-mappings.js（載入順序 10/12）
+ * Pick My Card — js/spending-mappings.js（載入順序第 10 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 消費配卡表載存            → "loadSpendingMappings" / "saveSpendingMappings"
- *  - 釘選/取消釘選             → "togglePin" / "addMapping"
+ *  - 消費配卡表載存              → "loadSpendingMappings" / "saveSpendingMappings"
+ *  - 釘選/取消釘選               → "addMapping" / "togglePin"
  *  - 小抄存的名字認回改名後的寫法 → "resolveMappingMerchant" / "resolveMappingItemName" / "findPinnedMapping"
  *  - 我的刷卡小抄頁面           → 見 js/mappings-page.js（2026-09-28 由 modal 改成完整頁面）
- *  - 免年費狀態                → "loadFeeWaiverStatus" / "setupFeeWaiverStatus"
- *  - 我的額度相關功能           → "loadCreditLimit" / "setupCreditLimit"
- *  - 結帳日/繳款日             → "loadBillingDates" / "setupBillingDates"
+ *  - 免年費狀態                  → "loadFeeWaiverStatus" / "setupFeeWaiverStatus"
+ *  - 我的額度相關功能            → "loadCreditLimit" / "setupCreditLimit"
+ *  - 結帳日/繳款日               → "loadBillingDates" / "setupBillingDates"
  * ============================================================ */
 // ============================================
 // 消費配卡表功能
@@ -77,14 +77,14 @@ async function saveSpendingMappings(mappings) {
     // 檢查是否有登入用戶
     if (!currentUser) {
         // 未登入用戶只保存在本地
-        localStorage.setItem('spendingMappings', JSON.stringify(mappings));
+        const ok = writeLocal('spendingMappings', JSON.stringify(mappings));
         console.log('💾 [配卡] 未登入，僅保存到本地');
-        return true;
+        return ok;
     }
 
     try {
-        // 保存到本地快取
-        localStorage.setItem(`spendingMappings_${currentUser.uid}`, JSON.stringify(mappings));
+        // 保存到本地快取（寫不進去不擋雲端，見 writeLocal）
+        writeLocal(`spendingMappings_${currentUser.uid}`, JSON.stringify(mappings));
         console.log('✅ [配卡] 已保存到本地快取:', mappings.length, '筆');
 
         // 保存到 Firestore 的 users collection
@@ -483,15 +483,17 @@ async function setupFeeWaiverStatus(cardId) {
 
 // 我的額度相關功能（選填金額；比照免年費狀態的儲存方式）
 
+// 額度字串／數字 → 正數，其餘（null、undefined、''、0、負數、非數字）一律 null＝未填寫。
+// 讀額度的兩個地方共用：loadCreditLimit（本檔）、mpLoadLimits（js/mappings-page.js，載入順序在後）
+function parseCreditLimit(v) {
+    const n = Number(v);
+    return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null;
+}
+
 // 讀取我的額度（回傳數字，未填寫回傳 null）
 async function loadCreditLimit(cardId) {
-    const parse = (v) => {
-        const n = Number(v);
-        return v !== null && v !== '' && Number.isFinite(n) && n > 0 ? n : null;
-    };
-
     if (!currentUser) {
-        return parse(localStorage.getItem(`creditLimit_local_${cardId}`));
+        return parseCreditLimit(localStorage.getItem(`creditLimit_local_${cardId}`));
     }
 
     try {
@@ -499,16 +501,16 @@ async function loadCreditLimit(cardId) {
             const docRef = window.doc(window.db, 'users', currentUser.uid);
             const docSnap = await window.getDoc(docRef);
             if (docSnap.exists() && docSnap.data().creditLimits) {
-                const amount = parse(docSnap.data().creditLimits[cardId]);
+                const amount = parseCreditLimit(docSnap.data().creditLimits[cardId]);
                 const localKey = `creditLimit_${currentUser.uid}_${cardId}`;
                 localStorage.setItem(localKey, amount === null ? '' : String(amount));
                 return amount;
             }
         }
-        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+        return parseCreditLimit(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
     } catch (error) {
         console.error('❌ 讀取我的額度失敗:', error);
-        return parse(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
+        return parseCreditLimit(localStorage.getItem(`creditLimit_${currentUser.uid}_${cardId}`));
     }
 }
 

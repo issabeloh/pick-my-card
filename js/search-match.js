@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/search-match.js（載入順序 4/12）
+ * Pick My Card — js/search-match.js（載入順序第 4 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 模糊搜尋對照表            → "fuzzySearchMap"
  *  - 搜尋排除表                → "searchExclusionMap" / "mergeDataSearchExclusions"
@@ -7,16 +7,18 @@
  *  - 商家名稱彎引號正規化      → "normalizeMerchantQuotes" / "normalizeQuoteChars"
  *  - 精準搜尋開關              → "isExactSearchEnabled"
  *  - 搜尋匹配核心              → "findMatchingItem" / "expandSearchTerms" / "findSearchHits"（找、算、顯示三步之「找」）
+ *  - 停車折抵比對（四處共用）   → "findMatchingParkingBenefits"
  *  - 匹配結果提示 UI            → "showMatchedItem" / "showNoMatchMessage"
  *  - 匹配到但沒活動的提示        → "showMatchedButNoActivityMessage"
  *  - 送出時重新推導匹配          → "syncMatchedItemToInput"
- *  - 輸入驗證                  → "validateInputs"
- *  - 同活動合併                → "mergeResultsByActivity"
- *  - 無匹配 fallback            → "buildBasicCashbackResult"
- *  - 輸入建議下拉選單            → "setupMerchantSuggest" / "getMerchantSuggestions"
- *  - 排除項目同義詞群組          → "expandExclusionGroupTerms"
- *  - 一般消費排除項目            → "getBasicExclusionHits" / "getBasicExclusionMaybeHits" / "showBasicExcludedMessage" / "showBasicExclusionPreview"
+ *  - 輸入驗證                    → "validateInputs"
+ *  - 同活動合併                  → "mergeResultsByActivity"
+ *  - 無匹配 fallback             → "buildBasicCashbackResult"
+ *  - 排除項目同義詞群組          → "getBasicExclusionSearchTerms" / "expandExclusionGroupTerms"
+ *  - 一般消費排除項目            → "showBasicExclusionPreview" / "getBasicExclusionHits" / "getBasicExclusionMaybeHits"
  *  - NCCC 小額支付品牌           → "findMicropaymentBrand" / "classifyBasicExclusion"
+ *  - 排除／未達門檻的提示訊息    → "showBasicExcludedMessage" / "appendUnmetSpendNote"
+ *  - 輸入建議下拉選單            → "MERCHANT_SUGGEST_LIMIT" / "getMerchantSuggestions" / "setupMerchantSuggest"
  * ============================================================ */
 // 模糊搜尋對照表：2026-10-15 起全部搬到 Google Sheets「統一詞」工作表（其他寫法＋搜尋別名），
 // 匯出成 cardsData.termAliases，載入時由 mergeDataTermAliases 填進來（別名 → 統一詞）。
@@ -113,7 +115,7 @@ function mergeDataTermAliases(data) {
 // 只動商家名稱類欄位（下面的 key 清單）底下的字串值，不動物件的 key：
 // 級別名稱是識別碼（鐵則 6），條件文字等其他欄位照原樣顯示
 const MERCHANT_NAME_KEYS = new Set([
-    'items', 'specialItems', 'generalItems', 'merchant', 'merchants',
+    'items', 'merchant', 'merchants',
     'basicExclusions', 'term', 'aliases', 'excludedItems'
 ]);
 function normalizeQuoteChars(text) {
@@ -164,7 +166,7 @@ function toggleExactSearchEmptyHint(show) {
 // options.exactOnly：只回傳完全一致的匹配（isExactMatch；fuzzy 同義詞展開後全等也算，
 // 例如搜「國外」時 item「海外」視為完全一致）。快捷搜尋等呼叫端不傳即維持原行為。
 // 搜尋詞展開：原詞＋fuzzy 正反向對照＋片語級同義詞。第一個元素永遠是原詞。
-// findMatchingItem 與一般消費排除判斷（isBasicExcludedForSearch）共用，兩邊才認得同一組別名。
+// findMatchingItem 與一般消費排除判斷（getBasicExclusionHits）共用，兩邊才認得同一組別名。
 // 臺／台視為同一個字（2026-10-30 站長要求）：搜「臺北捷運」要找到「台北捷運」，反過來也一樣。
 // 做法是把原詞的「全台」「全臺」兩個版本都當成起點，各自再走一次別名與片語展開；
 // 比對與計算都吃這份清單（getAllSearchVariants），所以資料名稱寫哪個字都對得到，不用再為每個詞列臺字別名。
@@ -318,18 +320,6 @@ function findMatchingItem(searchTerm, options = {}) {
             checkItemMatches(rateGroup.items, searchTerms, searchLower, allMatches, searchTerm);
         }
 
-        // Check specialItems for CUBE card
-        if (card.specialItems) {
-            checkItemMatches(card.specialItems, searchTerms, searchLower, allMatches, searchTerm);
-        }
-
-        // Check generalItems for CUBE card
-        if (card.generalItems) {
-            for (const [category, items] of Object.entries(card.generalItems)) {
-                checkItemMatches(items, searchTerms, searchLower, allMatches, searchTerm);
-            }
-        }
-
         // Check couponCashbacks merchant field
         if (card.couponCashbacks) {
             for (const coupon of card.couponCashbacks) {
@@ -412,6 +402,62 @@ function findSearchHits(query, options = {}) {
     return findMatchingItem(String(query || ''), { exactOnly: !!options.exactOnly });
 }
 
+// ============================================================
+// 停車折抵（cardsData.benefits）比對——全站唯一一支（2026-11-17 由四份各抄一份的迴圈合併）
+// 回傳符合的權益陣列（每筆是 benefit 的淺拷貝＋matchedMerchant＝第一個命中的地點名）。
+// 一筆 benefit 最多回一次；一張卡可有多筆（ID 重複是正常的），數量＝權益筆數，不是卡片張數。
+//
+// 共通規則（四個呼叫端都一樣）：active 才算；登入且有比較清單時，只算清單內的卡（!currentUser 時不篩）；
+// 比對是「搜尋詞包含地點名 或 地點名包含搜尋詞」的 substring（雙向、小寫）。
+// 刻意用 substring 而非 startsWith：停車的商家名稱是長描述字串、關鍵詞常在中間（「中興嘟嘟房」⊇「嘟嘟房」、
+// 「全台遠東百貨停車」⊇「遠東」），否則會漏掉大量停車場；停車資料皆為台灣停車場專名，誤匹配風險低。
+// 刻意不理精準搜尋（2026-11-02 站長裁定）：停車場名稱是長句，只認全等等於整區關掉。
+//
+// searchInput：字串，或字串陣列（快捷搜尋的關鍵詞）。傳進來的字串一律先轉小寫＋去頭尾空白。
+// 空字串不在這裡擋——它會比對到所有權益（地點名 ⊇ ''），要不要擋由呼叫端決定（見下表）。
+//
+// options.expandAliases（預設 false）——各呼叫端現行行為不同，這裡原樣保留，不要擅自統一（產品決定歸站長）：
+//   ・false：只用原始輸入比，不展開別名。showMatchedItem／showNoMatchMessage（匹配狀態列的
+//     「停車折抵優惠 (N張卡片)」連結）、showMatchedButNoActivityMessage 用這個；
+//     前兩者另外自己擋掉空輸入（merchantValue 為空字串就不比）。
+//   ・true：每個輸入先過 getAllSearchVariants() 展開（fuzzy 別名、臺／台、海外／國外片語），
+//     任一展開詞命中即成立。displayParkingBenefits（結果區的停車折抵區塊）用這個，
+//     快捷搜尋時輸入是 currentQuickSearchOption.merchants 整組關鍵詞（傳 displayName 必定失敗，見 cashback-engine.md 第 7 節）。
+//   後果（2026-11-17 實測，都是合併前就存在的現況，留給站長裁決，這支函式不去統一）：
+//   ・搜「carrefour」：下方區塊靠別名展開命中 1 筆，狀態列沒有「停車折抵優惠」連結。
+//   ・快捷搜尋（所有停車／所有超市／所有百貨公司／統一企業集團）：狀態列傳的是顯示名稱而非關鍵詞，
+//     下方區塊有權益（所有停車 14 筆）、狀態列卻沒有連結。
+//   ・結果區塊對空白輸入不擋（按計算但商家欄空白時，14 筆全部列出）；狀態列兩處有 merchantValue 守門。
+// ============================================================
+function findMatchingParkingBenefits(searchInput, cardsToCheck = [], options = {}) {
+    if (!cardsData || !Array.isArray(cardsData.benefits) || cardsData.benefits.length === 0) return [];
+
+    const inputs = Array.isArray(searchInput) ? searchInput : [searchInput];
+    const searchTerms = options.expandAliases
+        ? [...new Set(inputs.flatMap(k => getAllSearchVariants(k)))]
+        : inputs.map(k => String(k == null ? '' : k).toLowerCase().trim());
+
+    const matchingBenefits = [];
+    for (const benefit of cardsData.benefits) {
+        if (!benefit.active) continue;
+        if (!(benefit.merchants && Array.isArray(benefit.merchants))) continue;
+        // 是否在用戶的比較清單內（沒登入時不篩）
+        const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
+        if (!shouldShow) continue;
+
+        const matchedMerchant = benefit.merchants.find(merchant => {
+            const merchantItemLower = merchant.toLowerCase();
+            return searchTerms.some(searchTerm =>
+                searchTerm.includes(merchantItemLower) || merchantItemLower.includes(searchTerm)
+            );
+        });
+        if (matchedMerchant !== undefined) {
+            matchingBenefits.push({ ...benefit, matchedMerchant });
+        }
+    }
+    return matchingBenefits;
+}
+
 // Show matched item(s)
 // summaryText：送出後才知道「你的選項下符合幾筆」，打字時不傳（打字階段還沒算結果）。
 // 由呼叫端組好字串（活動與領券的量詞不同），這裡只負責接在 ✓ 那行後面。
@@ -442,25 +488,9 @@ function showMatchedItem(matchedItems, merchantValue = '', cardsToCheck = [], su
         messageHtml += ` | ${escapeHtml(summaryText)}`;
     }
 
-    // Check if there are parking benefits matches
-    if (merchantValue && cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
-        const merchantLower = merchantValue.toLowerCase().trim();
-        const matchingBenefits = cardsData.benefits.filter(benefit => {
-            if (!benefit.active) return false;
-
-            // Check if this card is in the user's selection
-            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
-            if (!shouldShow) return false;
-
-            // Check if merchants match
-            if (benefit.merchants && Array.isArray(benefit.merchants)) {
-                return benefit.merchants.some(merchant => {
-                    const merchantItemLower = merchant.toLowerCase();
-                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
-                });
-            }
-            return false;
-        });
+    // Check if there are parking benefits matches（原始輸入比對、不展開別名；見 findMatchingParkingBenefits）
+    if (merchantValue) {
+        const matchingBenefits = findMatchingParkingBenefits(merchantValue, cardsToCheck);
 
         if (matchingBenefits.length > 0) {
             messageHtml += `<br>✓ 匹配到: <a href="javascript:void(0)" class="parking-jump-link" onclick="scrollToParkingBenefits()">停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</a>`;
@@ -480,25 +510,9 @@ function showNoMatchMessage(merchantValue = '', cardsToCheck = []) {
     let messageHtml = `✘ 沒有匹配到 ${merchantPart} 的活動（以下結果顯示基本回饋）`;
     let hasParkingMatch = false;
 
-    // Check if there are parking benefits matches
-    if (merchantValue && cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
-        const merchantLower = merchantValue.toLowerCase().trim();
-        const matchingBenefits = cardsData.benefits.filter(benefit => {
-            if (!benefit.active) return false;
-
-            // Check if this card is in the user's selection
-            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
-            if (!shouldShow) return false;
-
-            // Check if merchants match
-            if (benefit.merchants && Array.isArray(benefit.merchants)) {
-                return benefit.merchants.some(merchant => {
-                    const merchantItemLower = merchant.toLowerCase();
-                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
-                });
-            }
-            return false;
-        });
+    // Check if there are parking benefits matches（原始輸入比對、不展開別名；見 findMatchingParkingBenefits）
+    if (merchantValue) {
+        const matchingBenefits = findMatchingParkingBenefits(merchantValue, cardsToCheck);
 
         if (matchingBenefits.length > 0) {
             hasParkingMatch = true;
@@ -551,20 +565,9 @@ async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], 
     messageHtml += `<br><span class="matched-item-warn">${warn}</span>`;
 
     // 停車折抵與一般活動是兩套資料，這裡沒活動不代表停車也沒有——沿用 showNoMatchMessage 的附加
-    if (cardsData && cardsData.benefits && cardsData.benefits.length > 0) {
-        const merchantLower = displayName.toLowerCase().trim();
-        const matchingBenefits = cardsData.benefits.filter(benefit => {
-            if (!benefit.active) return false;
-            const shouldShow = !currentUser || cardsToCheck.some(card => card.id === benefit.id);
-            if (!shouldShow) return false;
-            if (benefit.merchants && Array.isArray(benefit.merchants)) {
-                return benefit.merchants.some(merchant => {
-                    const merchantItemLower = merchant.toLowerCase();
-                    return merchantLower.includes(merchantItemLower) || merchantItemLower.includes(merchantLower);
-                });
-            }
-            return false;
-        });
+    // （這裡用匹配到的名稱串接當搜尋詞，不像前兩處用用戶輸入；也不擋空字串——現行行為，見 findMatchingParkingBenefits）
+    {
+        const matchingBenefits = findMatchingParkingBenefits(displayName, cardsToCheck);
         if (matchingBenefits.length > 0) {
             messageHtml += `<br>✓ 匹配到: <a href="javascript:void(0)" class="parking-jump-link" onclick="scrollToParkingBenefits()">停車折抵優惠 (${matchingBenefits.length}張卡片) - 點擊查看 ↓</a>`;
         }
@@ -579,7 +582,7 @@ async function showMatchedButNoActivityMessage(matchedItems, cardsToCheck = [], 
 
 // 比較清單「以外」、真的有東西可看的卡有幾張（理由見 showMatchedButNoActivityMessage）。
 // 一般活動與領券活動要分開查：領券的商家欄不會進 _itemsIndex（那支索引只收
-// cashbackRates／specialItems／generalItems），只看索引會把「只有券的卡」算成 0，
+// cashbackRates），只看索引會把「只有券的卡」算成 0，
 // 於是明明別張卡有券，卻對使用者說「沒有卡片有這個商家的活動」。
 async function countCardsWithActivityOutside(itemNames, cardsToCheck, amount) {
     if (!cardsData || !Array.isArray(cardsData.cards)) return 0;
@@ -888,10 +891,6 @@ function getBasicExclusionMaybeHits(card, searchTerms, exactOnly = false) {
     return hits;
 }
 
-function isBasicExcludedForSearch(card, searchTerms, exactOnly = false) {
-    return getBasicExclusionHits(card, searchTerms, exactOnly).length > 0;
-}
-
 // ============================================================
 // NCCC 小額支付品牌（2026-11-13 站長決定）
 // 聯卡中心「小額支付平台」的門市（麥當勞、八方雲集…）直接刷卡時，請款方是 NCCC 小額支付平台，
@@ -1041,7 +1040,7 @@ function appendUnmetSpendNote(unmetCount) {
 // ============================================================
 // 輸入建議下拉選單（2026-10-14 站長要求）
 // 用戶不知道銀行怎麼命名（打「罰」想找「交通罰單」），邊打邊列出資料裡**真的存在**的名稱讓用戶挑：
-// 指定通路商家（cashbackRates／specialItems／generalItems／領券商家）、一般消費排除項目、快捷選項名稱。
+// 指定通路商家（cashbackRates／領券商家）、一般消費排除項目、快捷選項名稱。
 // 只列名稱、不標類別（站長決定）。點選＝替用戶打好這個字（走 handleMerchantInput），不自動計算——
 // 跟快捷搜尋「只填入、不自動計算」同一個產品決策；快捷選項走 handleQuickSearch。
 // 效能：名稱表（約 2 千筆）只在 cardsData 換了才重建；每次輸入只做子字串掃描（< 1ms）。
@@ -1090,8 +1089,6 @@ function buildMerchantSuggestIndex() {
     });
     cards.forEach(card => {
         (card.cashbackRates || []).forEach(g => (g.items || []).forEach(i => add(i)));
-        (card.specialItems || []).forEach(i => add(i));
-        if (card.generalItems) Object.values(card.generalItems).forEach(items => (items || []).forEach(i => add(i)));
         (card.couponCashbacks || []).forEach(c => { if (c.merchant) String(c.merchant).split(',').forEach(m => add(m)); });
     });
     cards.forEach(card => (card.basicExclusions || []).forEach(i => {

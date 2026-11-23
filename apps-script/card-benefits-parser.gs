@@ -531,7 +531,7 @@ function joinPeriod_(start, end) {
 // ⚠️ 它只做得出**最單純的那一種**形狀。實際資料裡三種形狀只有一種吃得下（2026-08-16 盤點）：
 //     ✅ 玉山 Uni／凱基誠品：{rate, cap, period, level-note}
 //     ❌ 國泰 CUBE：{specialRate, level-note}（分級改的是指定通路的率）
-//     ❌ 永豐大戶卡：{rate_1, cap_1, rate_14, cap_hide, overseasBonusRate…} 共 11 個 key（逐槽覆寫）
+//     ❌ 永豐大戶卡：{rate_1, cap_1, rate_14, overseasBonusRate…} 等多個 key（逐槽覆寫）
 //   後兩種硬套簡單格式會產出「看起來對、算出來錯」的 levelSettings，而站長未必看得出來——
 //   所以由 AI 舉手（levels_beyond_simple）、這裡直接留空讓人手填（站長 2026-08-16 裁定：
 //   分級卡數量少（全站 4 張）、形狀又雜，自動化的投報率遠低於產錯的代價）。

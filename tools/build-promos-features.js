@@ -9,7 +9,7 @@
  * 同一段邏輯就會變成第四份副本——docs/project/cashback-engine.md 第 6 節已經明文
  * 警告「三處實作必須一致」，再多一份遲早分岔。
  *
- * 所以這裡照 tools/lib/merchant-cards.js 的成例：把 js/ 那 12 支模組原封不動載進
+ * 所以這裡照 tools/lib/merchant-cards.js 的成例：把 js/ 那些模組原封不動載進
  * Node 的 vm 跑，只補一個極簡 DOM 替身。cards-export.gs 只負責產出空的
  * <div class="promo-card-feat" data-feat-for="<card id>"> 容器，這支腳本在部署時填進去。
  *

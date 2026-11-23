@@ -1,25 +1,27 @@
 /* ============================================================
- * Pick My Card — js/core-utils.js（載入順序 1/12）
- * 12 個模組檔為傳統全域 script（非 ES module），依 index.html 標籤
+ * Pick My Card — js/core-utils.js（載入順序第 1 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
+ * js/ 的模組檔為傳統全域 script（非 ES module），依 index.html 標籤
  * 順序載入，被依賴的在前；模組地圖見 CLAUDE.md 專案地圖。
  * 區塊目錄（Grep 關鍵字）：
- *  - Debug 日誌閘門            → "Debug 日誌閘門"
- *  - 全域狀態                  → "Global variables"
- *  - GA4 版位標記              → "getAnalyticsSurface"
- *  - Body scroll lock          → "disableBodyScroll"
- *  - Modal 每次打開都從最上方   → "setupModalScrollReset"
- *  - 全域 loading overlay      → "loadingOverlay"
- *  - WebView 內建瀏覽器警告     → "isInAppBrowser" / "showWebViewWarning"
- *  - 台灣時區日期工具           → "getTaiwanToday" / "parseISODate"
- *  - 活動期間狀態＋快取         → "getRateStatus" / "rateStatusCache"
- *  - 級別快取                  → "cardLevelCache"
- *  - localStorage 安全讀取      → "localStorage 安全讀取 helpers" / "readLocalJSON"
- *  - 過期活動過濾              → "filterExpiredRates"
- *  - 卡片權益期限解析           → "parseBenefitPeriod" / "getBenefitStatus"
- *  - 比較卡集合                → "getCardsForComparison"
- *  - 新戶活動 helpers          → "getActiveCardholderPromos" / "expandPromoMerchants"
- *  - 卡片項目彙整              → "collectCardItems"
- *  - 雲端同步錯誤提示           → "pmcOnFirestoreError"
+ *  - Debug 日誌閘門              → "Debug 日誌閘門"
+ *  - 全域狀態                    → "Global variables"
+ *  - Embed 模式（新戶活動頁 iframe） → "Embed 模式" / "isEmbedMode"
+ *  - GA4 版位標記                → "getAnalyticsSurface"
+ *  - Body scroll lock            → "bodyScrollLockDepth" / "disableBodyScroll"
+ *  - Modal 每次打開都從最上方    → "setupModalScrollReset"
+ *  - 全域 loading overlay        → "loadingOverlay"
+ *  - WebView 內建瀏覽器警告      → "isInAppBrowser" / "showWebViewWarning"
+ *  - 台灣時區日期工具            → "getTaiwanToday" / "formatISODateForDisplay"
+ *  - 活動期間狀態＋快取          → "getRateStatus" / "rateStatusCache"
+ *  - 級別快取                    → "cardLevelCache"
+ *  - localStorage 安全讀取       → "localStorage 安全讀取 helpers" / "readLocalJSON"
+ *  - 「還有幾天」唯一算法        → "taiwanDaysUntil" / "getTaiwanMonth" / "isEndingSoon"
+ *  - 卡片權益期限解析            → "parseBenefitPeriod" / "getBenefitStatus"
+ *  - 過期活動過濾                → "filterExpiredRates"
+ *  - 比較卡集合                  → "getCardsForComparison"
+ *  - 新戶活動 helpers            → "getActiveCardholderPromos" / "expandPromoMerchants"
+ *  - 卡片項目彙整                → "collectCardItems"
+ *  - 雲端同步錯誤提示            → "pmcOnFirestoreError"
  * ============================================================ */
 
 // ========== Debug 日誌閘門 ==========
@@ -57,6 +59,8 @@ let isBirthdayMonth = false;  // 預先計算的旗標：當前月份是否為�
 // 用戶是否符合「童樂匯」權益（預設為是）。訪客的選擇存在本機 childrenEligible_guest（2026-11-20 起，只存 true/false）；
 // 登入者以雲端 users/{uid}.isChildrenEligible 為準（onAuthStateChanged 會覆蓋這個初值）
 let isChildrenEligible = readLocalJSON('childrenEligible_guest', true) !== false;
+// 國泰 CUBE 卡「童樂匯」方案在資料（cards.data 的 category 欄）裡的類別字串；是比對用的識別碼，一個字都不能改
+const CHILDREN_PLAN_CATEGORY = '切換「童樂匯」方案';
 let cubeIssuer = (typeof localStorage !== 'undefined' && localStorage.getItem('cubeIssuer')) || 'Visa'; // 國泰CUBE卡發卡組織（Visa/Mastercard/JCB）
 
 // Embed 模式（新戶活動頁 iframe 內嵌卡片詳情彈窗，2026-07-16）：URL 帶 ?embed=1 時
@@ -328,16 +332,6 @@ function getTaiwanToday() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Taipei' });
 }
 
-// 解析日期字串為本地午夜 Date 物件（供天數差計算用）
-// 相容 ISO "YYYY-MM-DD" 與台灣慣用 "YYYY/M/D"（Apps Script 匯出的 periodStart/periodEnd 兩種格式都會出現）
-function parseISODate(dateStr) {
-    if (!dateStr) return null;
-    const isoStr = dateStr.includes('-') ? dateStr : slashDateToISO(dateStr);
-    if (!isoStr) return null;
-    const [y, m, d] = isoStr.split('-').map(Number);
-    return new Date(y, m - 1, d);
-}
-
 // 將 ISO 日期 YYYY-MM-DD 格式化為台灣慣用顯示 YYYY/M/D（去補零）
 function formatISODateForDisplay(isoDate) {
     if (!isoDate) return '';
@@ -430,6 +424,20 @@ function notifyMappingsDataChanged() {
     document.dispatchEvent(new Event('pmc:mappings-data-changed'));
 }
 
+// 寫 localStorage 的「本機快取」那一步（2026-11-23，稽核 B7）。setItem 在儲存空間滿了、或瀏覽器的
+// 隱私設定擋住網站資料時會直接拋錯；以前免年費／額度／結帳日／刷卡小抄的儲存函式第一行就是裸的
+// setItem，一拋錯整個函式中斷，**後面的雲端寫入根本沒跑**——登入用戶改了設定、畫面上看起來成功，
+// 其實哪裡都沒存。本機快取只是快取，寫不進去不該擋住雲端。回傳 true＝寫成功。
+function writeLocal(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (e) {
+        console.error('❌ 本機儲存失敗（雲端照常同步）:', key, e);
+        return false;
+    }
+}
+
 function readLocalJSON(key, fallback = null) {
     let raw = null;
     try { raw = localStorage.getItem(key); } catch (e) { return fallback; }
@@ -469,64 +477,53 @@ function getCachedRateStatus(periodStart, periodEnd) {
     return rateStatusCache.get(key);
 }
 
+// ============================================================
+// 「還有幾天」的唯一算法（2026-11-17 合併；原本 core-utils 四支、home-ui、mappings-page 各算各的，
+// 其中亮點卡用的是裝置時區）。
+// 台灣今天到指定日期的天數（整數）：當天 0、明天 1、昨天 -1；日期字串不合法回 null。
+// 接受 ISO "YYYY-MM-DD" 與台式 "YYYY/M/D"。
+// ⚠️「今天」一律是台灣的今天（getTaiwanToday），而且用 UTC 日曆日相減——結果跟使用者裝置的
+//    時區、日光節約時間都無關。新增任何「剩 N 天／N 天後開始」的顯示都走這支，不要再自己 new Date() 相減。
+function taiwanDaysUntil(dateStr) {
+    if (!dateStr) return null;
+    const utcDay = (value) => {
+        const str = String(value);
+        const iso = str.includes('-') ? str : slashDateToISO(str);
+        if (!iso) return NaN;
+        const [y, m, d] = iso.split('-').map(Number);
+        return Date.UTC(y, m - 1, d);
+    };
+    const diff = (utcDay(dateStr) - utcDay(getTaiwanToday())) / 86400000;
+    return Number.isFinite(diff) ? Math.round(diff) : null;
+}
+
+// 台灣現在是幾月（1–12）。慶生月方案的判斷用，不看裝置時區。
+function getTaiwanMonth() {
+    return Number(getTaiwanToday().slice(5, 7));
+}
+
 // Check if upcoming activity starts within N days
 function isUpcomingWithinDays(periodStart, days = 30) {
-    if (!periodStart) return false;
-
-    try {
-        const today = parseISODate(getTaiwanToday());
-        const startDate = parseISODate(periodStart);
-        const diffDays = Math.ceil((startDate - today) / 86400000);
-        return diffDays >= 0 && diffDays <= days;
-    } catch (error) {
-        console.error('❌ Date parsing error:', error, { periodStart });
-        return false;
-    }
+    const diffDays = taiwanDaysUntil(periodStart);
+    return diffDays !== null && diffDays >= 0 && diffDays <= days;
 }
 
 // Get days until activity starts (returns number or null if error)
 function getDaysUntilStart(periodStart) {
-    if (!periodStart) return null;
-
-    try {
-        const today = parseISODate(getTaiwanToday());
-        const startDate = parseISODate(periodStart);
-        const diffDays = Math.ceil((startDate - today) / 86400000);
-        return diffDays >= 0 ? diffDays : null;
-    } catch (error) {
-        console.error('❌ Date parsing error:', error, { periodStart });
-        return null;
-    }
+    const diffDays = taiwanDaysUntil(periodStart);
+    return diffDays !== null && diffDays >= 0 ? diffDays : null;
 }
 
 // Check if activity is ending soon (within N days)
 function isEndingSoon(periodEnd, days = 10) {
-    if (!periodEnd) return false;
-
-    try {
-        const today = parseISODate(getTaiwanToday());
-        const endDate = parseISODate(periodEnd);
-        const diffDays = Math.ceil((endDate - today) / 86400000);
-        return diffDays >= 0 && diffDays <= days;
-    } catch (error) {
-        console.error('❌ Date parsing error:', error, { periodEnd });
-        return false;
-    }
+    const diffDays = taiwanDaysUntil(periodEnd);
+    return diffDays !== null && diffDays >= 0 && diffDays <= days;
 }
 
 // Get days until activity ends (returns number or null if error)
 function getDaysUntilEnd(periodEnd) {
-    if (!periodEnd) return null;
-
-    try {
-        const today = parseISODate(getTaiwanToday());
-        const endDate = parseISODate(periodEnd);
-        const diffDays = Math.ceil((endDate - today) / 86400000);
-        return diffDays >= 0 ? diffDays : null;
-    } catch (error) {
-        console.error('❌ Date parsing error:', error, { periodEnd });
-        return null;
-    }
+    const diffDays = taiwanDaysUntil(periodEnd);
+    return diffDays !== null && diffDays >= 0 ? diffDays : null;
 }
 
 // 卡片權益（cardsData.benefits，停車折抵那類）的期限欄位只有一個自由格式字串
@@ -556,6 +553,43 @@ function getBenefitStatus(benefit) {
     return getRateStatus(start, end);
 }
 
+// 國內／海外加碼的活動期間（2026-11-23 站長要求：和其他活動一樣依期間到期）。
+// 匯出端欄位是卡片層的 domesticBonusPeriod／overseasBonusPeriod（"YYYY/M/D~YYYY/M/D"，
+// 一張卡兩種加碼各一個，分級卡各級別共用卡片層的期間）。沒填＝長期有效，照舊。
+//
+// 為什麼在載入時把率歸零、而不是在每個讀率的地方判斷期間：加碼率有 6 個讀取點
+// （resolveBonusComponent、getDisplayRate、buildRateCompositionRows、calculateStackedCashback、
+// 空白 model 的舊預設、詳情頁一般回饋區），逐處加判斷一定會漏。這裡跟 cashbackRates 過期濾除
+// 在同一個時機、同一套 getRateStatus，下游全部自然看到 0：不算、不顯示、組成表不列。
+// 卡片層與每個級別的加碼率一起歸零——級別讀不到才退回卡片層（`ls.x || card.x`），只歸一邊會漏。
+//
+// 還在期間內的，期間記在 card.bonusPeriods[kind]，詳情頁回饋卡拿來顯示「活動期間」與「即將結束」。
+// 未開始的加碼只歸零、不預告（目前資料的加碼期間都從年初起算，沒有這種案例）。
+function applyBonusPeriods(card) {
+    ['domestic', 'overseas'].forEach(kind => {
+        const raw = card[kind + 'BonusPeriod'];
+        if (!raw) return;
+        const p = { period: String(raw) };
+        backfillPeriodBounds(p);
+        if (!p.periodStart && !p.periodEnd) return; // 期間格式不認得：當作沒填，不隱藏
+        const status = getRateStatus(p.periodStart, p.periodEnd);
+        if (status === 'active' || status === 'always') {
+            if (!card.bonusPeriods) card.bonusPeriods = {};
+            card.bonusPeriods[kind] = p;
+            return;
+        }
+        const rateKey = kind + 'BonusRate';
+        // 記下來給只讀條件、不讀率的地方用（搜尋結果「一般消費回饋率」卡的加碼條件）
+        if (!card.endedBonuses) card.endedBonuses = {};
+        card.endedBonuses[kind] = status;
+        console.log(`🕒 ${card.name}: ${status === 'expired' ? '加碼已過期' : '加碼未開始'}，${rateKey} 歸零 (${p.period})`);
+        if (card[rateKey] != null) card[rateKey] = 0;
+        Object.values(card.levelSettings || {}).forEach(ls => {
+            if (ls && ls[rateKey] != null) ls[rateKey] = 0;
+        });
+    });
+}
+
 // Filter expired rates from cards data (keep active and upcoming within 30 days)
 function filterExpiredRates(cardsData) {
     if (!cardsData || !cardsData.cards) {
@@ -574,6 +608,8 @@ function filterExpiredRates(cardsData) {
             console.warn(`⚠️ ${card.name}: hasLevels=true 但 levelSettings 為空（可能所有級別已過期），改以一般卡處理`);
             card.hasLevels = false;
         }
+
+        applyBonusPeriods(card); // 加碼期間過了（或還沒到）→ 加碼率歸零，見函式說明
 
         // Filter cashbackRates - keep active and upcoming (within 30 days)
         if (card.cashbackRates && Array.isArray(card.cashbackRates)) {
@@ -634,13 +670,10 @@ function filterExpiredRates(cardsData) {
         cardsData.newCardholderPromos = cardsData.newCardholderPromos.filter(promo => {
             // Keep if no end date (ongoing) or end date >= today
             if (!promo.period_end) return true;
-            // 一律走 parseISODate（相容 ISO 與台式斜線，見 data-pipeline.md 第 8 節）——
-            // 舊 parseDateString 只認 "/"，ISO 的 period_end 解析成 null 被當永久有效，過期活動永遠濾不掉
-            const endDate = parseISODate(promo.period_end);
-            if (!endDate) return true;
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const isActive = endDate >= today;
+            // period_end 相容 ISO 與台式斜線兩種寫法（見 data-pipeline.md 第 8 節）；格式不對的當作沒寫、不隱藏
+            // 「今天」用台灣的今天（getRateStatus 內部走 getTaiwanToday），不看裝置時區——
+            // 原本拿裝置的本地午夜來比，海外用戶會早一天或晚一天看到活動下架
+            const isActive = getRateStatus(null, promo.period_end) !== 'expired';
             if (!isActive) {
                 console.log(`🕒 隱藏過期新戶活動 - ${promo.id} ${promo.promo_name} (~${promo.period_end})`);
             }
@@ -772,3 +805,33 @@ window.pmcOnFirestoreError = function (err) {
     bar.append(text, close);
     document.body.appendChild(bar);
 };
+
+// ========== 回饋上限文字 formatCapText（2026-11-17 由六種寫法合併）==========
+// 把「回饋消費上限」數字轉成畫面文字：有上限 → 「NT$7,500」，沒有 → 「無上限」。
+// ⚠️ 合併時各處對 0／空字串／非數字字串的處理本來就不一致，為了「畫面逐字不變」，用
+// unlimitedWhen 保留各自的判斷，**不要自行統一**（要不要統一由站長決定）。
+//
+// opts.unlimitedWhen（什麼值算「無上限」）：
+//   'falsy'        （預設）!cap：null／undefined／''／0／NaN 算無上限；字串 '0' 與 'abc' 不算
+//                  （會印成 NT$0／NT$NaN）。→ formatRateCardCap（詳情頁回饋卡、搜尋結果卡上限欄）、
+//                    搜尋結果卡 capText、「回饋組成」彈窗每列上限、詳情頁級別說明（card-detail 的 levelSettings）
+//   'falsyOrNaN'   !cap 或 isNaN(cap)：多擋掉非數字字串；'0'、負數照印。→ 領券結果卡（createCouponResultElement）
+//   'nullishOrNaN' 只有 null／undefined／NaN／非數字字串算無上限；**0 與 '' 會印成 NT$0**。→ formatSpotlightCap（推薦活動）
+//   'nonPositive'  凡不是「大於 0 的數」都算無上限（0、負數、非數字都是）。→ mpCapText（刷卡小抄）、
+//                  搜尋結果卡「計算明細」上限欄（layer.cap）
+// opts.unlimitedText  無上限時的字樣，預設 '無上限'（可傳 '' 留白）
+// opts.currency       false＝數字前不加「NT$」（計算明細的上限欄，欄位標題已有幣別）
+// opts.prefix/suffix  只加在「有上限」的字樣前後（例：'上限 '、台新 Richart 的 '+'）
+function formatCapText(cap, opts) {
+    const o = opts || {};
+    const unlimitedText = o.unlimitedText !== undefined ? o.unlimitedText : '無上限';
+    let unlimited;
+    switch (o.unlimitedWhen) {
+        case 'falsyOrNaN': unlimited = !cap || isNaN(cap); break;
+        case 'nullishOrNaN': unlimited = cap === null || cap === undefined || isNaN(cap); break;
+        case 'nonPositive': unlimited = !(cap != null && cap > 0); break;
+        default: unlimited = !cap;
+    }
+    if (unlimited) return unlimitedText;
+    return `${o.prefix || ''}${o.currency === false ? '' : 'NT$'}${Math.floor(cap).toLocaleString()}${o.suffix || ''}`;
+}

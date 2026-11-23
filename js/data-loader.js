@@ -1,13 +1,14 @@
 /* ============================================================
- * Pick My Card — js/data-loader.js（載入順序 2/12）
+ * Pick My Card — js/data-loader.js（載入順序第 2 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
- *  - 卡片搜尋索引              → "buildCardItemsIndex"
- *  - 資料載入（cards.data）     → "loadCardsData"
- *  - 行動支付資料初始化         → "initializePaymentsData"
- *  - 快捷選項初始化/偏好載存    → "initializeQuickSearchOptions" / "loadUserQuickSearchPrefs"
- *  - 舊版偏好遷移              → "migrateLegacyQuickSearchOptions"
- *  - 快捷按鈕渲染/下拉         → "renderQuickSearchButtons" / "setupQuickSearchDropdown"
- *  - 快捷搜尋觸發／兩型判斷     → "handleQuickSearch" / "isTypingHelperQuickOption"
+ *  - 卡片搜尋索引                → "buildCardItemsIndex"
+ *  - 資料載入（cards.data）      → "loadCardsData"
+ *  - 行動支付資料初始化          → "initializePaymentsData"
+ *  - 快捷選項初始化/偏好載存     → "initializeQuickSearchOptions" / "loadUserQuickSearchPrefs"
+ *  - 舊版偏好遷移                → "migrateLegacyQuickSearchOptions"
+ *  - 快捷按鈕渲染/下拉           → "renderQuickSearchButtons" / "setupQuickSearchDropdown"
+ *  - 快捷搜尋觸發／兩型判斷      → "isTypingHelperQuickOption" / "handleQuickSearch"
+ *  - 信任列（收錄 N 家銀行、N 張卡） → "renderTrustLine"
  * ============================================================ */
 function buildCardItemsIndex(card) {
     const itemsMap = new Map();
@@ -29,42 +30,6 @@ function buildCardItemsIndex(card) {
                 });
             }
         });
-    }
-
-    // Index specialItems (can be string array or object array)
-    if (card.specialItems && card.specialItems.length > 0) {
-        card.specialItems.forEach((specialItem, specialIndex) => {
-            const itemLower = (typeof specialItem === 'string' ? specialItem : specialItem.item || '').toLowerCase();
-            if (itemLower) {
-                if (!itemsMap.has(itemLower)) {
-                    itemsMap.set(itemLower, []);
-                }
-                itemsMap.get(itemLower).push({
-                    type: 'specialItem',
-                    index: specialIndex,
-                    specialItem: specialItem
-                });
-            }
-        });
-    }
-
-    // Index generalItems (for cards like CUBE - object with category keys)
-    if (card.generalItems && typeof card.generalItems === 'object') {
-        for (const [category, items] of Object.entries(card.generalItems)) {
-            if (Array.isArray(items)) {
-                items.forEach(item => {
-                    const itemLower = item.toLowerCase();
-                    if (!itemsMap.has(itemLower)) {
-                        itemsMap.set(itemLower, []);
-                    }
-                    itemsMap.get(itemLower).push({
-                        type: 'generalItem',
-                        category: category,
-                        item: item
-                    });
-                });
-            }
-        }
     }
 
     card._itemsIndex = itemsMap;

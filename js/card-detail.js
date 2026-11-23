@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/card-detail.js（載入順序 9/12）
+ * Pick My Card — js/card-detail.js（載入順序第 9 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 卡片詳情頁主體            → "showCardDetail"
  *  - 近期異動（changelog）      → "renderCardDetailChangelog"
@@ -433,7 +433,7 @@ async function renderCardPersonalSettings(card, opts = {}) {
                 // Default formatting for other cards (like Uni card)
                 levelNames.forEach(level => {
                     const data = card.levelSettings[level];
-                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${data.rate}% (上限 NT$${data.cap ? Math.floor(data.cap).toLocaleString() : '無'})</div>`;
+                    levelRatesInfo += `<div class="level-help-rate-line">• ${escapeHtml(level)}: ${data.rate}% (${formatCapText(data.cap, { prefix: '上限 ' })})</div>`;
                 });
             }
             levelRatesInfo += '</div>';
@@ -759,38 +759,9 @@ async function showCardDetail(cardId) {
         const cube = await generateCubeSpecialContent(card);
         specialHtml = cube.html;
         generalExtra.push(...cube.general);
-    } else if (card.hasLevels && card.specialItems && card.specialItems.length > 0) {
-        // Handle generic level-based cards with specialItems (like Uni card and DBS Eco)
-        const levelNames = Object.keys(card.levelSettings);
-        const { level: lvName, data: levelData } = await resolveCardLevel(card, levelNames[0]);
-        const entries = [];
-
-        // First, display any cashbackRates if they exist (like DBS Eco's 10% cashback)
-        // 2026-07-09 起逐筆顯示（不再按 rate+cap 合併）；2026-11-17 起標題／上限／期間相同的併成一張卡
-        if (card.cashbackRates && card.cashbackRates.length > 0) {
-            const rendered = await renderCashbackRatesIndividually(card, levelData, { idPrefix: 'lvA', levelName: lvName });
-            entries.push(...rendered.entries);
-
-            // Store upcoming groups for later display in separate section
-            window._currentUpcomingGroups1 = rendered.upcoming;
-            window._currentCard = card;
-            window._currentLevelData1 = levelData;
-        }
-
-        // Then display the level-based cashback with specialItems
-        // （通路多，由 .cd-ch 依寬度收成最多三行，其餘收在「顯示全部」）
-        entries.push({
-            rate: levelData.rate,
-            levelLabel: cdLevelLabel(card, lvName),
-            capText: formatRateCardCap(levelData.cap),
-            merchants: { items: card.specialItems },
-            conditions: levelData.condition
-        });
-        const composed = composeSpecialArea(entries);
-        specialHtml = composed.html;
-        generalExtra.push(...composed.general);
-    } else if (card.hasLevels && (!card.specialItems || card.specialItems.length === 0)) {
-        // Handle level-based cards without specialItems (or with empty specialItems array)
+    } else if (card.hasLevels) {
+        // 分級卡（CUBE 以外）：所有通路都在 cashbackRates 裡，用級別設定解析 placeholder
+        // （specialItems／generalItems 資料形狀已於 2026-11-17 移除，稽核 B1）
         const levelNames = Object.keys(card.levelSettings);
         const { level: savedLevel, data: levelData } = await resolveCardLevel(card, levelNames[0]);
         const entries = [];
@@ -805,7 +776,6 @@ async function showCardDetail(cardId) {
             // Store upcoming groups for later display in separate section
             window._currentUpcomingGroups2 = rendered.upcoming;
             window._currentCard = card;
-            window._currentLevelData2 = levelData;
 
             // Note: "各級別回饋率" is now displayed next to the level selector, no need to repeat here
         } else {
@@ -923,7 +893,7 @@ async function showCardDetail(cardId) {
     // Update upcoming cashback section
     const upcomingSection = document.getElementById('card-upcoming-section');
     const upcomingCashbackDiv = document.getElementById('card-upcoming-cashback');
-    const upcomingGroups = window._currentUpcomingGroups1 || window._currentUpcomingGroups2 || window._currentUpcomingGroupsCube || window._currentUpcomingGroups3 || [];
+    const upcomingGroups = window._currentUpcomingGroups2 || window._currentUpcomingGroupsCube || window._currentUpcomingGroups3 || [];
 
     if (upcomingGroups.length > 0) {
         // upcomingGroups1/2 are [key, value] tuples from Map.entries();
@@ -951,13 +921,10 @@ async function showCardDetail(cardId) {
     }
 
     // Clean up temporary variables
-    delete window._currentUpcomingGroups1;
     delete window._currentUpcomingGroups2;
     delete window._currentUpcomingGroupsCube;
     delete window._currentUpcomingGroups3;
     delete window._currentCard;
-    delete window._currentLevelData1;
-    delete window._currentLevelData2;
 
     // Update coupon cashback
     const couponSection = document.getElementById('card-coupon-section');
@@ -1434,6 +1401,9 @@ async function buildBasicEntries(card) {
     // 加碼的上限欄：舊版沒填 cap 時整行不顯示（沒說無上限也沒說有上限），
     // 改成固定欄位後沿用 formatRateCardCap，沒填一律顯示「無上限」——與計算一致
     // （resolveBonusComponent 的 bonusCap 為 null 時套用整筆金額）
+    // 有加碼期間的：過期或未開始的率在載入時已歸零（applyBonusPeriods，core-utils.js），走不到這裡；
+    // 期間內的照其他活動顯示「活動期間」＋「即將結束」
+    const bonusPeriods = card.bonusPeriods || {};
     if (domesticBonusRate) {
         entries.push({
             rate: domesticBonusRate,
@@ -1441,6 +1411,8 @@ async function buildBasicEntries(card) {
             capText: formatRateCardCap(domesticBonusCap),
             title: '國內加碼',
             titleIsDisplay: true,
+            period: bonusPeriods.domestic ? bonusPeriods.domestic.period : '',
+            endingSoonEnd: bonusPeriods.domestic ? bonusPeriods.domestic.periodEnd : null,
             conditions: domesticConditions
         });
     }
@@ -1452,6 +1424,8 @@ async function buildBasicEntries(card) {
             capText: formatRateCardCap(overseasBonusCap),
             title: '國外加碼',   // 2026-11-24 站長：原「海外加碼」，和「國內加碼」對稱
             titleIsDisplay: true,
+            period: bonusPeriods.overseas ? bonusPeriods.overseas.period : '',
+            endingSoonEnd: bonusPeriods.overseas ? bonusPeriods.overseas.periodEnd : null,
             conditions: overseasConditions
         });
     }
@@ -1841,8 +1815,9 @@ function renderBasicExclusionsCard(card, initialCount = 10) {
 }
 
 // 「NT$7,500」／「無上限」：詳情頁回饋卡的上限欄（cap 是 null/0/'' 都算無上限）
+// 實作在 js/core-utils.js 的 formatCapText（預設選項＝falsy 判斷，與舊寫法逐字相同）
 function formatRateCardCap(cap) {
-    return cap ? `NT$${Math.floor(cap).toLocaleString()}` : '無上限';
+    return formatCapText(cap);
 }
 
 // Escape a string for embedding as a single-quoted JS literal inside an HTML onclick attribute.

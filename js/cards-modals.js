@@ -1,5 +1,5 @@
 /* ============================================================
- * Pick My Card — js/cards-modals.js（載入順序 8/12）
+ * Pick My Card — js/cards-modals.js（載入順序第 8 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 區塊目錄（Grep 關鍵字）：
  *  - 手機側選單                → "setupSidebarDrawer"
  *  - 卡片選擇 modal 共用渲染    → "_renderCardSelectionModal" / "updateSelectionDirtyState"
@@ -7,7 +7,7 @@
  *  - 持有卡總覽（卡片格）       → "renderOwnedCardsOverview"
  *  - 單卡面板（點卡片直接編輯）→ "openOwnedCardPanel" / "ownedPanelExit"
  *  - 持有卡管理 modal           → "openManageOwnedCardsModal" / "setupMyOwnedCardsModal"
- *  - 卡片標籤/條件顯示 helpers  → "getTagClass" / "renderConditionLine"
+ *  - 卡片標籤/條件顯示 helpers  → "getTagClass" / "renderCardTags" / "renderConditionLine"
  *  - 側選單「最近異動」          → "renderSidebarChangelog"
  * ============================================================ */
 // ==========================================
@@ -162,7 +162,7 @@ function _renderCardSelectionModal(config) {
     const selectedTags = new Set();
     if (allTags.size > 0) {
         tagFilterChips.innerHTML = '';
-        const sortedTags = ['旅遊', '開車族', '餐飲', '交通', '網購', '百貨公司', '外送', '娛樂', '行動支付', 'AI工具', '便利商店', '串流平台', '超市', '藥妝', '時尚品牌', '直銷品牌', '生活百貨', '運動', '寵物', '親子', '應用程式商店', '飲食品牌', '美妝美髮保養品牌', '保費']
+        const sortedTags = CARD_TAG_DEFS.map(def => def.name)
             .filter(tag => allTags.has(tag));
         sortedTags.forEach(tag => {
             const chip = document.createElement('div');
@@ -717,36 +717,44 @@ function setupMyOwnedCardsModal() {
     });
 }
 
-// Show card detail modal
+// ===== 卡片標籤總表（顯示順序＋CSS class，唯一正本）=====
+// 陣列順序＝卡片選擇 modal 標籤篩選列的排列順序；cls 是 styles.css 裡 `.card-tag.tag-xxx` 的 class 名。
+// 新增一個標籤要做三件事：
+//   1. 在下面這張表加一項 { name: 標籤名, cls: 'tag-xxx' }（位置就是它在篩選列的排序位置）
+//   2. 在 styles.css 補上對應的 `.tag-xxx` 樣式（否則會沒有顏色）
+//   3. 確認 Google Sheets 的 Cards 工作表 tags 欄用的是同一個標籤名（字串要完全一致）
+// 不在表裡的標籤：卡片上的標籤用預設樣式 `tag-default`，且不會出現在篩選列。
+const CARD_TAG_DEFS = [
+    { name: '旅遊', cls: 'tag-travel' },
+    { name: '開車族', cls: 'tag-driving' },
+    { name: '餐飲', cls: 'tag-restaurant' },
+    { name: '交通', cls: 'tag-transport' },
+    { name: '網購', cls: 'tag-online' },
+    { name: '百貨公司', cls: 'tag-department' },
+    { name: '外送', cls: 'tag-delivery' },
+    { name: '娛樂', cls: 'tag-entertainment' },
+    { name: '行動支付', cls: 'tag-payment' },
+    { name: 'AI工具', cls: 'tag-ai' },
+    { name: '便利商店', cls: 'tag-convenience' },
+    { name: '串流平台', cls: 'tag-streaming' },
+    { name: '超市', cls: 'tag-supermarket' },
+    { name: '藥妝', cls: 'tag-pharmacy' },
+    { name: '時尚品牌', cls: 'tag-fashion' },
+    { name: '直銷品牌', cls: 'tag-direct-sales' },
+    { name: '生活百貨', cls: 'tag-lifestyle' },
+    { name: '運動', cls: 'tag-sports' },
+    { name: '寵物', cls: 'tag-pet' },
+    { name: '親子', cls: 'tag-family' },
+    { name: '應用程式商店', cls: 'tag-appstore' },
+    { name: '飲食品牌', cls: 'tag-food-brand' },
+    { name: '美妝美髮保養品牌', cls: 'tag-beauty-brand' },
+    { name: '保費', cls: 'tag-insurance' }
+];
+const CARD_TAG_CLASS_MAP = new Map(CARD_TAG_DEFS.map(def => [def.name, def.cls]));
+
 // Helper function to convert tag name to CSS class
 function getTagClass(tagName) {
-    const tagMap = {
-        '旅遊': 'tag-travel',
-        '開車族': 'tag-driving',
-        '餐飲': 'tag-restaurant',
-        '交通': 'tag-transport',
-        '網購': 'tag-online',
-        '百貨公司': 'tag-department',
-        '外送': 'tag-delivery',
-        '娛樂': 'tag-entertainment',
-        '行動支付': 'tag-payment',
-        'AI工具': 'tag-ai',
-        '便利商店': 'tag-convenience',
-        '串流平台': 'tag-streaming',
-        '超市': 'tag-supermarket',
-        '藥妝': 'tag-pharmacy',
-        '時尚品牌': 'tag-fashion',
-        '直銷品牌': 'tag-direct-sales',
-        '生活百貨': 'tag-lifestyle',
-        '運動': 'tag-sports',
-        '寵物': 'tag-pet',
-        '親子': 'tag-family',
-        '應用程式商店': 'tag-appstore',
-        '飲食品牌': 'tag-food-brand',
-        '美妝美髮保養品牌': 'tag-beauty-brand',
-        '保費': 'tag-insurance'
-    };
-    return tagMap[tagName] || 'tag-default';
+    return CARD_TAG_CLASS_MAP.get(tagName) || 'tag-default';
 }
 
 // Helper function to render card tags
@@ -754,7 +762,7 @@ function renderCardTags(tags) {
     if (!tags || tags.length === 0) return '';
 
     const tagsHtml = tags.map(tag =>
-        `<span class="card-tag ${getTagClass(tag)}">${tag}</span>`
+        `<span class="card-tag ${getTagClass(tag)}">${escapeHtml(tag)}</span>`
     ).join('');
 
     return `<div class="card-tags-container">${tagsHtml}</div>`;

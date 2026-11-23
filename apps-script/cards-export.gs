@@ -50,7 +50,10 @@ function onOpen() {
   // 活動快寫（activity-writer.gs ＋ ActivityWriter.html，2026-11-13 新增）：貼原文 → 解析 → 寫進表。同樣沒貼就不出現
   if (typeof openActivityWriter === 'function') menu.addItem('✍️ 活動快寫', 'openActivityWriter');
   menu.addToUi();
-    buildAutomationMenu_();
+  // 「🤖 資料自動化」選單由 benefits-parser.gs 提供；它現在住在另一個 Apps Script 專案
+  // （PMC 資料自動化），本專案沒有這個函式。少了 typeof 守衛，每次開試算表 onOpen 都會
+  // ReferenceError（2026-11-17 站長從執行記錄確認）。兩支放回同一個專案時這行照樣有效。
+  if (typeof buildAutomationMenu_ === 'function') buildAutomationMenu_();
 }
 
 // ==========================================

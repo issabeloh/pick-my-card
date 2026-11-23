@@ -1,16 +1,18 @@
 /* ============================================================
- * Pick My Card — js/mappings-page.js（載入順序 13/13）
+ * Pick My Card — js/mappings-page.js（載入順序第 13 支模組檔；完整順序以 index.html 的 <script> 標籤為準）
  * 「我的刷卡小抄」完整頁面（2026-09-28 由 modal 改版：收據風格「刷卡小抄」）
  * 區塊目錄（Grep 關鍵字）：
- *  - 狀態與偏好（排列/版面/字級/存圖設定）→ "mpLoadPrefs" / "mpSavePrefs"
- *  - 商家顯示名稱（改名／重設，存雲端）    → "loadMerchantAliases" / "mpSetAlias"
- *  - 分組／分類／拼音字首                 → "mpBuildGroups" / "mpCategoryOf" / "mpLetterOf"
- *  - 失效檢查與「更新活動」              → "mpProbeAll" / "mpUpdateDeadlines"
- *  - 頁面開關與網址 /mappings            → "openMappingsPage" / "closeMappingsPage"
- *  - 收據 HTML                         → "mpReceiptHtml"
- *  - 拖曳排序（自訂）                   → "mpStartDrag"
- *  - 改名面板                          → "mpOpenEditSheet"
- *  - 存成圖片（canvas 繪製、桌布尺寸）     → "mpOpenExport" / "mpRenderCanvas" / "mpWallSize"
+ *  - 狀態與偏好（排列/版面/字級/存圖設定） → "mpLoadPrefs" / "mpSavePrefs"
+ *  - 商家顯示名稱（改名／重設，存雲端） → "loadMerchantAliases" / "mpSetAlias"
+ *  - 分組／分類／拼音字首        → "mpBuildGroups" / "mpCategoryOf" / "mpLetterOf"
+ *  - 失效檢查與「更新活動」      → "mpProbeAll" / "mpUpdateDeadlines"
+ *  - 頁面開關與網址 /mappings    → "openMappingsPage" / "closeMappingsPage"
+ *  - 收據 HTML                   → "mpReceiptHtml"
+ *  - 頁面渲染                    → "mpRender"
+ *  - 拖曳排序（自訂）            → "mpStartDrag"
+ *  - 改名面板                    → "mpOpenEditSheet"
+ *  - 存成圖片（canvas 繪製、桌布尺寸） → "mpWallSize" / "mpRenderCanvas" / "mpOpenExport"
+ *  - 事件綁定                    → "mpBind"
  *
  * 設計紀錄：docs/project/ui-display.md 第 8 節。
  * ⚠️ 這支檔案也會被 tools/lib/merchant-cards.js 用 vm 載入（build 期間），頂層不可以直接
@@ -243,12 +245,9 @@ function mpISO(d) {
     return s.includes('-') ? s : (typeof slashDateToISO === 'function' ? slashDateToISO(s) : s);
 }
 
+// 到期日當天＝0、已過期＝負數。算法在 core-utils 的 taiwanDaysUntil（台灣的今天）。
 function mpDaysLeft(end) {
-    const iso = mpISO(end);
-    if (!iso) return null;
-    const endDate = parseISODate(iso), today = parseISODate(getTaiwanToday());
-    if (!endDate || !today) return null;
-    return Math.round((endDate - today) / 86400000);
+    return taiwanDaysUntil(end);
 }
 
 // 配對 → 以商家分組。組序＝組內最小 order；組內依回饋率高→低。
@@ -324,17 +323,16 @@ function mpOwnedIds() {
 async function mpLoadLimits() {
     const out = new Map();
     const ids = mpOwnedIds();
-    const parse = v => { const n = Number(v); return v !== null && v !== undefined && v !== '' && Number.isFinite(n) && n > 0 ? n : null; };
     // 本機鏡像（saveCreditLimit／loadCreditLimit 寫的）：雲端讀不到或離線時用它
     const readLocal = () => {
         const pre = currentUser ? `creditLimit_${currentUser.uid}_` : 'creditLimit_local_';
-        ids.forEach(id => { let v = null; try { v = localStorage.getItem(pre + id); } catch (e) { /* ignore */ } const n = parse(v); if (n !== null) out.set(id, n); });
+        ids.forEach(id => { let v = null; try { v = localStorage.getItem(pre + id); } catch (e) { /* ignore */ } const n = parseCreditLimit(v); if (n !== null) out.set(id, n); });
     };
     try {
         if (currentUser && window.db && window.doc && window.getDoc) {
             const snap = await window.getDoc(window.doc(window.db, 'users', currentUser.uid));
             const map = snap.exists() && snap.data().creditLimits;
-            if (map) ids.forEach(id => { const n = parse(map[id]); if (n !== null) out.set(id, n); });
+            if (map) ids.forEach(id => { const n = parseCreditLimit(map[id]); if (n !== null) out.set(id, n); });
             else readLocal();
         } else {
             readLocal();
@@ -388,9 +386,12 @@ function mpOpenOwnedCards() {
 
 // 活動封頂金額＝站上查詢結果「回饋消費上限」同一個值（calculateCardCashback 的 cap）
 function mpCapText(cardId, cap) {
-    const n = Number(cap);
-    if (!cap || isNaN(n) || n <= 0) return '無消費上限';
-    return `消費上限 NT$${Math.floor(n).toLocaleString()}${cardId === 'taishin-richart' ? '+' : ''}`;
+    return formatCapText(cap, {
+        unlimitedWhen: 'nonPositive',
+        unlimitedText: '無消費上限',
+        prefix: '消費上限 ',
+        suffix: cardId === 'taishin-richart' ? '+' : ''
+    });
 }
 
 function mpShortLevel(level) {
@@ -597,46 +598,6 @@ function refreshMappingsEntry() {
     MP.probed = false;
     if (location.pathname === '/mappings') openMappingsPage({ fromHistory: true });
     else if (MP.open) { mpLoadPrefs(); mpRender(); }
-    if (currentUser && !MP.open) setTimeout(mpShowMovedHint, 1200);
-}
-
-// ============================================
-// 一次性改版提示（2026-09-30）：登入後在「我的刷卡小抄」頁籤下方冒出說明氣泡（站長決定不要飛入動畫）。
-// 每個瀏覽器只顯示 2 次（計數存本機，不含個資，登出也不清）。
-// ============================================
-const MP_HINT_KEY = 'mpMovedHintCount';
-const MP_HINT_TIMES = 2;
-function mpAnyModalOpen() {
-    return [...document.querySelectorAll('.modal')].some(m => getComputedStyle(m).display !== 'none');
-}
-function mpShowMovedHint(attempt = 0) {
-    if (!currentUser || MP.open || document.querySelector('.mp-hint-bubble')) return;
-    const n = Number(readLocalJSON(MP_HINT_KEY, 0)) || 0;
-    if (n >= MP_HINT_TIMES) return;
-    // 登入後可能有其他 modal 同時開著 → 等它們關掉再播，最多等約 30 秒；沒播出來就不扣次數
-    if (mpAnyModalOpen()) { if (attempt < 20) setTimeout(() => mpShowMovedHint(attempt + 1), 1500); return; }
-    const tab = mpEl('home-view-switch-mappings');
-    if (!tab) return;
-    const tr = tab.getBoundingClientRect();
-    if (tr.bottom < 0 || tr.top > innerHeight || tr.width === 0) return;   // 頁籤不在畫面上就下次再說
-    try { localStorage.setItem(MP_HINT_KEY, JSON.stringify(n + 1)); } catch (e) { /* ignore */ }
-
-    const bubble = document.createElement('div');
-    bubble.className = 'mp-hint-bubble';
-    bubble.setAttribute('role', 'status');
-    bubble.innerHTML = '<span>原「我的配卡組合」搬到這裡了！釘選過的都在裡面</span><button type="button" aria-label="關閉提示">×</button>';
-    document.body.appendChild(bubble);
-    const w = Math.min(280, innerWidth - 24);
-    bubble.style.width = w + 'px';
-    bubble.style.left = Math.max(12, Math.min(tr.left + tr.width / 2 - w / 2, innerWidth - w - 12)) + 'px';
-    bubble.style.top = (tr.bottom + 10) + 'px';
-    bubble.style.setProperty('--arrow-x', (tr.left + tr.width / 2 - parseFloat(bubble.style.left)) + 'px');
-    // 氣泡本身不擋點擊（CSS pointer-events: none，只有 × 可按）；點畫面任何地方、捲動、6 秒後都會關
-    const close = () => { bubble.remove(); document.removeEventListener('pointerdown', close, true); };
-    bubble.querySelector('button').addEventListener('click', close);
-    document.addEventListener('pointerdown', close, true);
-    window.addEventListener('scroll', close, { once: true, passive: true });
-    setTimeout(close, 6000);
 }
 
 // ============================================

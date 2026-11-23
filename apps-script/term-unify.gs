@@ -27,7 +27,6 @@
 //   ・公式格、第 1 列表頭不動；只掃 TERM_UNIFY_SHEETS（MerchantPages 刻意不掃：牽涉商家頁網址）
 //   ・Highlights（精選活動）2026-10-17 加入：寫法一致性檢查抓到精選活動寫「LINE Pay」、卡片寫「Line Pay」，沒掃就永遠改不到
 const TERM_DICT_SHEET = '統一詞';
-const TERM_DICT_HEADERS = ['統一詞', '其他寫法', '搜尋別名', '備註'];
 const TERM_UNIFY_SHEETS = ['Cards Data', 'QuickSearch', 'Search Hints', 'searchExclusions', 'SearchExclusions',
   'Card Benefits', 'Merchant Payments', 'ExclusionGroups', 'Highlights'];
 const TERM_UNIFY_REPORT = '用詞統一預覽';
