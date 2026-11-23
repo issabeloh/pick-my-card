@@ -61,6 +61,13 @@ body {
     --ui-text-16: 16px;         /* 輸入框、強調內文（10；1rem 另有 9） */
     --ui-text-19: 19px;         /* 卡名（現在是 1.2rem＝19.2px） */
     --ui-text-28: 28px;         /* 回饋率主數字 */
+
+    /* 陰影 3 階（2026-11-23 漸層與陰影收斂）。值都取自本檔原有的值，定義當下畫面零變化。
+       只給「真的浮在別的東西上面」的元素用；卡片、按鈕、hover 不靠陰影分層（靠框線與底色）。
+       聚焦光暈（0 0 0 3px …）、用 inset 畫的框線、提示閃爍不是陰影，不用這組 */
+    --ui-shadow-1: 0 1px 3px rgba(0, 0, 0, 0.1);       /* 貼著頁面的浮動小鈕（回到頂端、回到推薦活動） */
+    --ui-shadow-2: 0 8px 24px rgba(15, 23, 42, 0.12);  /* 浮層：下拉選單、輸入建議、說明小窗 */
+    --ui-shadow-3: 0 20px 40px rgba(0, 0, 0, 0.2);     /* modal */
 }
 @media (min-width: 769px) {
     :root {
@@ -3440,7 +3447,7 @@ input[type="number"]:focus {
     overflow-y: auto;
     /* 滑到頂/底不再橡皮筋回彈、也不把捲動傳給背景頁 */
     overscroll-behavior: none;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--ui-shadow-3);
 }
 
 .modal-header {
@@ -7260,7 +7267,7 @@ mark.cashback-search-hl {
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--ui-shadow-1);
     backdrop-filter: blur(8px);
     z-index: 999;
     overflow: visible;
@@ -7336,7 +7343,7 @@ mark.cashback-search-hl {
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--ui-shadow-1);
     backdrop-filter: blur(8px);
     z-index: 999;
     transition: all 0.2s ease;
@@ -10334,7 +10341,7 @@ html.pmc-onboard #search-hints-container {
     background: #fff;
     border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-md);
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+    box-shadow: var(--ui-shadow-2);
     max-height: 320px;
     overflow-y: auto;
     z-index: 60;
