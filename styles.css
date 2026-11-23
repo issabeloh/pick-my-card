@@ -1756,7 +1756,7 @@ main {
     color: #64748b;
     border: 1px solid #e2e8f0;
     border-radius: 16px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1772,7 +1772,7 @@ main {
 .quick-search-expand-btn.expanded {
     background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
     border-color: #93c5fd;
-    color: #2563eb;
+    color: var(--ui-brand-bright);
 }
 
 .quick-search-expand-btn.expanded svg {
@@ -1788,7 +1788,7 @@ main {
     position: fixed;
     background: white;
     border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.08);
     z-index: 1000;
     opacity: 0;
@@ -1816,7 +1816,7 @@ main {
     border-top: 1px solid #e2e8f0;
     padding: 10px 12px;
     background: #f8fafc;
-    border-radius: 0 0 12px 12px;
+    border-radius: 0 0 var(--ui-radius-lg) var(--ui-radius-lg);
 }
 
 .quick-search-dropdown-footer .manage-quick-options-btn {
@@ -1828,9 +1828,9 @@ main {
     padding: 8px 12px;
     background: transparent;
     border: 1px dashed #cbd5e1;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     color: #64748b;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -1865,10 +1865,10 @@ main {
     padding: 6px 12px;
     background: #fff;
     /* 2026-11-16：原本是天藍字＋天藍框的膠囊，改中性色。顏色留給「計算回饋」這種主要動作 */
-    color: #374151;
+    color: var(--ui-ink-2);
     border: 1px solid #d1d5db;
-    border-radius: 8px;
-    font-size: 13px;
+    border-radius: var(--ui-radius-md);
+    font-size: var(--ui-text-13);
     font-weight: 500;
     white-space: nowrap;
     cursor: pointer;
@@ -1887,7 +1887,7 @@ main {
 }
 
 .quick-search-btn .icon {
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     line-height: 1;
 }
 
@@ -1972,7 +1972,7 @@ input[type="number"]:focus {
     background: transparent;
     border: none;
     color: #059669;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     line-height: 1.5;
     display: inline-block;
     /* 無匹配時 displayResults() 會 scrollIntoView({block:'start'}) 把這行紅字捲到接近
@@ -2032,10 +2032,10 @@ input[type="number"]:focus {
 .calculate-btn {
     width: 100%;
     padding: 16px;
-    background: #1e40af;
+    background: var(--ui-brand);
     color: white;
     border: none;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
@@ -2397,8 +2397,8 @@ input[type="number"]:focus {
     position: relative; /* 「?」說明浮層的定位基準 */
     display: flex;
     gap: 12px; /* 與 .input-row-with-button 手機版 grid gap 一致，上下左右間距等距 */
-    font-size: 14px;
-    color: #6b7280;
+    font-size: var(--ui-text-14);
+    color: var(--ui-ink-3);
     user-select: none;
 }
 
@@ -2409,8 +2409,8 @@ input[type="number"]:focus {
     display: flex;
     align-items: center;
     gap: 6px;
-    background: #f3f4f6;
-    border: 1px solid #e5e7eb;
+    background: var(--ui-fill);
+    border: 1px solid var(--ui-line);
     border-radius: 10px;
     padding: 4px 12px;
 }
@@ -2466,7 +2466,7 @@ input[type="number"]:focus {
     border-radius: 50%;
     width: 18px;
     height: 18px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: bold;
     cursor: pointer;
     display: inline-flex;
@@ -2520,7 +2520,7 @@ input[type="number"]:focus {
    桌機保持 display:none ⇒ 不會變成 .input-row-with-button 的 grid item。 */
 .mobile-comparison-hint {
     display: none;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.45;
     color: #9ca3af;      /* 備註灰：比 label 與 toggles 都淡，不跟主要操作搶注意力 */
     font-weight: 400;
@@ -9835,13 +9835,13 @@ html.pmc-onboard #search-hints-container {
 /* 信任列（2026-11-16）：搜尋區最下面一行小字，講資料有多深、多新 */
 .trust-line {
     margin: 14px 0 0;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.5;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 .trust-line b {
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .spotlight-header {
@@ -10355,16 +10355,16 @@ html.pmc-onboard #search-hints-container {
 }
 /* 第一行「搜尋「用戶打的字」」：跟下面的建議用細線隔開，打的字粗體 */
 .merchant-suggest-query {
-    color: #374151;
+    color: var(--ui-ink-2);
     border-bottom: 1px solid #eef2f7;
 }
 .merchant-suggest-query strong {
-    color: #111827;
+    color: var(--ui-ink-1);
     font-weight: 700;
 }
 .merchant-suggest-item mark {
     background: none;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-weight: 700;
 }
 
@@ -10395,8 +10395,8 @@ html.pmc-onboard #search-hints-container {
 
 .merchant-search-box .quick-search-wrapper {
     margin-top: 0;
-    background: #f3f4f6;
-    border-top: 1px solid #e5e7eb;
+    background: var(--ui-fill);
+    border-top: 1px solid var(--ui-line);
     border-radius: 0 0 11px 11px;
     padding: 10px 12px;
 }
@@ -10418,7 +10418,7 @@ html.pmc-onboard #search-hints-container {
 }
 
 .amount-input-wrap .amount-prefix {
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 600;
     color: #9ca3af;   /* 比金額本身淡：它是單位不是數值 */
     flex-shrink: 0;
