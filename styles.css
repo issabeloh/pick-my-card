@@ -1086,7 +1086,7 @@ header h1 {
 .card-chips-count {
     margin-bottom: 10px;
     font-size: var(--ui-text-12);
-    color: #9ca3af;
+    color: var(--ui-ink-3);   /* 原 #9ca3af，白底上太淡（2026-11-23） */
 }
 
 /* 左右分割膠囊：左半銀行（深色底）、右半卡名，讓用戶先掃銀行再找卡。
@@ -8853,14 +8853,14 @@ mark.cashback-search-hl {
     list-style: none;
     margin: 0;
     padding: 0;
-    background: #f9fafb;
-    border: 1px solid #edeff2;
-    border-radius: 10px;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-line);   /* 原 #edeff2，2026-11-23 站長看圖同意 */
+    border-radius: var(--ui-radius-lg);   /* 原 10px，和 FAQ 卡同款；縮圖的 4px 站長決定不改 */
     overflow: hidden;
 }
 
 .sidebar-changelog-list li + li {
-    border-top: 1px solid #edeff2;
+    border-top: 1px solid var(--ui-line);
 }
 
 .sidebar-changelog-item {
@@ -9065,16 +9065,16 @@ mark.cashback-search-hl {
 
 .sidebar-faq-card-text strong {
     font-size: 0.85rem;
-    color: #4b5563;
+    color: var(--ui-ink-2);   /* 原 #4b5563（2026-11-23） */
 }
 
 .sidebar-faq-card-text small {
     font-size: 0.7rem;
-    color: #9ca3af;
+    color: var(--ui-ink-3);   /* 原 #9ca3af（2026-11-23） */
 }
 
 .sidebar-faq-card-arrow {
-    color: #9ca3af;
+    color: var(--ui-ink-3);
     font-weight: 700;
 }
 
