@@ -3121,7 +3121,8 @@ function pmcRenderPicks_(picks, monthLabel) {
     return '    <article class="pmc-pick pmc-pick--' + c.kind + '" data-period-end="' + (p.periodEndIso || '') + '">\n' +
       '      <p class="pmc-pick-q">' + pmcEscapeHtml_(c.question) + '</p>\n' +
       '      ' + pmcCardImgHtml_(p, 'pmc-pick-img') + '\n' +
-      '      <h3 class="pmc-pick-name">' + pmcEscapeHtml_(p.cardName) + '</h3>\n' +
+      // 卡名連單卡頁（2026-11-23 站長）：同清單卡名的 .promo-card-name-link（藍色「›」）
+      '      <h3 class="pmc-pick-name">' + pmcCardNameLinkHtml_(p.promo.id, p.cardName) + '</h3>\n' +
       '      <div class="pmc-pick-badges"><span class="pmc-kind pmc-kind--' + c.kind + '">' + PMC_KIND_LABEL[c.kind] +
         '</span><span class="promo-ending-badge" hidden></span></div>\n' +
       '      <p class="pmc-pick-headline">' + pmcEscapeHtml_(c.headline) +
@@ -3207,7 +3208,7 @@ function pmcRenderLuggage_(items) {
         '" style="--inch:' + l.inch + '">\n' +
       '      <div class="pmc-lg-size">' + pmcSuitcaseSvg_() + '<span class="pmc-lg-inch">' + inchText + '<small>吋</small></span></div>\n' +
       '      <div class="pmc-lg-body">\n' +
-      '        <h3 class="pmc-lg-name">' + pmcEscapeHtml_(p.cardName) + '</h3>\n' +
+      '        <h3 class="pmc-lg-name">' + pmcCardNameLinkHtml_(p.promo.id, p.cardName) + '</h3>\n' +
       '        <p class="pmc-lg-gift">' + pmcEscapeHtml_(l.gift) + '</p>\n' +
       '        <div class="pmc-lg-meta"><dl class="pmc-lg-facts"><div><dt>參考價</dt><dd>' +
         (typeof v === 'number' && v > 0 ? pmcEscapeHtml_(pmcMoney_(v)) : '—') + '</dd></div>' +
@@ -3488,10 +3489,7 @@ function pmcRenderCardGroup_(group, opts) {
     pmcEscapeHtml_(featId) + '">卡片特色<span class="promo-chevron" aria-hidden="true"></span></button>';
   // 卡名連到這張卡的單卡頁（2026-11-18）：清單是單卡頁唯一的站內入口，Google 也靠這條連結找到它們。
   // 單卡頁在部署時由 tools/build-promo-card-pages.js 生成，跟這份清單用同一份資料、同一條過期規則。
-  const cardPagePath = pmcCardPagePath_(cardId);
-  const nameHtml = '<h2 class="promo-card-name">' + (cardPagePath
-    ? '<a class="promo-card-name-link" href="' + pmcEscapeHtml_(cardPagePath) + '">' + pmcEscapeHtml_(group.cardName) + '</a>'
-    : pmcEscapeHtml_(group.cardName)) + '</h2>';
+  const nameHtml = '<h2 class="promo-card-name">' + pmcCardNameLinkHtml_(cardId, group.cardName) + '</h2>';
   const openTag = '<article class="promo-card' + (pageMode ? ' promo-card--page' : '') + '" id="' + pmcEscapeHtml_(anchorId) + '" data-card-id="' +
     pmcEscapeHtml_(cardId) + '" data-card-name="' + pmcEscapeHtml_(group.cardName) +
     '" data-order-index="' + group.orderIndex + '" data-act-count="' + acts.length +
@@ -3984,6 +3982,15 @@ o.mainHtml +
 const PMC_CARD_PAGE_ID_RE = /^[a-z0-9][a-z0-9-]*$/;
 function pmcCardPagePath_(cardId) {
   return PMC_CARD_PAGE_ID_RE.test(String(cardId || '')) ? '/promos/' + cardId : '';
+}
+
+// 卡名＋單卡頁連結（清單卡名、站長推薦、行李箱專區共用；2026-11-23 抽出）。
+// id 不合規（沒有單卡頁）就只輸出純文字卡名。回傳值已跳脫，直接放進標題標籤。
+function pmcCardNameLinkHtml_(cardId, cardName) {
+  const path = pmcCardPagePath_(cardId);
+  return path
+    ? '<a class="promo-card-name-link" href="' + pmcEscapeHtml_(path) + '">' + pmcEscapeHtml_(cardName) + '</a>'
+    : pmcEscapeHtml_(cardName);
 }
 
 // 要出單卡頁（＝進 sitemap）的卡：今天還有進行中活動、id 合法。清單頁與部署端同一條規則。

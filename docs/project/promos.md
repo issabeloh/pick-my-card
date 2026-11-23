@@ -493,7 +493,7 @@ mockup 產生器：`docs/mockups/promos-mock-2026-11-17.js` 的 F、G 兩段。
     活動下架的卡圖不會自動刪（可能再上架），`--check` 以 ℹ️ 列出。
 - **活動全部到期、但還在 cards.data 裡的卡**：輸出一頁「目前沒有進行中的新戶活動」＋`noindex`，免得 sitemap／外部連結在下次匯出前 404。
   部署之後才到期的：`promos.js` 的 `setupCardPage()` 在整張卡被藏起來時顯示 `#pmc-cp-ended` 那一句。
-- **入口**：清單卡名 `<a class="promo-card-name-link" href="/promos/<id>">`（卡名後面 CSS 加藍色「›」，站長 2026-11-22：只有滑過才出底線，手機看不出能點）（`pmcRenderCardGroup_`）＋ sitemap。這兩樣在 Apps Script 端，
+- **入口**：清單卡名 `<a class="promo-card-name-link" href="/promos/<id>">`（卡名後面 CSS 加藍色「›」，站長 2026-11-22：只有滑過才出底線，手機看不出能點）（`pmcRenderCardGroup_`）、**站長推薦 `.pmc-pick-name` 與行李箱專區 `.pmc-lg-name`**（2026-11-23 站長；三處共用 `pmcCardNameLinkHtml_()`，同一個 class 同一個「›」）＋ sitemap。這兩樣在 Apps Script 端，
   **要站長重貼 `cards-export.gs` 才會出現**；之前頁面已經存在、只是沒有連結。
 - **每頁自己的更新日**：`exportToJSON` 用 `pmcPromoCardSignature_`（該卡活動＋申辦連結＋卡名）配 `pmcStampedDate_('PROMOCARD_<id hash>')`，
   寫進 `cards.data` 的 `promoCardUpdatedIso`，部署端烤進頁面（資料更新於／dateModified），sitemap 的 lastmod 同源。
