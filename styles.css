@@ -3031,14 +3031,14 @@ input[type="number"]:focus {
 
 /* 搜尋結果卡的「最優回饋」＝貼合右上框邊的角標（非膠囊，避免被誤認為可點）。
    絕對定位貼齊 .card-result（position:relative）右上角、壓住 1px 邊框；
-   外角沿用卡片 8px 圓角、內側下緣微圓；純標示、無 hover/點擊態。 */
+   外角沿用卡片 8px 圓角、內側下緣同樣 8px；純標示、無 hover/點擊態。 */
 .card-result .best-badge {
     position: absolute;
     top: -1px;
     right: -1px;
     z-index: 2;
     padding: 5px 12px 6px;
-    border-radius: 0 8px 0 10px;
+    border-radius: 0 var(--ui-radius-md) 0 var(--ui-radius-md);   /* 內側原本 10px，2026-11-23 站長同意併成 8px */
     letter-spacing: .03em;
     font-weight: 700;
     text-transform: none;

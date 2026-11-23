@@ -1749,9 +1749,11 @@ function createCardResultElement(result, originalAmount, searchedItem, isBest, i
                     ${cashbackText}
                 </div>
                 ${(() => {
-    if (result.card.basicCashbackType) {
-        const cashbackType = result.card.basicCashbackType;
-        return `<div class="cashback-type-label">(${cashbackType})</div>`;
+    // 回饋形式（現金積點、LINE POINTS…）。最普通的「現金回饋」不顯示（16 張卡都是它，標了等於沒標；
+    // 站長 2026-11-23 同意），只有點數類才是用戶要注意的。詳情頁的「回饋形式」列照舊全部顯示
+    const cashbackType = String(result.card.basicCashbackType || '').trim();
+    if (cashbackType && cashbackType !== '現金回饋') {
+        return `<div class="cashback-type-label">(${escapeHtml(cashbackType)})</div>`;
                     }
                     return '';
                 })()}
