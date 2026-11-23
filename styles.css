@@ -670,7 +670,7 @@ header {
 .da-input {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-md);
     font-size: var(--ui-text-14);
     font-family: inherit;
@@ -1305,7 +1305,7 @@ main {
     min-height: 48px;
     padding: 12px;
     background: var(--ui-bg);
-    border: 1px dashed #d1d5db;
+    border: 1px dashed var(--ui-line);
     border-radius: var(--ui-radius-md);
 }
 
@@ -1640,7 +1640,7 @@ main {
 .custom-option-form input {
     width: 100%;
     padding: 8px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-sm);
     font-size: 0.9rem;
 }
@@ -1661,7 +1661,7 @@ main {
 .selected-emoji {
     flex: 1;
     padding: 12px;
-    border: 2px dashed #d1d5db;
+    border: 2px dashed var(--ui-line);
     border-radius: var(--ui-radius-md);
     background: white;
     cursor: pointer;
@@ -3557,7 +3557,7 @@ input[type="number"]:focus {
 .toggle-all-btn {
     background: #e5e7eb;
     color: var(--ui-ink-3);
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     padding: 6px 14px;
     /* 任何寬度都只能一行（2026-10-14 站長：手機「全選」被擠成兩行）；讓搜尋框去縮 */
     white-space: nowrap;
@@ -3813,7 +3813,7 @@ input[type="number"]:focus {
     margin: 12px -16px -16px;
     padding: 12px 16px;
     background: var(--ui-fill);
-    border-top: 1px solid #d1d5db;
+    border-top: 1px solid var(--ui-line);
     border-radius: 0 0 var(--ui-radius-md) var(--ui-radius-md);
     font-size: var(--ui-text-13);
     overflow-x: auto;
@@ -3828,7 +3828,7 @@ input[type="number"]:focus {
 .cashback-detail-item .calc-breakdown-popup {
     margin: 10px 0 0;
     padding: 9px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-md);
     font-size: var(--ui-text-12);
 }
@@ -3887,7 +3887,7 @@ input[type="number"]:focus {
     .coupon-item .breakdown-table { min-width: 100%; }
 }
 .breakdown-table .bd-total td {
-    border-top: 1px solid #d1d5db;
+    border-top: 1px solid var(--ui-line);
     padding-top: 7px;
     font-weight: 700;
 }
@@ -3948,7 +3948,7 @@ input[type="number"]:focus {
     gap: 6px;
     height: 30px;
     padding: 0 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-pill);
     background: #fff;
     color: var(--ui-ink-2);
@@ -3999,7 +3999,7 @@ input[type="number"]:focus {
 .ow-frame {
     width: 100%;
     aspect-ratio: 1.586;
-    border-radius: 14px;
+    border-radius: var(--ui-radius-lg);
     overflow: hidden;
     position: relative;
     background: #f1f5f9;
@@ -4098,7 +4098,7 @@ input[type="number"]:focus {
     position: relative;
 }
 .ow-tile .ow-frame {
-    border-radius: 9px;
+    border-radius: var(--ui-radius-md);
     box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.1);
     transition: box-shadow 0.15s ease;
 }
@@ -4109,7 +4109,7 @@ input[type="number"]:focus {
 .ow-tile:focus-visible {
     outline: 2px solid var(--ui-brand);
     outline-offset: 4px;
-    border-radius: 9px;
+    border-radius: var(--ui-radius-md);
 }
 .ow-ok {
     display: block;
@@ -4138,7 +4138,7 @@ input[type="number"]:focus {
     justify-content: center;
     aspect-ratio: 1.586;
     border: 1.5px dashed #cbd5e1;
-    border-radius: 9px;
+    border-radius: var(--ui-radius-md);
     color: var(--ui-brand);
     font-size: 13.5px;
     font-weight: 700;
@@ -4319,7 +4319,7 @@ input[type="number"]:focus {
     max-width: 100%;
     margin: 0;
     padding: 0 8px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-sm);
     background-color: #fff;
     box-shadow: none;
@@ -4350,7 +4350,7 @@ input[type="number"]:focus {
     min-height: 66px;
     margin: 4px 0 0;
     padding: 8px 10px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-sm);
     background: #fff;
     color: var(--ui-ink-1);
@@ -4543,7 +4543,7 @@ input[type="number"]:focus {
     gap: 1px;
     margin: 8px 0 0;
     padding: 0 5px 0 9px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-pill);
     background: #fff;
     color: var(--ui-ink-2);
@@ -4723,7 +4723,7 @@ input[type="number"]:focus {
 .cancel-btn {
     background: var(--ui-fill);
     color: var(--ui-ink-2);
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
 }
 
 .cancel-btn:hover {
@@ -5119,7 +5119,7 @@ input[type="number"]:focus {
     height: 44px;
     margin: 0;
     padding: 0 34px 0 40px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-md);
     background-color: #fff;
     background-position: 14px center;
@@ -5327,7 +5327,7 @@ input[type="number"]:focus {
         padding: 12px 12px 14px;
         background: var(--ui-bg);
         border: 1px solid var(--ui-line);
-        border-radius: 10px;
+        border-radius: var(--ui-radius-lg);
     }
     .cd-side .cd-set-hd { margin: 0; }
     .cd-side .cd-set-box { background: #fff; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-md); }
@@ -5498,7 +5498,7 @@ input[type="number"]:focus {
     padding: 12px 14px;
     background: #f5f9ff;
     border: 1px solid #dbeafe;
-    border-radius: 10px;
+    border-radius: var(--ui-radius-md);
 }
 .cashback-search-label {
     display: block;
@@ -5519,7 +5519,7 @@ input[type="number"]:focus {
     width: 100%;
     padding: 5px 10px 5px 30px; /* 左 30px 讓開放大鏡背景圖示 */
     margin-bottom: 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-sm);
     font-size: var(--ui-text-12);
     box-sizing: border-box;
@@ -6089,7 +6089,7 @@ mark.cashback-search-hl {
     gap: 1px;
     margin: -2px 0;
     padding: 0 4px 0 7px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-pill);
     background: #fff;
     color: var(--ui-ink-2);
@@ -7364,7 +7364,7 @@ mark.cashback-search-hl {
 .feedback-textarea {
     width: 100%;
     padding: 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-md);
     font-family: inherit;
     font-size: 0.875rem;
@@ -7375,14 +7375,14 @@ mark.cashback-search-hl {
 
 .feedback-textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--ui-brand-bright);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 .feedback-input {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--ui-line);
     border-radius: var(--ui-radius-md);
     font-family: inherit;
     font-size: 0.875rem;
@@ -7391,7 +7391,7 @@ mark.cashback-search-hl {
 
 .feedback-input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: var(--ui-brand-bright);
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -7402,7 +7402,7 @@ mark.cashback-search-hl {
 
 /* Image Upload Area */
 .image-upload-area {
-    border: 2px dashed #d1d5db;
+    border: 2px dashed var(--ui-line);
     border-radius: var(--ui-radius-md);
     padding: 20px;
     text-align: center;
@@ -7412,12 +7412,12 @@ mark.cashback-search-hl {
 }
 
 .image-upload-area:hover {
-    border-color: #667eea;
+    border-color: var(--ui-brand-bright);
     background: var(--ui-fill);
 }
 
 .image-upload-area.drag-over {
-    border-color: #667eea;
+    border-color: var(--ui-brand-bright);
     background: #eef2ff;
 }
 
@@ -9144,7 +9144,7 @@ mark.cashback-search-hl {
     padding: 8px 14px;
     background: var(--ui-fill);
     color: var(--ui-ink-2);
-    border-color: #d1d5db;
+    border-color: var(--ui-line);
     width: 100%;
 }
 
@@ -10136,7 +10136,7 @@ html.pmc-onboard #search-hints-container {
     flex-direction: column;
     gap: 10px;
     background: var(--ui-bg);
-    border-radius: 10px;
+    border-radius: var(--ui-radius-md);
     padding: 14px 16px;
     margin-bottom: 14px;
 }
