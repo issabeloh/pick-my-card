@@ -49,7 +49,7 @@
             if (refHost && refHost !== location.hostname) {
                 qs += (qs ? '&' : '?') + 'pmc_ref=' + encodeURIComponent(ref);
             }
-            return 'landing.html' + qs;
+            return '/landing' + qs;
         }
         // ===== 對半分流：landing 對上「工具＋首次引導」（2026-11-16，設計見 docs/project/ui-refresh-diagnosis.md 5.4、5.5）=====
         // 只有「本來會被轉去 landing 的全新訪客」擲一次骰子，結果存 localStorage pmc_ab_landing：
@@ -71,7 +71,7 @@
                 localStorage.setItem('pmc_ab_landing', pmcAbForced[1]);
                 localStorage.setItem('pmc_ab_forced', '1');
                 localStorage.removeItem('pmc_onboard_done');
-                if (pmcAbForced[1] === 'A') location.replace('landing.html');
+                if (pmcAbForced[1] === 'A') location.replace('/landing');
                 else { document.documentElement.classList.add('pmc-returning-user'); pmcShowOnboardIfNeeded(); }
             } else if (!pmcFromLanding && localStorage.getItem('pmc_seen_landing') !== '1' && localStorage.length === 0) {
                 var pmcAbGroup = Math.random() < PMC_AB_TOOL_SHARE ? 'B' : 'A';
