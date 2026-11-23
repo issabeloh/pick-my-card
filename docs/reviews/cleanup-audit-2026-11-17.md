@@ -34,7 +34,8 @@
 | B3 舊儲存格式遷移碼 | ✅ 已裁決 | `mpMovedHintCount`（搬家提示氣泡＋頁面備註）已移除；`selectedCards` 相關**站長指示不做任何改動**；快捷選項舊格式遷移碼保留 |
 | C4 的「上限 NT$無」 | ✅ 完成 | 改成「無上限」（站長同意） |
 | B4 防呆用的退路分支 | ⏳ 待站長確認 | |
-| B6-3 `debugGSC`、B6-4 `importHistoricalData`、B6-5 `createDailyTrigger`、B6-6 `publishChangelog` | ⏳ 待站長確認 | |
+| B6-3 `debugGSC`、B6-4 `importHistoricalData`＋`writeHistoricalImportLog`、B6-5 `createDailyTrigger` | ✅ 刪除（2026-11-23，站長同意） | `pmc-analytics-sync.gs` 是手動貼，線上版要站長在《PMC 行銷數據集中》的 Apps Script 另外刪 |
+| B6-6 `publishChangelog` | ✅ 保留（站長同意） | 3 行轉呼叫，留著防舊觸發器／書籤斷掉；`tools/test-changelog.js` 也還呼叫它 |
 | B6-8 `domesticBonusPeriod`／`overseasBonusPeriod` | ✅ 前端改讀（2026-11-23） | 站長決定：和其他活動一樣依期間到期。`applyBonusPeriods()`（`js/core-utils.js`）過期／未開始 → 加碼率歸零；詳情頁加碼卡顯示活動期間 |
 | B6-8 `levelSettings.*.cap_hide`／`rate_hide` | ✅ 文件已清 | 站長確認試算表已無此欄，下次匯出自然消失；前端本來就不讀，只清掉文件與註解裡的提及 |
 | B6-8 `benefits[]` 的空字串鍵 | ⏳ 待站長確認 | 查證後更正：不是雜訊。那是「Card Benefits」表裡**沒有表頭的一欄**，18 筆停車權益裡 5 筆放的是官網網址、1 筆是 `true`。給它表頭（如 `source_url`）或刪掉該欄，二擇一 |
@@ -42,7 +43,7 @@
 | B7 訪客登入沒帶入額度 | ✅ 修復（2026-11-23） | 已複核屬實。`absorbGuestPersonalData` 補第 4b 段，寫入失敗保留 key 重試 |
 | B7 `saveFeeWaiverStatus` 等沒包 try | ✅ 修復（2026-11-23） | 已複核屬實，同樣問題還有 `saveCreditLimit`／`saveBillingDates`／`saveSpendingMappings`。四支的本機寫入改走 `writeLocal()`，寫不進去不再擋雲端 |
 | B7 `pmc_ab_sent` 時機 | ✅ 不改程式（站長 2026-11-23 同意） | 工具頁先記後送（送失敗會少算 B）、landing 送達才記（沒等到回應就離開會讓工具頁重送，A 多算）。分組人數改看使用者屬性 `ab_landing`，不數 `ab_assigned` 事件 |
-| 停車權益（`benefits[]`） | ⏳ 站長傾向下架 | GA4 熱門搜尋 30 天只有 1 次「停車」。18 筆裡 4 筆已過期隱藏、13 筆 12/31 到期、最後 1 筆 2027-01-01 到期。空表頭那欄（官網網址）維持原狀 |
+| 停車權益（`benefits[]`） | 📅 2027-01-04 下架（站長同意） | 已排一次性排程「PMC 停車權益下架」開新 session 做到 preview 為止。 GA4 熱門搜尋 30 天只有 1 次「停車」。18 筆裡 4 筆已過期隱藏、13 筆 12/31 到期、最後 1 筆 2027-01-01 到期。空表頭那欄（官網網址）維持原狀，隨下架一起消失 |
 | `tools/test-changelog.js` 11 項紅 | ✅ 修復（2026-11-23） | 測試過時、程式沒壞：斷言改照欄名對位 |
 | C5 級別解析兩套 | ✅ 隨 B1 解決 | 內聯正規化那一套在 specialItems 分支裡，已一起刪除，現在只剩 `resolveCardLevel` |
 | C8、C9、C10 | 未處理 | 不急；下次動到該檔時順手處理 |

@@ -872,36 +872,15 @@ function snapshotHistoryNow() {
 const WEEKDAY_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
 // ---------- 排程：每天自動執行 ----------
-// ⚠️ 現行那條 trigger 不是這個函式建的，是在「觸發條件」畫面手動建的，每天約 17:37 跑。
-//    這個函式會**先刪掉所有 updateAllReports 的觸發條件再重建一條**——
-//    為了「設定排程」隨手跑一次，就會把現行的 17:37 靜默換成下面 atHour 指定的時間。
-//    要改執行時間請去「觸發條件」畫面改，不要跑這個函式。
-//    （atHour 已從原本的 6 改成 17，與現況一致，避免真的被跑到時把排程整個挪走。）
-function createDailyTrigger() {
-  const triggers = ScriptApp.getProjectTriggers();
-  triggers.forEach(t => {
-    if (t.getHandlerFunction() === 'updateAllReports') {
-      ScriptApp.deleteTrigger(t);
-    }
-  });
-  ScriptApp.newTrigger('updateAllReports')
-    .timeBased()
-    .everyDays(1)
-    .atHour(17)
-    .create();
-}
-
-function debugGSC() {
-  const result = fetchGSCData(['query'], 10);
-  Logger.log('視窗：' + formatDate(result.window.start) + ' ~ ' + formatDate(result.window.end) +
-    '（共 ' + result.window.days + ' 天）');
-  Logger.log(JSON.stringify(result.data, null, 2));
-}
+// 現行觸發條件是在 Apps Script「觸發條件」畫面手動建的（updateAllReports，每天約 17:37）。
+// 要改執行時間就去那個畫面改。2026-11-23 刪掉了會「先刪光再重建」觸發條件的 createDailyTrigger
+// 與除錯用的 debugGSC（清理稽核 B6-3、B6-5）。
 
 // ========================================
 // 匯入 2025/11/07 上線至今的完整歷史資料（整表覆寫、每次重抓全區間）
-// ⚠️ 不是一次性：importGA4History() / importGSCHistory() 由 updateAllReports() 每天呼叫。
-//    手動跑的只有 importHistoricalData()（三步包在一起、含寫匯入紀錄）。
+// ⚠️ 不是一次性：importGA4History() / importGSCHistory() / importGA4ButtonClicksDaily()
+//    由 updateAllReports() 每天呼叫。（以前另有手動包裝 importHistoricalData，與每日排程重複，
+//    2026-11-23 刪除，稽核 B6-4）
 // ========================================
 
 const LAUNCH_DATE = '2025-11-07';
@@ -909,13 +888,6 @@ const LAUNCH_DATE = '2025-11-07';
 function launchDate_() {
   const parts = LAUNCH_DATE.split('-');
   return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-}
-
-function importHistoricalData() {
-  importGA4History();
-  importGSCHistory();
-  importGA4ButtonClicksDaily();
-  writeHistoricalImportLog();
 }
 
 // ---------- GA4：上線至今每日趨勢 ----------
@@ -1022,12 +994,6 @@ function importGSCHistory() {
       (truncated ? '｜⚠️ 已達 ' + rowLimit + ' 列上限，更早的日期被截斷，需改為分頁抓取'
                  : '｜列數上限 ' + rowLimit + '（一天一列，尚未逼近）'),
   }, ['日期', '點擊數', '曝光數', 'CTR', '平均排名'], values);
-}
-
-// ---------- 歷史匯入的更新紀錄 ----------
-function writeHistoricalImportLog() {
-  const sheet = getOrCreateSheet('更新紀錄');
-  sheet.appendRow([new Date(), '已匯入歷史資料（' + LAUNCH_DATE + ' 至今）']);
 }
 
 // ============================================================================
