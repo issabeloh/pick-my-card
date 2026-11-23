@@ -1059,7 +1059,7 @@ header h1 {
     border: none;
     color: rgba(255, 255, 255, 0.7);
     padding: 6px;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     cursor: pointer;
     transition: all 0.2s ease;
     display: flex;
@@ -1085,7 +1085,7 @@ header h1 {
    讓它落在標題與膠囊的正中間（.cards-header 實際下緣間距為 10px）。 */
 .card-chips-count {
     margin-bottom: 10px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     color: #9ca3af;
 }
 
@@ -1130,7 +1130,7 @@ header h1 {
     background: rgba(255, 255, 255, 0.2);
     color: white;
     padding: 4px 10px;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     font-size: 0.75rem;
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
@@ -8774,13 +8774,13 @@ mark.cashback-search-hl {
 /* Sidebar */
 .sidebar {
     background: #ffffff;
-    color: #374151;
+    color: var(--ui-ink-2);
     padding: 0;
     overflow: visible;
     position: sticky;
     top: 20px;
     align-self: start;
-    border-right: 1px solid #e5e7eb;
+    border-right: 1px solid var(--ui-line);
 }
 
 .sidebar-header {
@@ -8788,16 +8788,16 @@ mark.cashback-search-hl {
     justify-content: flex-end;
     align-items: center;
     padding: 16px 20px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ui-line);
 }
 
 .sidebar-close-btn {
     background: transparent;
     border: none;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     padding: 4px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     transition: all 0.2s;
     display: flex;
     align-items: center;
@@ -8825,7 +8825,7 @@ mark.cashback-search-hl {
 .sidebar .cards-header p {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     opacity: 1;
 }
 
@@ -8839,14 +8839,14 @@ mark.cashback-search-hl {
 .sidebar-changelog {
     padding-top: 14px;
     margin-bottom: 16px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
 }
 
 .sidebar-changelog-title {
     margin: 0 0 8px;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .sidebar-changelog-list {
@@ -8917,14 +8917,14 @@ mark.cashback-search-hl {
 .sidebar-changelog-card {
     font-size: 0.78rem;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .sidebar-changelog-summary {
     margin-top: 2px;
     font-size: 0.72rem;
     line-height: 1.4;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 /* 側選單底部的站內頁面連結：新戶活動＝吸睛好康 banner；FAQ＝低調工具連結
@@ -8935,7 +8935,7 @@ mark.cashback-search-hl {
     flex-direction: column;
     gap: 10px;
     padding-top: 14px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
 }
 
 @media (min-width: 769px) {
@@ -9039,9 +9039,9 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    border-radius: 12px;
-    background: #f9fafb;
-    border: 1px solid #e5e7eb;
+    border-radius: var(--ui-radius-lg);
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-line);
     text-decoration: none;
     transition: background 0.15s ease, border-color 0.15s ease;
 }
@@ -9091,9 +9091,9 @@ mark.cashback-search-hl {
 .sidebar .card-chip {
     font-size: 0.7rem;
     padding: 3px 8px;
-    background: #f9fafb;
-    color: #111827;
-    border-color: #e5e7eb;
+    background: var(--ui-bg);
+    color: var(--ui-ink-1);
+    border-color: var(--ui-line);
 }
 
 .sidebar .card-chip:hover {
@@ -9102,7 +9102,7 @@ mark.cashback-search-hl {
 }
 
 .sidebar .card-chip-name {
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 #my-payments-modal {
@@ -9163,7 +9163,7 @@ mark.cashback-search-hl {
 
 /* Sidebar still uses the same card chip overrides (cards only) */
 .sidebar .manage-cards-btn {
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .sidebar .manage-cards-btn:hover {
