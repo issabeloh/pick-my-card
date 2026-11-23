@@ -2268,8 +2268,8 @@ input[type="number"]:focus {
    「這是領券型」靠區塊標題（領券型活動）表達，不靠卡片顏色。
    同日刪掉沒有任何地方在用的 .coupon-rate／.coupon-details／.coupon-detail-*（舊版自拼模板的殘留）。 */
 .coupon-item {
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     padding: 16px;
     background: #fff;
 }
@@ -2284,7 +2284,7 @@ input[type="number"]:focus {
 .coupon-merchant {
     font-size: 1.2rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 /* Parking Benefits Styles */
@@ -2897,8 +2897,8 @@ input[type="number"]:focus {
 /* Card result styling */
 .card-result {
     position: relative;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     padding: 16px;
     transition: all 0.3s ease;
 }
@@ -2906,7 +2906,7 @@ input[type="number"]:focus {
 .card-result.best-card {
     /* 淺綠底色是站長指定保留的（2026-11-16：第一批曾改成白底綠框，站長看預覽後要求改回）。
        原本寫成 #f0fdf4 → #ecfdf5 的 135° 漸層，兩端幾乎同色，這裡直接用單色 */
-    border-color: #10b981;
+    border-color: var(--ui-green);
     background: #f0fdf4;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
 }
@@ -2983,7 +2983,7 @@ input[type="number"]:focus {
 .card-name {
     font-size: 1.2rem;
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3006,7 +3006,7 @@ input[type="number"]:focus {
 .card-name-with-pin .pin-btn {
     height: 26px;
     padding: 0 11px 0 9px;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
 }
 
 .badges-container {
@@ -3020,11 +3020,11 @@ input[type="number"]:focus {
 /* 基礎樣式：膠囊（供 .cashback-detail-item 內「卡名旁最優回饋」的行內徽章沿用，
    如 CUBE 級別／行動支付比較 modal）。搜尋結果卡另有角標覆蓋（見下） */
 .best-badge {
-    background: #10b981;
+    background: var(--ui-green);
     color: white;
     padding: 4px 12px;
     border-radius: 20px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 600;
     text-transform: uppercase;
 }
@@ -3112,7 +3112,7 @@ input[type="number"]:focus {
    （第一批曾給最優卡的回饋率深綠 #047857，站長指出那等於又多一種顏色，2026-11-16 拿掉）。 */
 .card-result .detail-value.rate-value,
 .coupon-item .detail-value.rate-value {
-    font-size: 28px;
+    font-size: var(--ui-text-28);
     font-weight: 800;
     line-height: 1.15;
     letter-spacing: -.01em;
@@ -3131,7 +3131,7 @@ input[type="number"]:focus {
 .card-result .pin-btn:not(.pinned) {
     background: #fff;
     border-color: #d1d5db;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 .card-result .pin-btn:not(.pinned):hover {
     background: #f3f4f6;
@@ -3152,22 +3152,22 @@ input[type="number"]:focus {
 }
 
 .detail-label {
-    font-size: 12px;
-    color: #6b7280;
+    font-size: var(--ui-text-12);
+    color: var(--ui-ink-3);
     font-weight: 500;
     text-transform: uppercase;
     margin-bottom: 2px;
 }
 
 .detail-value {
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 600;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 .cashback-amount {
-    color: #10b981;
-    font-size: 16px;
+    color: var(--ui-green);
+    font-size: var(--ui-text-16);
 }
 
 .no-cashback-text {
@@ -3184,8 +3184,8 @@ input[type="number"]:focus {
 
 .matched-merchant {
     margin-top: 6px;
-    font-size: 12px;
-    color: #6b7280;
+    font-size: var(--ui-text-12);
+    color: var(--ui-ink-3);
 }
 
 .matched-merchant strong {
@@ -3194,7 +3194,7 @@ input[type="number"]:focus {
 
 /* 資訊區第一行「活動: ○○」的內容：黑色粗體，比照 .spend-threshold-note 的強調（2026-10-08） */
 .matched-merchant .activity-name {
-    color: #111827;
+    color: var(--ui-ink-1);
     font-weight: 700;
 }
 
@@ -3213,9 +3213,9 @@ input[type="number"]:focus {
    緊貼回饋數字。黑色粗體、字級與 .matched-merchant 一致（2026-07-17 用戶定案） */
 .spend-threshold-note {
     margin-top: 6px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 700;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 /* Multi-line condition / gift text: keep manual line breaks readable */
@@ -3364,16 +3364,16 @@ input[type="number"]:focus {
     }
 
     .card-details .detail-value {
-        font-size: 13px;
+        font-size: var(--ui-text-13);
     }
 
     /* 「回饋消費上限」欄（第 3 欄）的數字略縮，替最寬的上限值換取單行空間 */
     .card-details .detail-item:nth-child(3) .detail-value {
-        font-size: 12px;
+        font-size: var(--ui-text-12);
     }
 
     .card-details .cashback-amount {
-        font-size: 14px;
+        font-size: var(--ui-text-14);
     }
 
     /* 手機版卡名太長時換到第二行（不再用 … 截斷；overflow-wrap 由 .card-result 繼承） */
@@ -3734,12 +3734,12 @@ input[type="number"]:focus {
     padding: 0 11px 0 9px;
     border: 1px solid #d1d5db;
     background: #fff;
-    color: #374151;
-    font-size: 13px;
+    color: var(--ui-ink-2);
+    font-size: var(--ui-text-13);
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
 }
 .card-detail-peek-btn::after {
