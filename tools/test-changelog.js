@@ -23,6 +23,14 @@ function check(name, cond, extra) {
   if (!cond) failures++;
 }
 
+// 照表頭欄名取值。2026-08-15 起監控與發布兩端都「照第一列的欄名對位」，欄序可以拖、
+// 缺的欄補在最右邊，所以斷言一律照欄名找，不寫死第幾欄（寫死欄位正是這支測試曾經過時的原因）
+const ACTION = '公開／封存／刪除';   // INBOX_ACTION_HEADER（舊名「公開」程式仍認，並會就地改名）
+function cellByName(rows, rowIdx, name) {
+  const c = rows[0].map(h => String(h).trim()).indexOf(name);
+  return c < 0 ? undefined : rows[rowIdx][c];
+}
+
 // ---------- 假試算表 ----------
 function makeSheet(name, rows, maxColumns) {
   return {
@@ -233,7 +241,7 @@ let ctxRows = null;
   vm.runInContext('publishChangelog()', ctx);   // 再按一次
   const afterSecond = dataSS.getSheetByName('變動紀錄').rows.length;
   check('重複按選單不會重寫（1 筆 → 還是 1 筆）', afterFirst === 2 && afterSecond === 2, { afterFirst, afterSecond });
-  check('第二次跳「沒有打勾的列」提示', alerts[alerts.length - 1].indexOf('沒有任何打勾') >= 0, alerts[alerts.length - 1]);
+  check('第二次跳「沒有任何指示」提示', alerts[alerts.length - 1].indexOf('沒有任何指示') >= 0, alerts[alerts.length - 1]);
 }
 
 // B3: 驗證失敗的列完整列在訊息裡且未寫入
@@ -263,20 +271,22 @@ check('「變動紀錄」表不存在時自動建立＋表頭',
   JSON.stringify(r.changelog.rows[0]) === JSON.stringify(['id', 'date', 'summary', 'active']), r.changelog.rows[0]);
 
 // B5: 舊的 12 欄分頁（站長既有內容還在）→ 自動補表頭、舊列一格都不動
+// 補的是 ensureInboxPublishColumns_ 的 wanted 清單：「所屬活動」（2026-08-20 加）＋三個發布欄，接在最右邊
 const OLD_HEADER = ['日期時間', 'card_id', '銀行', '網址', '實質變動', 'AI摘要', '變動類型',
   '信心', '變動段落', '舊文字', '新文字', '狀態'];
 const oldRow = [T, 'yushan-unicard', '玉山', 'https://x', '是', 'AI內部視角摘要', '文案', '高', 'd', 'o', 'n', '已處理'];
 r = runPublish([OLD_HEADER.slice(), oldRow.slice()], CARDS_DATA, null);
-check('舊 12 欄分頁：自動補上表尾三欄（不用刪分頁）',
-  JSON.stringify(r.inbox[0].slice(12)) === JSON.stringify(['公開摘要', '公開卡片', '公開']), r.inbox[0]);
+const PUBLISH_TAIL = ['所屬活動', '公開摘要', '公開卡片', ACTION];
+check('舊 12 欄分頁：自動在最右邊補上所屬活動＋三個發布欄（不用刪分頁）',
+  JSON.stringify(r.inbox[0].slice(12)) === JSON.stringify(PUBLISH_TAIL), r.inbox[0]);
 check('舊分頁的既有內容一格都沒動',
   JSON.stringify(r.inbox[1].slice(0, 12)) === JSON.stringify(oldRow), r.inbox[1]);
-check('補完表頭當次沒有打勾的列 → 不寫入、跳「沒有打勾」提示',
-  !r.changelog && r.alerts.join('').indexOf('沒有任何打勾') >= 0, r.alerts);
+check('補完表頭當次沒有打勾的列 → 不寫入、跳「沒有任何指示」提示',
+  !r.changelog && r.alerts.join('').indexOf('沒有任何指示') >= 0, r.alerts);
 
 // B5a: 舊列的「公開摘要／公開卡片」自動從 AI摘要／card_id 回填
-check('舊列「公開卡片」自動回填 card_id', r.inbox[1][13] === 'yushan-unicard', r.inbox[1].slice(12));
-check('舊列「公開摘要」自動回填 AI摘要', r.inbox[1][12] === 'AI內部視角摘要', r.inbox[1].slice(12));
+check('舊列「公開卡片」自動回填 card_id', cellByName(r.inbox, 1, '公開卡片') === 'yushan-unicard', r.inbox[1].slice(12));
+check('舊列「公開摘要」自動回填 AI摘要', cellByName(r.inbox, 1, '公開摘要') === 'AI內部視角摘要', r.inbox[1].slice(12));
 check('回填筆數有寫進結果視窗', r.alerts.join('').indexOf('回填了 2 格') >= 0, r.alerts);
 
 // 回填只填空格：站長已經改寫過的摘要不能被 AI 摘要蓋掉；「已發布」的列整列不碰
@@ -301,16 +311,18 @@ check('舊列手動補兩格後可正常發布',
   !!r.changelog && r.changelog.rows.length === 2 && r.changelog.rows[1][2] === '手動補寫的一句話',
   r.changelog && r.changelog.rows);
 
-// B5c: 表頭跟程式預期對不上 → 什麼都不寫，改給手動補表頭的指示
-r = runPublish([['日期時間', 'card_id', '銀行', '網址', '狀態'], [T, 'yushan-unicard', '玉山', 'u', '待解析']], CARDS_DATA, null);
-check('表頭對不上 → 不亂寫、指示手動補三格（不叫人刪分頁）',
+// B5c: 表頭跟程式預期對不上 → 什麼都不寫，改給手動補表頭的指示。
+// 「對不上」的判準是連「狀態」欄都沒有（ensureInboxPublishColumns_ 的第二道保險：那張表不是監控的產出）。
+// 只要有「狀態」，欄序隨便排程式都認得，會正常補欄——那是 2026-08-15 起的設計，不是這條要擋的情況
+r = runPublish([['日期時間', 'card_id', '銀行', '網址', '備註'], [T, 'yushan-unicard', '玉山', 'u', '隨手記']], CARDS_DATA, null);
+check('沒有「狀態」欄（不是監控產出的表）→ 不亂寫、指示手動補三格（不叫人刪分頁）',
   r.inbox[0].length === 5 && r.alerts.join('').indexOf('手動補即可') >= 0 && !r.changelog, r.alerts);
 
-// B5d: 第 13~15 欄已被站長自己的欄位佔用 → 不覆蓋
+// B5d: 第 13 欄已被站長自己的欄位佔用 → 那欄原封不動，缺的欄接在它右邊
 r = runPublish([OLD_HEADER.concat(['我的備註']), oldRow.concat(['別動我'])], CARDS_DATA, null);
-check('第 13 欄已有站長自己的欄位 → 不覆蓋、改指示手動補',
+check('第 13 欄已有站長自己的欄位 → 不覆蓋，缺的欄接在它右邊',
   r.inbox[0][12] === '我的備註' && r.inbox[1][12] === '別動我' &&
-  r.alerts.join('').indexOf('手動補即可') >= 0, r.inbox[0]);
+  JSON.stringify(r.inbox[0].slice(13)) === JSON.stringify(PUBLISH_TAIL), r.inbox[0]);
 
 // B6: 效能防呆——publishChangelog 不可以整張表讀進來。
 // 「舊文字／新文字」各上限 4 萬字，log 長到幾百列時 getDataRange() 會吞進數十 MB，
@@ -349,12 +361,12 @@ check('功能不受影響：大欄位的列照樣發得出去',
   };
   vm.runInContext('appendToInbox_(SpreadsheetApp.getActiveSpreadsheet(), __info)', ctx);
   const sheet = autoSS.getSheetByName('2-變動通知');
-  check('appendToInbox_ 表頭尾巴新增三欄',
-    JSON.stringify(sheet.rows[0].slice(12)) === JSON.stringify(['公開摘要', '公開卡片', '公開']), sheet.rows[0]);
-  check('公開摘要預填 AI 摘要、公開卡片預填 inboxCardId、公開留空',
-    sheet.rows[1][12] === '純版面調整，回饋未變' &&
-    sheet.rows[1][13] === 'febank-jaccard,cathay-cube' &&
-    sheet.rows[1][14] === '', sheet.rows[1].slice(12));
+  check('appendToInbox_ 新分頁的表頭含所屬活動＋三個發布欄',
+    PUBLISH_TAIL.every(h => sheet.rows[0].indexOf(h) >= 0), sheet.rows[0]);
+  check('公開摘要預填 AI 摘要、公開卡片預填 inboxCardId、動作欄留空',
+    cellByName(sheet.rows, 1, '公開摘要') === '純版面調整，回饋未變' &&
+    cellByName(sheet.rows, 1, '公開卡片') === 'febank-jaccard,cathay-cube' &&
+    cellByName(sheet.rows, 1, ACTION) === '', sheet.rows[1]);
 }
 
 // C2: 監控寫入舊的 12 欄分頁時，也會自動補表頭、舊列不動
@@ -370,11 +382,13 @@ check('功能不受影響：大欄位的列照樣發得出去',
   };
   vm.runInContext('appendToInbox_(SpreadsheetApp.getActiveSpreadsheet(), __info)', ctx);
   check('監控寫入舊分頁時自動補表頭',
-    JSON.stringify(oldSheet.rows[0].slice(12)) === JSON.stringify(['公開摘要', '公開卡片', '公開']), oldSheet.rows[0]);
+    JSON.stringify(oldSheet.rows[0].slice(12)) === JSON.stringify(PUBLISH_TAIL), oldSheet.rows[0]);
   check('舊分頁的舊列不受影響',
     JSON.stringify(oldSheet.rows[1].slice(0, 12)) === JSON.stringify(oldRow), oldSheet.rows[1]);
   check('新寫入的列三欄預填正確',
-    oldSheet.rows[2][12] === '新的一筆' && oldSheet.rows[2][13] === 'yushan-unicard' && oldSheet.rows[2][14] === '',
+    cellByName(oldSheet.rows, 2, '公開摘要') === '新的一筆' &&
+    cellByName(oldSheet.rows, 2, '公開卡片') === 'yushan-unicard' &&
+    cellByName(oldSheet.rows, 2, ACTION) === '',
     oldSheet.rows[2].slice(12));
 }
 
