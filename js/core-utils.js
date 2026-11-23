@@ -422,6 +422,20 @@ function notifyMappingsDataChanged() {
     document.dispatchEvent(new Event('pmc:mappings-data-changed'));
 }
 
+// 寫 localStorage 的「本機快取」那一步（2026-11-23，稽核 B7）。setItem 在儲存空間滿了、或瀏覽器的
+// 隱私設定擋住網站資料時會直接拋錯；以前免年費／額度／結帳日／刷卡小抄的儲存函式第一行就是裸的
+// setItem，一拋錯整個函式中斷，**後面的雲端寫入根本沒跑**——登入用戶改了設定、畫面上看起來成功，
+// 其實哪裡都沒存。本機快取只是快取，寫不進去不該擋住雲端。回傳 true＝寫成功。
+function writeLocal(key, value) {
+    try {
+        localStorage.setItem(key, value);
+        return true;
+    } catch (e) {
+        console.error('❌ 本機儲存失敗（雲端照常同步）:', key, e);
+        return false;
+    }
+}
+
 function readLocalJSON(key, fallback = null) {
     let raw = null;
     try { raw = localStorage.getItem(key); } catch (e) { return fallback; }

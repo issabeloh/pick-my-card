@@ -5,10 +5,11 @@
 
 ## 1. localStorage 讀取一律走安全 helpers
 
-- `readLocalJSON(key, fallback)` / `readLocalJSONArray(key, fallback)`（script.js 開頭「localStorage 安全讀取 helpers」區）
+- `readLocalJSON(key, fallback)` / `readLocalJSONArray(key, fallback)`（`js/core-utils.js`「localStorage 安全讀取 helpers」區）
 - 壞資料（污染的 JSON）→ 回傳 fallback **並移除該 key**（自我修復），絕不讓 JSON.parse 拋錯中斷流程
 - **禁止**在任何新程式碼直接寫 `JSON.parse(localStorage.getItem(...))`（`tools/preflight.sh` 會擋）
 - 載入的卡片 ID 用 `filterKnownCardIds()` 過濾已下架卡片——**只在記憶體過濾，絕不回寫**
+- **寫入端**（2026-11-23）：儲存函式裡「先寫本機快取、再寫雲端」的那一步用 `writeLocal(key, value)`（同區）。裸的 `localStorage.setItem` 在空間滿了或隱私設定擋住時會拋錯，整個函式中斷、雲端那步根本沒跑——用戶看到成功，其實哪裡都沒存。本機快取寫不進去只記 `console.error`，不擋雲端
 
 ## 2. 🔒 絕對不可以擅自改寫用戶已儲存的級別（最高等級鐵則）
 

@@ -77,14 +77,14 @@ async function saveSpendingMappings(mappings) {
     // 檢查是否有登入用戶
     if (!currentUser) {
         // 未登入用戶只保存在本地
-        localStorage.setItem('spendingMappings', JSON.stringify(mappings));
+        const ok = writeLocal('spendingMappings', JSON.stringify(mappings));
         console.log('💾 [配卡] 未登入，僅保存到本地');
-        return true;
+        return ok;
     }
 
     try {
-        // 保存到本地快取
-        localStorage.setItem(`spendingMappings_${currentUser.uid}`, JSON.stringify(mappings));
+        // 保存到本地快取（寫不進去不擋雲端，見 writeLocal）
+        writeLocal(`spendingMappings_${currentUser.uid}`, JSON.stringify(mappings));
         console.log('✅ [配卡] 已保存到本地快取:', mappings.length, '筆');
 
         // 保存到 Firestore 的 users collection
@@ -442,7 +442,7 @@ async function loadFeeWaiverStatus(cardId) {
 // 儲存免年費狀態
 async function saveFeeWaiverStatus(cardId, isWaived) {
     const localKey = `feeWaiver_${currentUser?.uid || 'local'}_${cardId}`;
-    localStorage.setItem(localKey, isWaived.toString());
+    writeLocal(localKey, isWaived.toString());   // 寫不進去不擋雲端，見 writeLocal
     console.log('✅ [免年費] 已保存到本地快取:', cardId, isWaived);
 
     if (!currentUser) return;
@@ -533,7 +533,7 @@ async function loadCreditLimit(cardId) {
 // 儲存我的額度（amount 為數字，null 表示清空）
 async function saveCreditLimit(cardId, amount) {
     const localKey = `creditLimit_${currentUser?.uid || 'local'}_${cardId}`;
-    localStorage.setItem(localKey, amount === null ? '' : String(amount));
+    writeLocal(localKey, amount === null ? '' : String(amount));   // 寫不進去不擋雲端，見 writeLocal
     if (!currentUser) { notifyMappingsDataChanged(); return; }
 
     try {
@@ -640,7 +640,7 @@ async function saveBillingDates(cardId, billingDate, statementDate) {
     };
 
     const localKey = `billingDates_${currentUser?.uid || 'local'}_${cardId}`;
-    localStorage.setItem(localKey, JSON.stringify(dateData));
+    writeLocal(localKey, JSON.stringify(dateData));   // 寫不進去不擋雲端，見 writeLocal
     console.log('✅ [結帳日期] 已保存到本地快取:', cardId, dateData);
 
     if (!currentUser) return;
