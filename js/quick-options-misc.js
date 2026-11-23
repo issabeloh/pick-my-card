@@ -1297,14 +1297,16 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('click', function(e) {
     if (!window.logEvent || !window.firebaseAnalytics) return;
     const btn = e.target.closest(
-        '.spotlight-compare-btn, .spotlight-info-btn, .card-apply-cta-btn, .promo-apply-cta-btn, .cd-apply-header-btn, .cd-fab-btn, .card-official-site-link'
+        '.spotlight-compare-btn, .spotlight-info-btn, .spotlight-promo-link, .card-apply-cta-btn, .promo-apply-cta-btn, .cd-apply-header-btn, .cd-fab-btn, .card-official-site-link'
     );
     if (!btn) return;
 
     let buttonType;
     if (btn.classList.contains('spotlight-compare-btn'))        buttonType = 'spotlight_compare';
     else if (btn.classList.contains('spotlight-info-btn'))      buttonType = 'spotlight_info';
-    else if (btn.classList.contains('spotlight-apply-cta-btn')) buttonType = 'spotlight_apply';
+    // spotlight_apply（推薦活動 modal 的立即申辦）2026-11-23 停用、按鈕已移除；歷史資料保留在 GA4_按鈕點擊。
+    // 新戶膠囊連到站內 /promos/<id>、不是申辦連結，所以類型名稱不帶 apply（不算進月表的申辦點擊數）
+    else if (btn.classList.contains('spotlight-promo-link'))    buttonType = 'spotlight_promo';
     else if (btn.classList.contains('cd-apply-header-btn')) buttonType = 'detail_header_apply';
     else if (btn.classList.contains('cd-fab-btn'))    buttonType = 'detail_sticky_apply';
     else if (btn.classList.contains('card-official-site-link'))      buttonType = 'detail_official_site';

@@ -408,7 +408,9 @@ active 是勾選框、日期是日期 → 把那列 active 取消勾選存檔（
     公式欄一律靠 `copyTo` 延續）：從 `GA4_按鈕點擊` 用 `SUMIFS` 彙總，
     只算 `button_type` 含 `apply` 的 6 種（`spotlight_apply`／`detail_header_apply`／
     `detail_sticky_apply`／`card_apply`／`search_result_apply`／`promos_page_apply`），
-    排除 `spotlight_compare`／`spotlight_info`。
+    排除 `spotlight_compare`／`spotlight_info`。`spotlight_apply` 2026-11-23 停用（按鈕已移除，歷史月份照算）；
+    同日新增的 `spotlight_promo`（推薦活動 modal 的新戶膠囊，連到站內 /promos/<id>）與
+    `detail_official_site`（詳情頁官網連結）都不是申辦，名稱刻意不帶 `apply`，不會被算進來。
     ```
     =IFERROR(LET(ms,IF(ISNUMBER($A2),EOMONTH($A2,-1)+1,DATEVALUE($A2&"/01")),me,EOMONTH(ms,0),
      IF(ms<DATE(2026,7,1),"—",
