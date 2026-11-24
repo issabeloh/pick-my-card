@@ -548,11 +548,25 @@ function formatSpotlightCap(cap) {
 // 10 月起佔全站申辦點擊 2%（89 次裡 2 次），而打開 modal 的「詳情」同期有 158 次。
 // 申辦入口改由 modal 最下面的新戶膠囊（→ /promos/<id>）與 ⓘ 卡片詳情頁的兩顆申辦鈕承接。
 // 2026-11-24 站長：ⓘ「卡片詳情」改成文字連結「看完整回饋與權益」。href 是可分享的深連結 /?start&card=<id>
-// （新分頁開、複製連結都對），站內一般點擊攔下來直接 showCardDetail，不重新載入（openSpotlightModal 綁）
+// （新分頁開、複製連結都對），站內一般點擊攔下來直接 showCardDetail，不重新載入（openSpotlightModal 綁）。
+// 同日改版（選項 C）：標題下方一列卡片＝卡圖（缺圖自動隱藏）＋卡名＋這個連結
 function buildSpotlightModalActions(item, card) {
-    return card
-        ? `<a class="spotlight-carddetail-btn" href="/?start&amp;card=${encodeURIComponent(card.id)}" data-card-id="${escapeHtml(card.id)}">看完整回饋與權益</a>`
-        : '';
+    if (!card) return '';
+    return `<img class="sp-thumb" src="assets/images/cards/${encodeURIComponent(card.id)}.png" alt="" onerror="this.hidden=true">` +
+        `<span class="sp-card-nm">${escapeHtml(getSpotlightCardName(item) || card.name || '')}</span>` +
+        `<a class="spotlight-carddetail-btn" href="/?start&amp;card=${encodeURIComponent(card.id)}" data-card-id="${escapeHtml(card.id)}">看完整回饋與權益${SP_CHEV_R}</a>`;
+}
+
+const SP_CHEV_R = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>';
+const SP_CHEV_D = '<svg class="sp-chev" width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>';
+// 推薦活動 modal 的清單列（標籤左、值右，細線分隔；同個人設定的「設定清單」語言）。valueHtml 由呼叫端 escape
+function spRow(label, valueHtml, extraClass) {
+    return `<div class="sp-row"><span class="sp-k">${label}</span><div class="sp-v${extraClass ? ' ' + extraClass : ''}">${valueHtml}</div></div>`;
+}
+// 會很長的值（適用通路 3 行、條件 2 行）：先收合，溢出才出現「展開」膠囊（setupSpotlightActItemsToggle 量）
+function spClamp(textHtml, lines) {
+    return `<div class="sp-clamp clamped" data-lines="${lines}">${textHtml}</div>` +
+        `<button type="button" class="sp-more" aria-expanded="false" hidden><span class="sp-more-t">展開</span>${SP_CHEV_D}</button>`;
 }
 
 // 推薦活動 modal 最下面一行「新戶」連到這張卡的新戶活動單卡頁 /promos/<id>（2026-11-22 站長選 R4 樣式、R1 位置）。
@@ -595,8 +609,7 @@ function buildSpotlightPromoLink(card, item) {
 function buildSpotlightModalBody(item, card) {
     const activities = card ? findSpotlightCardActivities(card, item.merchant) : [];
 
-    // Highlights 編輯文字（含「壓倒性神卡！」等前綴）
-    const descHtml = item.description ? `<p class="spotlight-modal-desc">${escapeHtml(item.description)}</p>` : '';
+    // Highlights 編輯文字（含「壓倒性神卡！」等前綴）2026-11-24 起是 modal 標題（openSpotlightModal），內文不重複
 
     // Fallback to the editorial Highlights data when the card/activity can't be resolved.
     if (activities.length === 0) {
@@ -606,13 +619,10 @@ function buildSpotlightModalBody(item, card) {
         const daysLeft = getSpotlightDaysLeft(deadline);
         const daysBadge = (daysLeft !== null && daysLeft >= 0 && daysLeft <= 14)
             ? `<span class="spotlight-days-badge">剩 ${daysLeft} 天</span>` : '';
-        return `
-            ${descHtml}
-            ${rate ? `<div class="spotlight-modal-rate">${escapeHtml(rate)}</div>` : ''}
-            <div class="spotlight-modal-info">
-                ${deadline ? `<div><span class="spotlight-modal-label">活動期限</span><span>${escapeHtml(deadline)} ${daysBadge}</span></div>` : ''}
-            </div>
-        `;
+        return `<div class="spotlight-activity">` +
+            (rate ? `<div class="sp-rate"><span class="sp-rate-num">${escapeHtml(rate)}</span><span class="sp-rate-lb">回饋</span></div>` : '') +
+            (deadline ? spRow('活動期限', `${escapeHtml(deadline)} ${daysBadge}`) : '') +
+            `</div>`;
     }
 
     // 分級卡：推薦活動是編輯挑的某個級別（如「用UP選方案刷」），不能一律拿第一個級別解析
@@ -645,41 +655,36 @@ function buildSpotlightModalBody(item, card) {
         const categoryLabel = group.category
             ? ` <span class="spotlight-rate-category">${escapeHtml(getCategoryDisplayName(group.category))}</span>`
             : '';
-        const rateLine = `<div class="cashback-rate">${rateNum ? `<span class="cashback-rate-num">${escapeHtml(rateNum + '%')}</span> 回饋${levelTag}` : ''}${categoryLabel}</div>`;
-        // 適用通路：標題獨立一行、內容下一行；超過 3 行預設收合、點擊展開（toggle 由 setupSpotlightActItemsToggle 開啟）
-        const actItemsHtml = items.length
-            ? `<div class="spotlight-act-items"><div class="spotlight-act-items-label">此活動也適用以下通路</div><div class="spotlight-act-items-values clamped">${items.map(escapeHtml).join('、')}</div><button type="button" class="spotlight-act-items-toggle" hidden>展開</button></div>`
-            : '';
-        return `
-            <div class="spotlight-activity">
-                ${rateLine}
-                ${actItemsHtml}
-                <div class="spotlight-modal-info">
-                    <div><span class="spotlight-modal-label">回饋上限</span><span>${capText}</span></div>
-                    ${period ? `<div><span class="spotlight-modal-label">活動期間</span><span>${escapeHtml(period)}</span></div>` : ''}
-                    ${group.conditions ? `<div><span class="spotlight-modal-label">條件</span><span class="spotlight-cond-value">${escapeHtml(group.conditions)}</span></div>` : ''}
-                </div>
-            </div>
-        `;
+        // 2026-11-24 改版（選項 C）：回饋率黑色大字（不加虛線底線——這裡沒有試算可點，虛線在網站上代表「可點」），
+        // 下面一列一項：適用通路（3 行收合）、回饋上限、活動期間、條件（2 行收合）
+        const rateLine = rateNum
+            ? `<div class="sp-rate"><span class="sp-rate-num">${escapeHtml(rateNum + '%')}</span><span class="sp-rate-lb">回饋${levelTag}${categoryLabel}</span></div>`
+            : (categoryLabel ? `<div class="sp-rate"><span class="sp-rate-lb">${categoryLabel}</span></div>` : '');
+        return `<div class="spotlight-activity">${rateLine}` +
+            (items.length ? spRow('適用通路', spClamp(items.map(escapeHtml).join('、'), 3), 'is-ch') : '') +
+            spRow('回饋上限', capText) +
+            (period ? spRow('活動期間', escapeHtml(period)) : '') +
+            (group.conditions ? spRow('條件', spClamp(escapeHtml(group.conditions), 2)) : '') +
+            `</div>`;
     }).join('');
 
-    return `${descHtml}${blocks}`;
+    return blocks;
 }
 
-// 「適用通路」內容超過 3 行才顯示展開鈕（收合時 -webkit-line-clamp:3）；點擊切換展開/收合
+// 收合的值（適用通路 3 行、條件 2 行，-webkit-line-clamp）真的溢出才顯示「展開」膠囊；點擊切換展開／收起。
+// 要在 modal 顯示後才量得到（openSpotlightModal 結尾呼叫）
 function setupSpotlightActItemsToggle(container) {
     if (!container) return;
-    container.querySelectorAll('.spotlight-act-items').forEach(wrap => {
-        const values = wrap.querySelector('.spotlight-act-items-values');
-        const toggle = wrap.querySelector('.spotlight-act-items-toggle');
-        if (!values || !toggle) return;
-        // clamp 生效時，內容溢出 3 行才提供展開/收合
+    container.querySelectorAll('.sp-clamp').forEach(values => {
+        const toggle = values.nextElementSibling;
+        if (!toggle || !toggle.classList.contains('sp-more')) return;
         if (values.scrollHeight - values.clientHeight > 2) {
             toggle.hidden = false;
             toggle.addEventListener('click', () => {
                 const expanded = values.classList.toggle('expanded');
                 values.classList.toggle('clamped', !expanded);
-                toggle.textContent = expanded ? '收合' : '展開';
+                toggle.setAttribute('aria-expanded', String(expanded));
+                toggle.querySelector('.sp-more-t').textContent = expanded ? '收起' : '展開';
             });
         }
     });
@@ -695,17 +700,16 @@ function openSpotlightModal(index) {
 
     const card = ((cardsData && cardsData.cards) || []).find(c => c.id === item.card_id);
 
-    // Modal 標題改為卡片名稱（原為通路名稱）
-    if (titleEl) titleEl.textContent = getSpotlightCardName(item) || item.merchant || '活動詳情';
-
-    // 卡片詳情 ⓘ 按鈕：放在 header 卡名下方（動態插入 .modal-header，第一次開啟時建立）
-    let actionsEl = document.getElementById('spotlight-modal-actions');
-    if (!actionsEl && titleEl && titleEl.parentElement) {
-        actionsEl = document.createElement('div');
-        actionsEl.id = 'spotlight-modal-actions';
-        actionsEl.className = 'spotlight-modal-actions';
-        titleEl.parentElement.appendChild(actionsEl);
+    // Modal 標題＝編輯寫的那句話（2026-11-24 改版；之前是卡名，卡名現在在下面的卡片列）。
+    // 沒寫就退回「{通路} 刷 {卡名}」
+    const cardName = getSpotlightCardName(item) || (card && card.name) || '';
+    if (titleEl) {
+        titleEl.textContent = item.description ||
+            ((item.merchant && cardName) ? `${item.merchant} 刷 ${cardName}` : (cardName || item.merchant || '活動詳情'));
     }
+
+    // 卡片列（卡圖＋卡名＋「看完整回饋與權益」）：index.html 的 #spotlight-modal-actions
+    const actionsEl = document.getElementById('spotlight-modal-actions');
     if (actionsEl) actionsEl.innerHTML = buildSpotlightModalActions(item, card);
 
     bodyEl.innerHTML = buildSpotlightModalBody(item, card) + buildSpotlightPromoLink(card, item);

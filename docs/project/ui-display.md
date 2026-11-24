@@ -544,6 +544,8 @@ Grep `titleParts`）：
 
 **modal header 的「立即申辦」已移除**（2026-11-23，站長看 `GA4_按鈕點擊` 決定）：原本 ⓘ 旁邊有一顆 `.spotlight-apply-cta-btn`（`spotlight_apply`），06/07～11/21 共 168 天只有 15 次點擊、10 月起佔全站申辦點擊 2%。現在 header 只剩 ⓘ；申辦入口＝上面的新戶膠囊（只在有新戶活動、未持卡時出現）與 ⓘ 卡片詳情頁的申辦鈕。要加回來之前先看 `spotlight_promo` 的量。
 
+**modal 版面（2026-11-24 改版，站長從選項頁選「一句話摘要＋清單」，否決「詳情頁回饋卡縮小版」「重點數字置頂＋底部面板」）**：標題 `#spotlight-modal-title`＝Highlights 編輯文字 `item.description`（沒寫退回「{通路} 刷 {卡名}」；之前標題是卡名、編輯文字在內文第一行）。標題下一列卡片 `#spotlight-modal-actions.sp-card`（靜態在 index.html）：卡圖 `.sp-thumb`（缺圖 onerror 隱藏）＋卡名＋「看完整回饋與權益 ›」。內文每個活動＝黑色大字回饋率 `.sp-rate`（不加虛線底線：網站上虛線＝可點看試算，這裡沒有）＋清單列 `spRow()`（適用通路／回饋上限／活動期間／條件，標籤左值右、細線分隔，同個人設定「設定清單」；舊的灰底資訊框 `.spotlight-modal-info` 已刪）。適用通路 3 行、條件 2 行收合，溢出才出現灰色「展開」膠囊 `.sp-more`（`spClamp()`＋`setupSpotlightActItemsToggle`，modal 顯示後才量）。最下面新戶膠囊不變
+
 **header 的卡片詳情入口改成文字連結「看完整回饋與權益」**（2026-11-24 站長）：`a.spotlight-carddetail-btn`，href＝深連結 `/?start&card=<id>`（新分頁開、複製連結都正確），站內一般點擊在 `openSpotlightModal` 攔下來直接 `showCardDetail()`，**不跳轉網址、不重新載入**；Ctrl／Cmd／Shift／中鍵照瀏覽器原本行為。原本的 ⓘ（`.card-detail-peek-btn`）已拿掉，所以全站 `.card-detail-peek-btn` 委派不會碰到它。
 
 **持卡人不顯示新戶膠囊／申辦鈕，只對已登入帳號生效**（2026-11-24 站長）：`hidesNewCustomerPromoFor(cardId)`（`js/core-utils.js`）＝已登入且 `myOwnedCards` 有這張卡。訪客在「我的信用卡」勾的卡只影響查詢結果（`js/results-display.js` 搜尋結果的新戶活動區仍排除持有卡），不藏推薦活動 modal 的新戶膠囊（`buildSpotlightPromoLink`）與詳情頁申辦鈕（`refreshCardDetailApply`）。站長回報「台新 Richart 推薦活動沒有新戶按鈕」就是這條：資料（保險新戶回饋加碼到 12/31）沒問題，是持卡清單有勾 Richart
