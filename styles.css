@@ -10032,19 +10032,6 @@ html.pmc-onboard #search-hints-container {
 
 /* Spotlight detail modal */
 .spotlight-modal-content { max-width: 460px; }
-.spotlight-modal-rate {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #059669;
-    margin-bottom: 8px;
-}
-.spotlight-modal-desc {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--ui-ink-1);
-    line-height: 1.5;
-    margin: 0 0 16px;
-}
 /* 推薦活動 modal 最下面的新戶活動連結（buildSpotlightPromoLink）。2026-11-22 站長：外觀比照詳情頁手機
    申辦膠囊 .cd-fab——白底黃框膠囊、黃色禮物圓圈（共用 .cd-gift）、右邊黃色按鈕（共用 .cd-apply-btn）。
    不浮動，固定在內文最下面；位置沿用前一版（Amazon 信用卡優惠列的位置） */
@@ -10070,26 +10057,6 @@ html.pmc-onboard #search-hints-container {
 .spotlight-promo-btn { padding: 7px 14px; font-size: 13.5px; }
 .spotlight-promo-link:hover .spotlight-promo-btn { filter: brightness(1.03); }
 .spotlight-promo-link:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; }
-.spotlight-modal-info {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: var(--ui-bg);
-    border-radius: var(--ui-radius-md);
-    padding: 14px 16px;
-    margin-bottom: 14px;
-}
-.spotlight-modal-info > div {
-    display: flex;
-    gap: 10px;
-    font-size: 0.9rem;
-    color: var(--ui-ink-2);
-}
-.spotlight-modal-label {
-    color: #9ca3af;
-    flex-shrink: 0;
-    width: 64px;
-}
 @media (max-width: 768px) {
     /* 一排 2 張（見 js/home-ui.js spotlightLayout） */
     .spotlight-track { grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -10112,26 +10079,40 @@ html.pmc-onboard #search-hints-container {
     .spotlight-cap { overflow: visible; }
 }
 
-/* 卡片詳情 ⓘ 與立即申辦按鈕列：動態插入 modal header、置於卡名（標題）下方。
-   header 改 flex-wrap，本列 flex-basis:100% 自動落到標題下一行、靠左對齊。 */
-#spotlight-modal .modal-header {
-    flex-wrap: wrap;
-    row-gap: 12px;
-}
-.spotlight-modal-actions {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-#spotlight-modal-actions {
-    flex-basis: 100%;
-}
-/* 卡片詳情鈕（modal 內）：沿用全站 .card-detail-peek-btn 樣式，
-   僅把標籤文字覆蓋成「卡片詳情」。 */
-.spotlight-modal-actions .card-detail-peek-btn::after {
-    content: '卡片詳情';
-}
+
+/* 推薦活動 modal 改版（2026-11-24，站長從選項頁選「一句話摘要＋清單」）：
+   標題＝編輯寫的那句話；下面一列卡片（卡圖＋卡名＋「看完整回饋與權益 ›」）；內文＝黑色大字回饋率＋清單列
+   （標籤左、值右、細線分隔，同個人設定「設定清單」），沒有灰底資訊框；最下面新戶膠囊。
+   回饋率不加虛線底線：網站上虛線＝可點看試算，這裡沒有試算 */
+#spotlight-modal .modal-header { display: block; padding: 16px 10px 14px 20px; border-bottom: 0; }
+.sp-top { display: flex; align-items: flex-start; gap: 8px; }
+#spotlight-modal .modal-header h3 { flex: 1; min-width: 0; margin: 7px 0 0; font-size: 17px; font-weight: 700; line-height: 1.45; text-wrap: balance; }
+#spotlight-modal .modal-close { flex: none; width: 40px; height: 40px; font-size: 28px; }
+.sp-card { display: flex; align-items: center; gap: 10px; margin: 12px 10px 0 0; padding: 8px 12px 8px 8px; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-md); }
+.sp-card:empty { display: none; }
+.sp-thumb { flex: none; width: 48px; height: 30px; object-fit: cover; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08); }
+.sp-thumb[hidden] { display: none; }
+.sp-card-nm { flex: 1; min-width: 0; font-size: var(--ui-text-14); font-weight: 700; color: var(--ui-ink-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spotlight-carddetail-btn { flex: none; display: inline-flex; align-items: center; gap: 2px; color: var(--ui-brand-bright); font-size: var(--ui-text-13); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.spotlight-carddetail-btn:hover { text-decoration: underline; }
+.spotlight-carddetail-btn:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
+#spotlight-modal .modal-body { padding: 4px 20px 18px; }
+.spotlight-activity + .spotlight-activity { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--ui-line); }
+.sp-rate { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; padding: 4px 0 10px; }
+.sp-rate-num { font-size: var(--ui-text-28); font-weight: 800; line-height: 1.1; color: var(--ui-ink-1); font-variant-numeric: tabular-nums; }
+.sp-rate-lb { font-size: var(--ui-text-13); color: var(--ui-ink-3); }
+.sp-row { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid #f0f1f3; font-size: 13.5px; line-height: 1.55; }
+.sp-k { flex: none; width: 4.5em; font-size: 12.5px; color: var(--ui-ink-3); }
+.sp-v { flex: 1; min-width: 0; color: var(--ui-ink-1); font-variant-numeric: tabular-nums; }
+.sp-v.is-ch .sp-clamp { color: #2563eb; font-weight: 700; }
+.sp-clamp.clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.sp-clamp.clamped[data-lines="2"] { -webkit-line-clamp: 2; }
+/* 「展開」：同詳情頁條件列的灰色白底小膠囊 */
+.sp-more { display: inline-flex; align-items: center; gap: 1px; margin: 4px 0 0; padding: 0 4px 0 7px; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-pill); background: #fff; color: var(--ui-ink-2); font: inherit; font-size: 11px; font-weight: 600; line-height: 17px; cursor: pointer; }
+.sp-more[hidden] { display: none; }
+.sp-more:hover { border-color: #d1d5db; color: var(--ui-ink-1); }
+.sp-more[aria-expanded="true"] .sp-chev { transform: rotate(180deg); }
+#spotlight-modal .spotlight-promo-link { margin-top: 14px; }
 
 /* 回饋率旁的 category：低調灰字註記（非膠囊、非按鈕，避免與卡片詳情/立即申辦混淆），
    以中點與「回饋」分隔 */
@@ -10147,56 +10128,6 @@ html.pmc-onboard #search-hints-container {
     font-weight: 700;
 }
 
-.spotlight-activity {
-    border-top: 1px solid #f0f0f0;
-    padding-top: 14px;
-    margin-top: 14px;
-}
-.spotlight-activity:first-of-type {
-    border-top: none;
-    padding-top: 0;
-    margin-top: 0;
-}
-/* 適用通路：標題獨立一行，通路清單另起一行；超過 3 行預設收合、可點展開 */
-/* margin-bottom 是刻意的：下面緊接著 .spotlight-modal-info 那塊灰底資訊卡，
-   只給 margin-top 的話通路清單會幾乎貼著灰底上緣（2026-08-15 站長回報）。
-   跟 .spotlight-modal-info 自己的 margin-bottom: 14px 同值，上下留白才對稱。 */
-.spotlight-act-items {
-    font-size: 0.85rem;
-    color: #4b5563;
-    line-height: 1.6;
-    margin: 10px 0 14px;
-}
-.spotlight-act-items-label {
-    color: #9ca3af;
-    margin-bottom: 3px;
-}
-/* 通路清單（nintendo、netflix…）：藍字加粗，凸顯活動涵蓋的通路 */
-.spotlight-act-items-values {
-    color: #3b82f6;
-    font-weight: 700;
-}
-.spotlight-act-items-values.clamped {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    overflow: hidden;
-}
-.spotlight-act-items-toggle {
-    margin-top: 4px;
-    background: none;
-    border: none;
-    padding: 0;
-    color: #1d4ed8;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-.spotlight-act-items-toggle:hover { text-decoration: underline; }
-/* 條件內容字體略縮（比其他資訊列小一點點） */
-.spotlight-cond-value {
-    font-size: 0.82rem;
-}
 
 /* Prevent iOS/Android auto-zoom on input focus (triggered when font-size < 16px) */
 @media (max-width: 768px) {

@@ -710,6 +710,14 @@ function getCardsForComparison() {
 }
 
 // Get active new cardholder promos for a given card id, sorted by priority
+// 「持卡人不顯示新戶／申辦按鈕」只對已登入的帳號生效（2026-11-24 站長）：訪客在「我的信用卡」勾的卡
+// 只影響查詢結果，不藏推薦活動 modal 的新戶膠囊、詳情頁的申辦鈕——訪客的勾選常是隨手試用，
+// 不一定真的持有。呼叫端：buildSpotlightPromoLink（js/home-ui.js）、refreshCardDetailApply（js/card-detail.js）
+function hidesNewCustomerPromoFor(cardId) {
+    return !!(cardId && typeof currentUser !== 'undefined' && currentUser &&
+        typeof myOwnedCards !== 'undefined' && myOwnedCards && myOwnedCards.has(cardId));
+}
+
 function getActiveCardholderPromos(cardId) {
     if (!cardsData || !cardsData.newCardholderPromos) return [];
     return cardsData.newCardholderPromos

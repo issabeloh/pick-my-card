@@ -837,12 +837,17 @@
         <!-- 信用卡警語橫條（精選活動區下方） -->
         <section class="finance-warning-row" id="finance-warning-row" aria-label="信用卡警語" style="display: none;">謹慎理財、信用至上</section>
 
-        <!-- Spotlight activity detail modal -->
+        <!-- 推薦活動 modal（2026-11-24 改版，站長選「一句話摘要＋清單」）：標題＝編輯寫的那句話；
+             下面一列卡片（卡圖＋卡名＋「看完整回饋與權益」，#spotlight-modal-actions 由 buildSpotlightModalActions 填）；
+             內文是回饋率＋清單列（buildSpotlightModalBody），最下面新戶膠囊（buildSpotlightPromoLink） -->
         <div id="spotlight-modal" class="modal" style="display: none;">
             <div class="modal-content spotlight-modal-content">
                 <div class="modal-header">
-                    <h3 id="spotlight-modal-title">活動詳情</h3>
-                    <button class="modal-close" id="spotlight-modal-close" aria-label="關閉">&times;</button>
+                    <div class="sp-top">
+                        <h3 id="spotlight-modal-title">活動詳情</h3>
+                        <button class="modal-close" id="spotlight-modal-close" aria-label="關閉">&times;</button>
+                    </div>
+                    <div class="sp-card" id="spotlight-modal-actions"></div>
                 </div>
                 <div class="modal-body" id="spotlight-modal-body">
                     <!-- Content injected by JS -->
