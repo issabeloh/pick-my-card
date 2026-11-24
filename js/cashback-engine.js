@@ -1753,7 +1753,7 @@ function displayReferralLink(searchedItem) {
     const referralUrl = sanitizeUrl(matchedReferral.url);
     infoBlock.innerHTML = `
         <div class="referral-link-content">
-            <span class="referral-link-icon">🎁</span>
+            <span class="referral-link-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-4-6-3.5-5-1 .6 1.3 3 1 5 1Zm0 0c1.5-4 6-3.5 5-1-.6 1.3-3 1-5 1Z"/></svg></span>
             <span class="referral-link-text">${escapeHtml(matchedReferral.description)}</span>
             ${referralUrl ? `<a href="${escapeHtml(referralUrl)}" target="_blank" rel="sponsored noopener noreferrer" class="referral-link-button">
                 前往註冊 →
