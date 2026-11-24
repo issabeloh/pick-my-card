@@ -4198,6 +4198,10 @@ input[type="number"]:focus {
     color: var(--ui-ink-2);
 }
 .cd-pan-set > .cd-set-box { margin-top: 12px; }
+/* 分級卡：級別組（#cube-level-section 裡的盒子）與「我的紀錄」盒子接成同一張清單，中間一條較深的線。
+   .cd-has-lv 由 renderCardPersonalSettings 依有沒有級別組切換（js/card-detail.js） */
+#card-personal-section.cd-has-lv #cube-level-section .cd-set-box { border-bottom-color: #d9dce1; border-radius: var(--ui-radius-md) var(--ui-radius-md) 0 0; }
+#card-personal-section.cd-has-lv > .cd-set-box { margin-top: 0; border-top: 0; border-radius: 0 0 var(--ui-radius-md) var(--ui-radius-md); }
 
 /* 儲存狀態：標題列右側一行 12px 灰字，data-state＝ok（綠勾）／local（黃手機）／busy（轉圈）／err（紅字），
    由 cdSaveStatusRender 切。文字長時換行、靠右；失敗的原因放第二行 .cd-sv-d */
@@ -4258,14 +4262,18 @@ input[type="number"]:focus {
 .cd-set-sec-t { margin: 0; font-size: var(--ui-text-14); font-weight: 600; color: var(--ui-ink-2); }
 .cd-set-sec-s { font-size: var(--ui-text-12); color: var(--ui-ink-3); }
 
-/* 一組一個白底灰框盒子；一欄一列：標籤左、控制項右、說明小字在下一行（跨兩欄） */
+/* 「設定清單」（2026-11-24 站長從選項頁選定，取代每列有框的大控制項）：像手機的「設定」App——
+   一張白色清單、一列一項，標籤一般字重，數值是右側灰字＋小箭頭、沒有框。兩組（級別組／我的紀錄）接成同一張清單，
+   中間一條較深的線（.cd-has-lv，見下）。說明小字在下一行（跨兩欄） */
 .cd-set-box { background: #fff; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-md); }
 .cd-st-r {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 2px 12px;
     align-items: center;
-    padding: 10px 14px;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 8px 12px 8px 14px;
 }
 .cd-st-r + .cd-st-r { border-top: 1px solid #f0f1f3; }
 .cd-st-l { display: flex; align-items: center; gap: 6px; min-width: 0; }
@@ -4273,7 +4281,7 @@ input[type="number"]:focus {
     display: block;
     margin: 0;
     font-size: var(--ui-text-14);
-    font-weight: 600;
+    font-weight: 400;
     line-height: 1.4;
     color: var(--ui-ink-1);
     cursor: pointer;
@@ -4284,19 +4292,29 @@ input[type="number"]:focus {
 /* 單一級別且沒有備註時沒有「i」按鈕，備註節點（切級別時就地改寫的目標）一定存在但不佔位 */
 .cd-st-l > .level-help-note:empty { display: none; }
 
-/* 下拉與輸入框同高 36px、寬約 132px、靠右、同框色 */
+/* 下拉與輸入框：沒有框，右側灰字＋小箭頭（背景圖），滑過／聚焦時淡灰底。下拉寬度＝最長選項（appearance:none），
+   輸入框固定 120px。⚠️ 不要用負 margin 去對齊右緣：格線欄寬＝內容寬＋margin，負值會讓欄比下拉窄、下拉被壓縮，
+   最長的選項（如「大戶Plus等級」）最後一個字被切掉（2026-11-24 踩過）；flex:none 也是為了不被壓縮 */
 #card-personal-section .cd-st-sel,
 #card-personal-section input[type="text"].cd-st-inp {
     box-sizing: border-box;
-    width: 132px;
-    height: 36px;
+    width: auto;
+    height: 30px;
     max-width: 100%;
+    flex: none;
     margin: 0;
-    padding: 0 8px;
-    border: 1px solid var(--ui-line);
+    padding: 0 18px 0 6px;
+    border: 0;
     border-radius: var(--ui-radius-sm);
-    background-color: #fff;
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: transparent;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 4l4 4-4 4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 2px center;
+    background-size: 12px 12px;
     box-shadow: none;
+    cursor: pointer;
     color: var(--ui-ink-1);
     font-family: inherit;
     font-size: var(--ui-text-14);
@@ -4305,7 +4323,10 @@ input[type="number"]:focus {
     text-align-last: right;
     font-variant-numeric: tabular-nums;
 }
+#card-personal-section input[type="text"].cd-st-inp { width: 120px; cursor: text; }
 #card-personal-section input.cd-st-inp::placeholder { color: #9ca3af; font-weight: 400; }
+#card-personal-section .cd-st-sel:hover,
+#card-personal-section input[type="text"].cd-st-inp:hover { background-color: var(--ui-bg); }
 #card-personal-section .cd-st-sel:focus-visible,
 #card-personal-section input[type="text"].cd-st-inp:focus,
 #card-personal-section .cd-st-ta:focus {
@@ -4313,7 +4334,9 @@ input[type="number"]:focus {
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
-#card-personal-section .cd-st-sel:disabled { background-color: var(--ui-fill); color: #9ca3af; cursor: not-allowed; }
+#card-personal-section .cd-st-sel:focus-visible,
+#card-personal-section input[type="text"].cd-st-inp:focus { background-color: var(--ui-bg); }
+#card-personal-section .cd-st-sel:disabled { background-color: transparent; background-image: none; padding-right: 6px; color: #9ca3af; cursor: not-allowed; }
 
 /* 筆記：整列寬的 textarea（標題在上） */
 .cd-st-notes .cd-st-l { grid-column: 1 / -1; }
@@ -4321,7 +4344,7 @@ input[type="number"]:focus {
     grid-column: 1 / -1;
     box-sizing: border-box;
     width: 100%;
-    min-height: 66px;
+    min-height: 48px;
     margin: 4px 0 0;
     padding: 8px 10px;
     border: 1px solid var(--ui-line);
@@ -4345,15 +4368,20 @@ input[type="number"]:focus {
 #card-personal-section .cd-st-ta { color: var(--ui-ink-2); }
 #card-personal-section input.cd-st-inp::placeholder { font-size: var(--ui-text-14); }
 @media (max-width: 768px) {
-    /* 2026-11-24 站長：手機輸入框的字比標籤大、看起來特別大。輸入框鎖 16px 不能動，改成標籤也 16px，
-       標籤粗體、值一般字重深灰，主次靠字重與顏色分（不用 viewport maximum-scale=1：Android 會因此不能雙指放大） */
-    #card-personal-section .cd-st-l label { font-size: var(--ui-text-16); }
+    /* 2026-11-24 站長：手機輸入框的字太大。全站規則把手機輸入框鎖 16px（防 iOS 聚焦自動放大），
+       index.html <head> 改成只在 iPhone／iPad 的 viewport 加 maximum-scale=1（iOS 仍可雙指放大；Android 本來就不會自動放大），
+       這一區才能縮成 14px。!important 是要蓋過檔尾那條 16px !important */
     #card-personal-section .cd-st-sel,
-    #card-personal-section input[type="text"].cd-st-inp { height: 38px; }
-    #card-personal-section .cd-st-sel:disabled { font-size: var(--ui-text-14) !important; }
+    #card-personal-section input[type="text"].cd-st-inp,
+    #card-personal-section .cd-st-ta { font-size: var(--ui-text-14) !important; }
 }
-/* ≥769px 沒有防放大規則：下拉／輸入框／筆記的字比 14px 粗體標籤小一階（13px），值退到標籤後面（2026-11-24 站長） */
+/* ≥769px：整區 13px、列高 38px（2026-11-24 設定清單） */
 @media (min-width: 769px) {
+    .cd-st-r { min-height: 38px; padding: 6px 10px 6px 12px; }
+    #card-personal-section .cd-st-l label { font-size: var(--ui-text-13); }
+    #card-personal-section .cd-st-sel,
+    #card-personal-section input[type="text"].cd-st-inp { height: 26px; }
+    #card-personal-section .cd-st-ta { min-height: 44px; }
     #card-personal-section .cd-st-sel,
     #card-personal-section input[type="text"].cd-st-inp,
     #card-personal-section .cd-st-ta,
@@ -4368,12 +4396,12 @@ input[type="number"]:focus {
     box-sizing: border-box;
     position: relative;
     flex: none;
-    width: 40px;
-    height: 24px;
+    width: 36px;
+    height: 20px;
     margin: 0;
     padding: 0;
     border: 0;
-    border-radius: 12px;
+    border-radius: 10px;
     background: #cfd4dc;
     cursor: pointer;
     transition: background-color 0.15s;
@@ -4383,8 +4411,8 @@ input[type="number"]:focus {
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
     background: #fff;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
@@ -5073,9 +5101,10 @@ input[type="number"]:focus {
 .cd-news-icon { flex: none; color: var(--ui-ink-2); }
 .cd-news-date { flex: none; color: #9ca3af; font-variant-numeric: tabular-nums; }
 .cd-news-tx { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cd-news-more { margin-left: auto; flex: none; color: #3b82f6; font-weight: 600; }
-.cd-news[aria-expanded="true"] .cd-news-more::after { content: " ▲"; font-size: 10px; }
-.cd-news[aria-expanded="false"] .cd-news-more::after { content: " ▼"; font-size: 10px; }
+/* 「共 N 則」與級別列的「變更」（2026-11-24 站長）：次要動作，改成跟條件列「展開」同一種灰色白底小膠囊（.cd-pill），
+   緊跟在文字後面、不推到最右邊（寬螢幕時離文字太遠）。文字太長時文字先截成「…」，膠囊 flex:none 永遠看得到 */
+.cd-news-more { flex: none; }
+.cd-news[aria-expanded="true"] .cd-news-more .cd-chev { transform: rotate(180deg); }
 #card-detail-modal .card-changelog-list { margin-top: 8px; }
 
 /* 搜尋框：這一區唯一的框（白底灰框、左邊放大鏡、高 44px），沿用 #cashback-search-input */
@@ -5321,13 +5350,9 @@ input[type="number"]:focus {
     .cd-side .cd-set-hd { margin: 0; }
     .cd-side .cd-set-box { background: #fff; border: 1px solid var(--ui-line); border-radius: var(--ui-radius-md); }
     .cd-side .cd-pan-set > .cd-set-box { margin-top: 10px; }
-    .cd-side .cd-st-r { padding: 9px 12px; }
+    .cd-side #card-personal-section.cd-has-lv > .cd-set-box { margin-top: 0; }
     .cd-side .cd-set-sec { margin: 6px 2px 8px; }
     .cd-side .cd-set-foot { padding: 10px 2px 0; }
-    .cd-side .cd-st-l label { font-size: var(--ui-text-14); }
-    #card-detail-modal .cd-side .cd-st-sel,
-    #card-detail-modal .cd-side input[type="text"].cd-st-inp { width: 120px; height: 32px; font-size: var(--ui-text-13); }
-    #card-detail-modal .cd-side .cd-st-ta { min-height: 60px; font-size: var(--ui-text-13); }
 
     /* 近期異動自己一整排（下方細線），展開的清單接在它下面；搜尋框換到下一排、與下方回饋卡同寬。
        2026-11-19 站長：原本兩者同一排，通知被擠窄，搜尋框也像是公告的一部分；搜尋的對象是下面的回饋，
@@ -6105,7 +6130,7 @@ mark.cashback-search-hl {
     text-align: left;
     cursor: pointer;
 }
-.cd-cc-t { flex: 1 1 auto; min-width: 0; }
+.cd-cc-t { flex: 0 1 auto; min-width: 0; }
 .cd-cc-v {
     font-weight: 700;
     color: var(--ui-ink-1);
@@ -6113,10 +6138,11 @@ mark.cashback-search-hl {
     text-decoration-thickness: 1.5px;
     text-underline-offset: 4px;
 }
-.cd-cc-go { flex: none; display: inline-flex; align-items: center; gap: 1px; font-size: var(--ui-text-12); color: var(--ui-ink-3); }
+.cd-cc-go { flex: none; }
 .cd-cc-go .cd-chev { transform: rotate(-90deg); }
 .cd-cc-btn:hover .cd-cc-v { text-decoration-color: #374151; }
-.cd-cc-btn:hover .cd-cc-go { color: var(--ui-ink-2); }
+.cd-cc-btn:hover .cd-cc-go,
+.cd-news:hover .cd-news-more { border-color: #d1d5db; color: var(--ui-ink-1); }
 
 /* Billing Dates Section Styles */
 .billing-dates-section {

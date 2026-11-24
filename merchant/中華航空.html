@@ -5,6 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <base href="/">
     <script>window.__PMC_MERCHANT__="中華航空";</script>
+    <!-- 只在 iPhone／iPad 加 maximum-scale=1（2026-11-24）：iOS Safari 點到字小於 16px 的輸入框會自動放大整頁，
+         加了就不放大；iOS 10 起用戶照樣能雙指放大，所以沒有無障礙損失。Android 不會自動放大、也會被這個值鎖住雙指放大，
+         所以不加。iPadOS 的 Safari 自稱 Mac（MacIntel＋觸控點）。有了它，個人設定的輸入框才能在手機用 14px -->
+    <script>
+        (function () {
+            var ua = navigator.userAgent || '';
+            var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+            var vp = ios && document.querySelector('meta[name="viewport"]');
+            if (vp) vp.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+        })();
+    </script>
     <title>中華航空刷哪張信用卡回饋最高？2026 華航機票比較 - Pick My Card</title>
 
     <!-- 首屏路由（pre-paint，需在任何外部 script 前同步執行）：
@@ -1183,13 +1194,12 @@
 
                             <div class="cd-set-box">
                                 <div class="cd-st-r" id="credit-limit-section">
-                                    <div class="cd-st-l"><label for="credit-limit-input">我的額度</label></div>
+                                    <div class="cd-st-l"><label for="credit-limit-input">我的額度（NT$）</label></div>
                                     <div class="cd-st-c">
                                         <input type="text" id="credit-limit-input" class="cd-st-inp"
                                                inputmode="numeric" pattern="[0-9,]*" enterkeyhint="done"
                                                placeholder="未設定" autocomplete="off">
                                     </div>
-                                    <small class="cd-st-s">單位 NT$。會計入刷卡小抄的額度合計</small>
                                 </div>
 
                                 <!-- 結帳日／繳款截止日（2026-11-22 補上）：選項由 setupBillingDates()（js/spending-mappings.js）填。
@@ -1238,7 +1248,7 @@
                                         </svg>
                                         <time class="cd-news-date" id="card-changelog-latest-date"></time>
                                         <span class="cd-news-tx" id="card-changelog-latest-text"></span>
-                                        <span class="cd-news-more" id="card-changelog-count"></span>
+                                        <span class="cd-news-more cd-pill" id="card-changelog-count"></span>
                                     </button>
                                     <ul class="card-changelog-list" id="card-changelog-content" hidden></ul>
                                 </div>
