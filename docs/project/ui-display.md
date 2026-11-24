@@ -364,7 +364,12 @@ Grep `titleParts`）：
 - 算法：全部放得下就不長鈕；否則二分搜尋最多能列幾個通路名（含「… 顯示全部N個」鈕算在三行內），至少留一個。通路完整清單記在元素的 JS 屬性 `_cdFull`（`strong._fullText` 是搜尋 `condenseMerchantList` 暫存的原文，優先取它），不放 data-* 屬性
 - 「顯示全部」走委派點擊 `cdToggleChannel`（行為同 `toggleMerchants`：展開成全文、鈕變「收起」，收起時重收），不再用 inline `onclick`；`toggleMerchants` 只剩排除卡用。條件「展開」只在真的被截斷時才長出來
 
-**計算條件列**（`#card-calc-cond`，index.html 在「指定通路回饋」`h4` 下；`updateCardCalcConditions(card)`）：分級卡才有；灰字「計算條件」＋各值灰底小標籤（級別；CUBE 另有發卡組織。「童樂匯」2026-11-20 起不顯示在這裡，站長決定）＋「變更 ›」小膠囊。值**讀個人設定欄位的目前值**（`#card-level-select`／`#cube-issuer-select`），不另存一份；`showCardDetail` 結尾、`updateCubeSpecialCashback`、發卡組織與童樂匯的 `onchange` 都會重呼叫，所以設定一改標籤即時更新。「變更」→ 手機 `selectCardDetailTab('set')`，桌機（個人設定常駐左欄）捲到左欄並聚焦級別下拉。搜尋中隱藏（`filterCashbackItems`）。⚠️ 不得為了這條新增 `saveCardLevel` 呼叫（鐵則 1）——這裡只讀不寫
+**級別列**（`#card-calc-cond`，舊稱「計算條件列」；`updateCardCalcConditions(card)`）：⚠️ 2026-11-24 改版（站長從兩輪選項頁選定「窗格標題列」）。
+- **位置**：`.cd-bar` 裡，近期異動通知列之後、搜尋框之前（舊位置在「指定通路回饋」`h4` 下，看起來只管指定通路；級別同時影響一般回饋）
+- **內容**：整列一個按鈕 `.cd-cc-btn`：「以下回饋依〔級別〕計算」＋右側「變更 ›」。用整句取代「計算條件」標籤，不需要另外的說明字。級別值 `.cd-cc-v` 用灰色虛線底線（同可點回饋率）。**只放級別**：CUBE 的發卡組織不帶入（站長 2026-11-24：目前沒有發卡組織專屬活動，以後有再說），「童樂匯」也不顯示（2026-11-20）
+- **外觀**：沒有框、沒有底色、下方一條細線，跟近期異動通知列同一套（手機整條橫跨、桌機內容寬）。否決過：灰字標籤＋灰底小標籤＋白膠囊拼在一起（雜亂、像突然冒出來）、白框或淺灰底提示條（跟回饋卡同一種 UI，會誤導）、併進搜尋列（像搜尋篩選條件）、就地下拉（已有個人設定頁）、淡藍資訊帶、放進藍色頁首
+- **搜尋中不隱藏**（舊版會藏）：它在搜尋框上方，藏起來會讓搜尋框在打字時往上跳
+- 值**讀 `#card-level-select` 的目前值**，不另存一份；`showCardDetail` 結尾與 `updateCubeSpecialCashback` 重呼叫。點了 → `cdGoToPersonalSettings()`（委派在 `setupCardDetailFit`，認 `.cd-cc-chg`）：手機 `selectCardDetailTab('set')`，桌機捲到左欄並聚焦級別下拉。非分級卡整列 `hidden`。⚠️ 不得為了這條新增 `saveCardLevel` 呼叫（鐵則 1）：這裡只讀不寫
 
 **搜尋**（`filterDetailCards`）：同方案卡以「列」為單位——命中的列留、沒命中的列藏，卡內全部列都沒命中整張藏；標題列（標題／註記／上限／期間）本身命中就整張的列都留（搜「慶生月」看得到整個方案）；清空全部恢復。其他卡（排除卡、領券、停車、說明）整張比對。自動展開被截斷的通路（`syncMerchantListsForSearch` 也認 `.cd-more`）、命中字高亮、只在領券區命中的提示（`#cashback-search-hint`）都照舊
 

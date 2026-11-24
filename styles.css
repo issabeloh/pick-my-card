@@ -5230,6 +5230,7 @@ input[type="number"]:focus {
     #card-detail-modal .cd-pan { padding-bottom: 48px; }
     /* 單欄時摘要的藍底滿版、內容靠左對齊頁籤 */
     .cd-news { width: 100%; margin: 0; padding: 10px 4px; }
+    .cd-cc-btn { width: 100%; margin: 0; padding: 11px 4px; }
 }
 
 /* --- 桌機（≥1025px）兩欄：左欄（sticky）摘要卡＋個人設定，右欄頁籤與內容 --- */
@@ -5333,6 +5334,7 @@ input[type="number"]:focus {
        所以要貼著回饋卡放 */
     .cd-bar { display: block; }
     .cd-bar .cd-news { width: 100%; margin: 0; padding: 4px 4px 10px; }
+    .cd-bar .cd-cc-btn { width: 100%; margin: 0; padding: 10px 4px 11px; }
     .cd-bar .cashback-search-bar { margin: 12px 0 0; }
     #card-detail-modal .cd-bar input[type="text"].cashback-search-input { height: 40px; }
 }
@@ -6080,32 +6082,41 @@ mark.cashback-search-hl {
     margin: 4px 0 0;
 }
 
-/* 計算條件列（分級卡，「指定通路回饋」標題下方；updateCardCalcConditions）：
-   灰字＋各值灰底小標籤＋「變更 ›」小膠囊（箭頭轉向右） */
-.cd-cc {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 6px;
-    margin: -2px 4px 10px;
-    font-size: var(--ui-text-12);
-    color: var(--ui-ink-3);
-}
+/* 級別列（分級卡；「回饋」頁籤最上面、搜尋框上方；updateCardCalcConditions，2026-11-24 站長從選項頁選「窗格標題列」）：
+   一句「以下回饋依〔級別〕計算」＋右側「變更 ›」，整列一個按鈕；沒有框、沒有底色，下方一條細線把「計算前提」和下面的
+   搜尋＋回饋卡切開（否決過：灰底小標籤拼湊＝雜亂、白框或淺灰底＝會被當成回饋卡）。級別值沿用「可點的數字＝灰色虛線底線」。
+   手機／平板比照近期異動 .cd-news：整條橫跨（抵銷內容區左右 12px）；桌機在 .cd-bar 規則裡收回內容寬 */
 .cd-cc[hidden] { display: none; }
-.cd-cc-v {
-    padding: 0 7px;
-    border-radius: 4px;
-    background: #e5e7eb;
+.cd-cc-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: calc(100% + 24px);
+    margin: 0 -12px;
+    padding: 12px 16px 11px;
+    border: 0;
+    border-bottom: 1px solid var(--ui-line);
+    border-radius: 0;
+    background: none;
     color: var(--ui-ink-2);
-    font-weight: 600;
-    line-height: 20px;
+    font: inherit;
+    font-size: var(--ui-text-14);
+    line-height: 1.5;
+    text-align: left;
+    cursor: pointer;
 }
-#card-detail-modal .cd-cc .cd-pill {
-    margin: 0 0 0 2px;
-    vertical-align: baseline;
-    padding-left: 8px;
+.cd-cc-t { flex: 1 1 auto; min-width: 0; }
+.cd-cc-v {
+    font-weight: 700;
+    color: var(--ui-ink-1);
+    text-decoration: underline dashed #9ca3af;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
 }
-.cd-cc .cd-chev { transform: rotate(-90deg); }
+.cd-cc-go { flex: none; display: inline-flex; align-items: center; gap: 1px; font-size: var(--ui-text-12); color: var(--ui-ink-3); }
+.cd-cc-go .cd-chev { transform: rotate(-90deg); }
+.cd-cc-btn:hover .cd-cc-v { text-decoration-color: #374151; }
+.cd-cc-btn:hover .cd-cc-go { color: var(--ui-ink-2); }
 
 /* Billing Dates Section Styles */
 .billing-dates-section {
