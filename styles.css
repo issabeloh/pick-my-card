@@ -12,7 +12,7 @@ body {
     /* 2026-11-16 全幅版面：原本是 135° 灰漸層＋20px 外圈留白，白色內容像一張浮在灰底上的卡片
        （站長：「主要內容都浮在灰色背景前面，很怪」）。現在內容直接鋪在頁面上，這個底色只在
        .container 之外的頁尾看得到。成因與整套計畫見 docs/project/ui-refresh-diagnosis.md */
-    background: #f9fafb;
+    background: var(--ui-bg);
     min-height: 100vh;
 }
 
@@ -79,7 +79,7 @@ body {
    !important 必要：全站有 16 處「.xxx:focus { outline:none }」權重比裸 :focus-visible
    高，會把外框蓋掉；鍵盤焦點可見性必須贏過它們。 */
 :focus-visible {
-    outline: 2px solid #2563eb !important;
+    outline: 2px solid var(--ui-brand-bright) !important;
     outline-offset: 2px;
 }
 
@@ -106,7 +106,7 @@ html.pmc-returning-user #pmc-boot-loader {
     width: 36px;
     height: 36px;
     border: 3px solid #dbeafe;
-    border-top-color: #1e40af;
+    border-top-color: var(--ui-brand);
     border-radius: 50%;
     animation: spinner-rotate 0.7s linear infinite;
 }
@@ -167,7 +167,7 @@ html.pmc-embed .modal:not(#card-detail-modal) {
 /* Header */
 header {
     /* 2026-11-16：原本是 #1e40af → #3b82f6 的 135° 漸層，改單色（診斷見 ui-refresh-diagnosis.md） */
-    background: #1e40af;
+    background: var(--ui-brand);
     color: white;
     padding: 10px calc(var(--page-gutter) + 20px);
     /* 陰影 2026-11-23 拿掉（首頁 11-16 起本來就沒有，FAQ／隱私權／使用須知比照） */
@@ -417,7 +417,7 @@ header {
 
 .auth-btn {
     padding: 8px 12px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     border: 1px solid rgba(255,255,255,0.5);
     background: rgba(255,255,255,0.15);
     color: white;
@@ -471,7 +471,7 @@ header {
     color: white;
     cursor: pointer;
     transition: background 0.2s;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
 }
 
 .avatar-btn:hover {
@@ -491,11 +491,11 @@ header {
 }
 
 .avatar-dropdown-signin {
-    color: #2563eb;
+    color: var(--ui-brand-bright);
 }
 
 .avatar-dropdown-signin svg {
-    color: #2563eb;
+    color: var(--ui-brand-bright);
 }
 
 .avatar-dropdown-signin:hover {
@@ -518,7 +518,7 @@ header {
     right: 0;
     min-width: 180px;
     background: white;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
     z-index: 1000;
     padding: 6px 0;
@@ -539,9 +539,9 @@ header {
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
-    color: #374151;
+    color: var(--ui-ink-2);
     text-decoration: none;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     transition: background 0.15s;
     cursor: pointer;
 }
@@ -552,7 +552,7 @@ header {
 
 .avatar-dropdown-item svg {
     flex-shrink: 0;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .avatar-dropdown-divider {
@@ -576,8 +576,8 @@ header {
 /* 刪除帳號入口（2026-08-20）：比登出更危險，所以視覺上更「冷」——預設灰字，
    hover 才轉紅。登出用的是常態紅字，兩者刻意不同，避免在下拉裡看成同一類動作。 */
 .avatar-dropdown-danger {
-    color: #6b7280;
-    font-size: 13px;
+    color: var(--ui-ink-3);
+    font-size: var(--ui-text-13);
 }
 
 .avatar-dropdown-danger svg {
@@ -754,7 +754,7 @@ header h1 {
     max-width: calc(var(--page-w) - 40px);
     margin: 12px auto 0;
     padding: 8px 14px;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     background: #f3f4f6;
 }
 
@@ -769,7 +769,7 @@ header h1 {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .announcement-text-wrapper {
@@ -781,7 +781,7 @@ header h1 {
 }
 
 .announcement-text {
-    color: #111827;
+    color: var(--ui-ink-1);
     text-decoration: none;
     font-size: 0.85rem;
     font-weight: 400;
@@ -817,7 +817,7 @@ header h1 {
     display: inline-block;
     flex-shrink: 0;
     /* 2026-11-16：原本是半透明白底的膠囊，改成純文字（灰），不再是盒子裡的盒子 */
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 0.75rem;
     font-weight: 500;
     margin-right: 8px;
@@ -836,7 +836,7 @@ header h1 {
 /* 2026-07-20 取消自動輪播後改為顯示：n/N 是「還有其他則公告」的唯一線索 */
 .announcement-indicator {
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     white-space: nowrap;
     padding: 0 2px;
 }
@@ -844,14 +844,14 @@ header h1 {
 .announcement-btn {
     background: none;
     border: none;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 1.05rem;
     cursor: pointer;
     /* 大 padding＋負縱向 margin：點擊區 ≥36px 但不撐高公告列、少佔文字寬度 */
     padding: 10px 9px;
     margin: -8px 0;
     min-width: 36px;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     transition: all 0.2s ease;
     line-height: 1;
     opacity: 0.8;
@@ -1886,7 +1886,7 @@ main {
 .line-icon {
     display: inline-flex;
     align-items: center;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 .line-icon svg {
     width: 1.1em;
@@ -1922,7 +1922,7 @@ label {
     display: block;
     margin-bottom: 14px;
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 input[type="text"],
@@ -1930,9 +1930,9 @@ input[type="search"],
 input[type="number"] {
     width: 100%;
     padding: 16px;
-    border: 2px solid #e5e7eb;
-    border-radius: 12px;
-    font-size: 16px;
+    border: 2px solid var(--ui-line);
+    border-radius: var(--ui-radius-lg);
+    font-size: var(--ui-text-16);
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -1991,7 +1991,7 @@ input[type="number"]:focus {
 }
 
 .matched-item.partial-match .parking-jump-link {
-    color: #374151;
+    color: var(--ui-ink-2);
     text-decoration: underline;
     cursor: pointer;
     font-weight: 600;
@@ -2054,32 +2054,32 @@ input[type="number"]:focus {
 
 /* Results section */
 .results-section {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
     padding-top: 20px;
 }
 
 .results-section h2,
 .threshold-results-section h2 {
     margin-bottom: 16px;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-size: 1.5rem;
 }
 
 /* Merchant payment info */
 .merchant-payment-info {
-    background-color: #f9fafb;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
+    background-color: var(--ui-bg);
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-sm);
     padding: 10px 14px;
     margin-bottom: 16px;
     font-size: 0.75rem;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     line-height: 1.5;
 }
 
 .merchant-payment-title {
     font-weight: 500;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     margin-bottom: 6px;
 }
 
@@ -2093,7 +2093,7 @@ input[type="number"]:focus {
 
 .merchant-payment-item .payment-label {
     font-weight: 500;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     margin-right: 4px;
 }
 
@@ -2101,7 +2101,7 @@ input[type="number"]:focus {
 .merchant-payment-note.with-divider {
     margin-top: 8px;
     padding-top: 8px;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
 }
 
 .merchant-payment-note-text {
@@ -2115,7 +2115,7 @@ input[type="number"]:focus {
 
 .merchant-payment-note-detail {
     margin-top: 6px;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .merchant-payment-note-detail[hidden] {
@@ -2203,7 +2203,7 @@ input[type="number"]:focus {
 }
 
 .cashback-site-link {
-    color: #6b7280;
+    color: var(--ui-ink-3);
     text-decoration: underline;
     text-underline-offset: 2px;
     font-size: inherit;
@@ -2211,7 +2211,7 @@ input[type="number"]:focus {
 }
 
 .cashback-site-link:hover {
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 @media (max-width: 480px) {
@@ -2222,14 +2222,14 @@ input[type="number"]:focus {
 
 /* Coupon results section */
 .coupon-results-section {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
     padding-top: 20px;
     margin-top: 30px;
 }
 
 .coupon-results-section h2 {
     margin-bottom: 16px;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-size: 1.5rem;
 }
 
@@ -2268,14 +2268,14 @@ input[type="number"]:focus {
 
 /* Parking Benefits Styles */
 .parking-benefits-section {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
     padding-top: 20px;
     margin-top: 30px;
 }
 
 .parking-benefits-section h2 {
     margin-bottom: 16px;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-size: 1.5rem;
 }
 
@@ -2289,7 +2289,7 @@ input[type="number"]:focus {
 
 .parking-benefit-item {
     border: 1px solid #3b82f6;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     padding: 16px;
     background: #eff6ff;   /* 2026-11-23 漸層改單色，hover 不再浮起 */
 }
@@ -2303,14 +2303,14 @@ input[type="number"]:focus {
 .parking-card-name {
     font-size: 1.1rem;
     font-weight: 700;
-    color: #1e40af;
+    color: var(--ui-brand);
 }
 
 .parking-benefit-highlight {
     background: #2563eb;
     color: white;
     padding: 12px 16px;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     font-size: 1.1rem;
     font-weight: 700;
     text-align: center;
@@ -2327,12 +2327,12 @@ input[type="number"]:focus {
     display: flex;
     align-items: flex-start;
     padding: 4px 0;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     line-height: 1.5;
 }
 
 .parking-label {
-    color: #1e40af;
+    color: var(--ui-brand);
     font-weight: 500;
     min-width: 50px;
     flex-shrink: 0;
@@ -2344,7 +2344,7 @@ input[type="number"]:focus {
 }
 
 .parking-merchants-highlight {
-    color: #2563eb;
+    color: var(--ui-brand-bright);
     font-weight: 700;
 }
 
@@ -2358,7 +2358,7 @@ input[type="number"]:focus {
     }
 
     .parking-detail-item {
-        font-size: 13px;
+        font-size: var(--ui-text-13);
     }
 }
 
@@ -2398,8 +2398,8 @@ input[type="number"]:focus {
     padding: 8px 10px;
     background: #f0f9ff;
     border: 1px solid #bae6fd;
-    border-radius: 6px;
-    font-size: 12px;
+    border-radius: var(--ui-radius-sm);
+    font-size: var(--ui-text-12);
     color: #0c4a6e;
     line-height: 1.5;
     max-width: 360px;
@@ -2529,21 +2529,21 @@ input[type="number"]:focus {
    New Cardholder Promos Section
    ========================================== */
 .cardholder-promos-section {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
     padding-top: 20px;
     margin-top: 30px;
 }
 
 .cardholder-promos-section h2 {
     margin-bottom: 8px;
-    color: #111827;
+    color: var(--ui-ink-1);
     font-size: 1.5rem;
 }
 
 .cardholder-promos-desc {
     margin-bottom: 16px;
-    color: #6b7280;
-    font-size: 14px;
+    color: var(--ui-ink-3);
+    font-size: var(--ui-text-14);
 }
 
 /* 「看全部新戶活動」pill 連結（2026-07-19 站長定案：原純文字連結改按鈕 pill；
@@ -2557,10 +2557,10 @@ input[type="number"]:focus {
     margin-top: 6px;
     margin-left: 2px;
     border: 1px solid #7dd3fc;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     background: #ffffff;
     color: #0369a1;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 700;
     text-decoration: none;
     white-space: nowrap;
@@ -2576,10 +2576,10 @@ input[type="number"]:focus {
     margin: 0 0 22px;
     padding: 10px 12px;
     color: #fff;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 600;
     text-align: center;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     background: #1f2937;
 }
 
@@ -2597,8 +2597,8 @@ input[type="number"]:focus {
     max-width: 42%;
     height: auto;
     margin: 0 0 12px 16px;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
+    border-radius: var(--ui-radius-md);
+    border: 1px solid var(--ui-line);
     cursor: zoom-in;
 }
 @media (max-width: 600px) {
@@ -2620,7 +2620,7 @@ input[type="number"]:focus {
 /* Cardholder promo cards reuse .card-result + .card-details + .detail-item
    styling so they look consistent with the regular comparison results. */
 .cardholder-promo-item .promo-summary {
-    color: #111827;
+    color: var(--ui-ink-1);
     font-size: 15px;
     font-weight: 700;
     line-height: 1.5;
@@ -2660,16 +2660,16 @@ input[type="number"]:focus {
 }
 .card-apply-cta-text {
     min-width: 0;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 700;
     line-height: 1.45;
     overflow-wrap: anywhere;   /* 長文字（「透過連結申辦，再享200元刷卡金」）在窄欄換行，不截成「…」（2026-11-22 站長） */
 }
 .card-apply-cta-trust {
     margin: 0 0 0 16px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     line-height: 1.5;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 /* Mobile: 詳情頁已有浮動申辦膠囊（.cd-fab），新戶活動區
@@ -2691,10 +2691,10 @@ input[type="number"]:focus {
    期限 / 備註 keep the default muted italic style of .cashback-condition.
    Blue rate banner uses plain bold blue text (no background). */
 #card-benefits-section .cashback-condition.parking-strong-line {
-    color: #111827;
+    color: var(--ui-ink-1);
     font-weight: 700;
     font-style: normal;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
 }
 
 /* Promo type chips on the detail-page promo card */
@@ -2708,8 +2708,8 @@ input[type="number"]:focus {
 .promo-type-chip {
     display: inline-block;
     padding: 2px 10px;
-    border-radius: 999px;
-    font-size: 12px;
+    border-radius: var(--ui-radius-pill);
+    font-size: var(--ui-text-12);
     font-weight: 600;
     line-height: 1.5;
     border: 1px solid transparent;
@@ -2729,14 +2729,14 @@ input[type="number"]:focus {
 
 .promo-type-chip.promo-type-voucher {
     background: #dbeafe;
-    color: #1e40af;
+    color: var(--ui-brand);
     border-color: #93c5fd;
 }
 
 .promo-type-chip.promo-type-default {
-    background: #f3f4f6;
-    color: #374151;
-    border-color: #e5e7eb;
+    background: var(--ui-fill);
+    color: var(--ui-ink-2);
+    border-color: var(--ui-line);
 }
 
 /* No 3-column grid for promo cards — '匹配項目' moved out, so each
@@ -2764,7 +2764,7 @@ input[type="number"]:focus {
     font-size: 12.5px;
     font-weight: 700;
     text-decoration: none;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     border: none;
     text-shadow: 0 1px 1px rgba(255, 255, 255, 0.5);
     box-shadow:
@@ -2863,18 +2863,18 @@ input[type="number"]:focus {
 
 .card-result.no-cashback {
     opacity: 0.6;
-    background: #f9fafb;
+    background: var(--ui-bg);
 }
 
 /* 一般消費排除卡（2026-10-11 站長要求）：整張灰色調、只有卡名＋排除項目。
    不用 opacity（no-cashback 那招）——ⓘ 詳情鈕要維持可點、項目文字要讀得清楚 */
 .card-result.excluded-card {
     background: #f3f4f6;
-    border-color: #e5e7eb;
+    border-color: var(--ui-line);
 }
 
 .card-result.excluded-card .card-name {
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 /* 顏色、圓角、字重由「標籤的兩種樣式」統一給（Grep 該標題） */
@@ -2885,15 +2885,15 @@ input[type="number"]:focus {
 }
 
 .excluded-card-body {
-    font-size: 13px;
-    color: #6b7280;
+    font-size: var(--ui-text-13);
+    color: var(--ui-ink-3);
     line-height: 1.6;
 }
 
 /* 排除項目是這張卡的重點：深灰粗體（不用一般匹配項目的藍色，藍色是「有得刷」的語氣） */
 .excluded-card-body strong,
 .rate-card-excluded .matched-merchant strong {
-    color: #374151;
+    color: var(--ui-ink-2);
     font-weight: 700;
 }
 
@@ -2903,11 +2903,11 @@ input[type="number"]:focus {
 }
 
 .rate-card-excluded .rate-card-title {
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .excluded-detail-note {
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     color: #9ca3af;
     margin-bottom: 2px;
 }
@@ -3092,7 +3092,7 @@ input[type="number"]:focus {
 .card-result .pin-btn:not(.pinned):hover {
     background: #f3f4f6;
     border-color: #9ca3af;
-    color: #111827;
+    color: var(--ui-ink-1);
 }
 
 .card-details {
@@ -3189,7 +3189,7 @@ input[type="number"]:focus {
 }
 /* 達成條件: label on its own line, content (black) below it */
 .promo-condition-text {
-    color: #111827;
+    color: var(--ui-ink-1);
     margin-top: 2px;
 }
 .cardholder-promo-item .detail-value .cashback-amount {
@@ -3209,7 +3209,7 @@ input[type="number"]:focus {
 
 /* No results styling */
 .no-results {
-    color: #374151;
+    color: var(--ui-ink-2);
     margin-bottom: 12px;
     font-size: 1.2rem;
 }
@@ -3743,12 +3743,12 @@ input[type="number"]:focus {
     -webkit-tap-highlight-color: transparent;
 }
 .calc-breakdown-btn:hover {
-    text-decoration-color: #374151;
+    text-decoration-color: var(--ui-ink-2);
 }
 .calc-breakdown-btn[aria-expanded="true"],
 .calc-breakdown-btn.active {
     text-decoration-style: solid;
-    text-decoration-color: #111827;
+    text-decoration-color: var(--ui-ink-1);
 }
 .calc-breakdown-btn:focus-visible {
     outline: 2px solid #3b82f6;
@@ -5508,7 +5508,7 @@ input[type="text"].cashback-search-input {
     border-radius: 50%;
     /* 常駐淺灰圓底：純字符 ✕ 在白底輸入框裡太不明顯，用戶會找不到 */
     background: #e5e7eb;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 11px;
     line-height: 1;
     cursor: pointer;
@@ -5518,7 +5518,7 @@ input[type="text"].cashback-search-input {
     transition: color 0.15s ease, background 0.15s ease;
 }
 .input-clear-btn:hover {
-    color: #374151;
+    color: var(--ui-ink-2);
     background: #d1d5db;
 }
 .input-clear-btn[hidden] {
@@ -6088,27 +6088,27 @@ mark.cashback-search-hl {
 
 .billing-dates-title {
     margin: 0 0 12px 0;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     font-weight: 500;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     display: flex;
     align-items: center;
     gap: 6px;
 }
 .date-suffix {
-    font-size: 13px;
-    color: #6b7280;
+    font-size: var(--ui-text-13);
+    color: var(--ui-ink-3);
     font-weight: 500;
 }
 
 /* 響應式設計 */
 
 .btn-icon {
-    font-size: 14px;
+    font-size: var(--ui-text-14);
 }
 
 .btn-text {
-    font-size: 13px;
+    font-size: var(--ui-text-13);
 }
 
 .chip-clickable {
@@ -6232,15 +6232,15 @@ mark.cashback-search-hl {
 }
 
 .info-label {
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     margin-bottom: 4px;
 }
 
 .info-value {
-    font-size: 14px;
-    color: #111827;
+    font-size: var(--ui-text-14);
+    color: var(--ui-ink-1);
     line-height: 1.4;
 }
 
@@ -6270,7 +6270,7 @@ mark.cashback-search-hl {
 .fee-waiver-text::before {
     content: '免年費條件: ';
     font-weight: 600;
-    color: #374151;
+    color: var(--ui-ink-2);
     font-style: normal;
 }
 
@@ -6351,7 +6351,7 @@ mark.cashback-search-hl {
     border-radius: 50%;
     width: 20px;
     height: 20px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: bold;
     cursor: pointer;
     margin-left: 6px;
@@ -6370,7 +6370,7 @@ mark.cashback-search-hl {
 .input-guide {
     background: #f0f9ff;
     border: 1px solid #bae6fd;
-    border-radius: 8px;
+    border-radius: var(--ui-radius-md);
     padding: 16px;
     margin: 12px 0;
     animation: slideDown 0.3s ease-out;
@@ -6396,7 +6396,7 @@ mark.cashback-search-hl {
 .guide-intro {
     color: #0c4a6e;
     margin-bottom: 12px;
-    font-size: 14px;
+    font-size: var(--ui-text-14);
     line-height: 1.5;
 }
 
@@ -6408,7 +6408,7 @@ mark.cashback-search-hl {
 
 .guide-list li {
     color: #0c4a6e;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     line-height: 1.8;
     padding: 4px 0;
 }
@@ -6447,8 +6447,8 @@ mark.cashback-search-hl {
 /* 2026-10-21：頁尾文字由白字改深色字。白字放在 body 灰漸層上對比只有約 1.5:1
    （WCAG 要 4.5:1），手機上 10–11px 的小標幾乎看不見；#374151 在漸層最深處約 5.4:1。 */
 .social-media-title {
-    color: #374151;
-    font-size: 12px;
+    color: var(--ui-ink-2);
+    font-size: var(--ui-text-12);
     font-weight: 600;
     margin: 0;
     text-transform: uppercase;
@@ -6471,11 +6471,11 @@ mark.cashback-search-hl {
     /* 2026-11-16：原本是半透明白＋毛玻璃，配的是灰漸層底；頁尾底色改成 #f9fafb 之後
        半透明白幾乎看不出按鈕外形，改實心白底＋灰框 */
     background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
     color: #1f2937;
     text-decoration: none;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     transition: all 0.3s ease;
 }
 
@@ -6538,15 +6538,15 @@ mark.cashback-search-hl {
 
 .social-text {
     font-weight: 500;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
 }
 
 /* 法務連結（隱私權政策／使用須知與免責聲明）：2026-10-21 由膠囊按鈕改成頁尾一行小字。
    它是法務入口不是行銷連結——要找得到、不要搶戲，所以不給按鈕外框也不帶 ↗。 */
 .footer-legal {
     margin: 20px 0 0;
-    font-size: 12px;
-    color: #374151;
+    font-size: var(--ui-text-12);
+    color: var(--ui-ink-2);
 }
 
 .footer-legal a {
@@ -6557,13 +6557,13 @@ mark.cashback-search-hl {
 }
 
 .footer-legal a:hover {
-    color: #1e40af;
+    color: var(--ui-brand);
     text-decoration-color: currentColor;
 }
 
 .footer-legal-dot {
     margin: 0 8px;
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 /* Mobile responsiveness for social media
@@ -6596,7 +6596,7 @@ mark.cashback-search-hl {
     }
 
     .social-media-title {
-        font-size: 12px;
+        font-size: var(--ui-text-12);
         letter-spacing: 0.08em;
     }
 
@@ -6620,7 +6620,7 @@ mark.cashback-search-hl {
         justify-content: center;
         min-height: 44px;
         padding: 6px 10px;
-        border-radius: 12px;
+        border-radius: var(--ui-radius-lg);
         gap: 6px;
         text-align: center;
         line-height: 1.3;
@@ -6633,7 +6633,7 @@ mark.cashback-search-hl {
     }
 
     .social-text {
-        font-size: 14px;
+        font-size: var(--ui-text-14);
     }
 
     .footer-legal {
@@ -6644,7 +6644,7 @@ mark.cashback-search-hl {
 
 .auth-btn.secondary {
     background: #f3f4f6;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .auth-btn.secondary:hover {
@@ -6659,17 +6659,17 @@ mark.cashback-search-hl {
     margin: 12px auto 20px;
     padding: 0 24px;
     text-align: center;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     color: #9ca3af;
 }
 
 .site-legal-footer a {
-    color: #6b7280;
+    color: var(--ui-ink-3);
     text-decoration: none;
 }
 
 .site-legal-footer a:hover {
-    color: #2563eb;
+    color: var(--ui-brand-bright);
     text-decoration: underline;
 }
 
@@ -6679,8 +6679,8 @@ mark.cashback-search-hl {
     margin: 16px auto 0;
     padding: 0 24px 28px;   /* 下方留白：這是全頁最後一行，貼著螢幕底緣很擠 */
     text-align: center;
-    font-size: 12px;
-    color: #374151;   /* 原 #6b7280：灰底上對比不足，見 .social-media-title 註解 */
+    font-size: var(--ui-text-12);
+    color: var(--ui-ink-2);   /* 原 #6b7280：灰底上對比不足，見 .social-media-title 註解 */
 }
 
 @media (max-width: 768px) {
@@ -6723,7 +6723,7 @@ mark.cashback-search-hl {
 .ad-row-frame {
     padding: 0 8px;
     border: 1px solid transparent;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
 }
 
 .ad-row-label {
@@ -6743,7 +6743,7 @@ mark.cashback-search-hl {
 .ad-row:has(.ad-row-unit[data-ad-status="filled"]) .ad-row-frame,
 .ad-row:has(.ad-row-unit[data-ad-status="unfill-optimized"]) .ad-row-frame {
     padding: 6px 8px 8px;
-    border-color: #e5e7eb;
+    border-color: var(--ui-line);
     background: #f9fafb;
     text-align: left;
 }
@@ -6756,7 +6756,7 @@ mark.cashback-search-hl {
     border: 1px solid #d1d5db;
     border-radius: 4px;
     background: #fff;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     font-size: 11px;
     line-height: 16px;
 }
@@ -6785,7 +6785,7 @@ mark.cashback-search-hl {
 
 @media (max-width: 600px) {
     .finance-warning-row {
-        font-size: 14px;
+        font-size: var(--ui-text-14);
         padding: 12px 16px;
         letter-spacing: 1px;
     }
@@ -6943,7 +6943,7 @@ mark.cashback-search-hl {
     position: absolute;
     top: -8px;
     right: -8px;
-    background: #f59e0b;
+    background: var(--ui-yellow);
     color: white;
     font-size: 0.7rem;
     font-weight: bold;
@@ -6962,10 +6962,10 @@ mark.cashback-search-hl {
     height: 22px;
     padding: 0 9px 0 7px;
     background: #fef3c7;
-    border: 1px solid #f59e0b;
-    border-radius: 999px;
+    border: 1px solid var(--ui-yellow);
+    border-radius: var(--ui-radius-pill);
     color: #b45309;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 600;
     line-height: 1;
     cursor: pointer;
@@ -6982,13 +6982,13 @@ mark.cashback-search-hl {
 
 .pin-btn:hover {
     background: #fde68a;
-    border-color: #f59e0b;
+    border-color: var(--ui-yellow);
     color: #92400e;
 }
 
 .pin-btn.pinned {
-    background: #f59e0b;
-    border-color: #f59e0b;
+    background: var(--ui-yellow);
+    border-color: var(--ui-yellow);
     color: #ffffff;
 }
 .pin-btn.pinned::after {
@@ -7010,7 +7010,7 @@ mark.cashback-search-hl {
     background: rgba(16, 185, 129, 0.95);
     color: white;
     padding: 8px 16px;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     font-size: 0.875rem;
     font-weight: 500;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -7073,7 +7073,7 @@ mark.cashback-search-hl {
     border-radius: 50%;
     border: 1px solid rgba(107, 114, 128, 0.2);
     background: rgba(107, 114, 128, 0.15);
-    color: #374151;
+    color: var(--ui-ink-2);
     cursor: pointer;
     align-items: center;
     justify-content: center;
@@ -7105,7 +7105,7 @@ mark.cashback-search-hl {
     background: rgba(31, 41, 55, 0.92);
     color: #ffffff;
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     font-size: 0.75rem;
     font-weight: 600;
     opacity: 0;
@@ -7149,7 +7149,7 @@ mark.cashback-search-hl {
     border-radius: 50%;
     border: 1px solid rgba(107, 114, 128, 0.2);
     background: rgba(107, 114, 128, 0.15);
-    color: #374151;
+    color: var(--ui-ink-2);
     cursor: pointer;
     align-items: center;
     justify-content: center;
@@ -7686,12 +7686,12 @@ mark.cashback-search-hl {
     }
 
     .auth-provider-btn {
-        font-size: 13px;
+        font-size: var(--ui-text-13);
         padding: 10px 12px;
     }
 
     .auth-input {
-        font-size: 16px; /* Prevents zoom on iOS */
+        font-size: var(--ui-text-16); /* Prevents zoom on iOS */
     }
 }
 /* WebView Warning Modal Styles */
@@ -7903,7 +7903,7 @@ mark.cashback-search-hl {
     border-radius: 50%;
     background: transparent;
     color: #1976d2;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     line-height: 1;
     cursor: pointer;
     display: inline-flex;
@@ -7933,7 +7933,7 @@ mark.cashback-search-hl {
 /* 提示訊息文字 */
 .hint-message {
     display: block;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     color: #1976d2;
     font-weight: 600;
     margin-bottom: 8px;
@@ -7958,7 +7958,7 @@ mark.cashback-search-hl {
     color: #1976d2;
     padding: 6px 12px;
     border-radius: 16px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -7998,14 +7998,14 @@ mark.cashback-search-hl {
 
     /* 2026-11-16 站長回報手機上字太小（原本文案 12px、建議鈕 11px，比桌機還小）：文案 14px、建議鈕 13px */
     .hint-message {
-        font-size: 14px;
+        font-size: var(--ui-text-14);
         line-height: 1.5;
         margin-bottom: 8px;
     }
 
     .hint-button {
         padding: 7px 13px;
-        font-size: 13px;
+        font-size: var(--ui-text-13);
     }
 
     .hint-suggestions {
@@ -8025,7 +8025,7 @@ mark.cashback-search-hl {
     color: white;
     padding: 6px;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: var(--ui-radius-sm);
     transition: background 0.2s;
     flex-shrink: 0;
 }
@@ -8104,7 +8104,7 @@ mark.cashback-search-hl {
 
 .sidebar-close-btn:hover {
     background: #f3f4f6;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 .sidebar-content {
@@ -8251,7 +8251,7 @@ mark.cashback-search-hl {
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
-    border-radius: 12px;
+    border-radius: var(--ui-radius-lg);
     background: #fff7e0;
     border: 1px solid #ffe29a;
     box-shadow: none;
@@ -8466,7 +8466,7 @@ mark.cashback-search-hl {
 
 .sidebar .manage-cards-btn:hover {
     background: #f3f4f6;
-    color: #374151;
+    color: var(--ui-ink-2);
 }
 
 /* ============================================
@@ -8710,7 +8710,7 @@ mark.cashback-search-hl {
 .app-layout main .quick-search-label {
     font-size: 0.85rem;
     font-weight: 600;
-    color: #6b7280;
+    color: var(--ui-ink-3);
     margin-top: 12px;
     margin-bottom: 6px;
 }
@@ -8762,7 +8762,7 @@ mark.cashback-search-hl {
        ⚠️ .avatar-btn 或 .guest-avatar-icon 的尺寸改了，這個數字要跟著改。 */
     min-height: 36px;
     padding: 5px 14px;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     background: rgba(255, 255, 255, 0.16);
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: #ffffff;
@@ -8877,7 +8877,7 @@ mark.cashback-search-hl {
 
     .auth-btn {
         padding: 5px 10px;
-        font-size: 13px;
+        font-size: var(--ui-text-13);
     }
 
     #user-name {
@@ -9176,7 +9176,7 @@ html.pmc-onboard #search-hints-container {
     transition: color .2s, background .2s, border-color .2s;
 }
 .spotlight-nav-btn:hover {
-    color: #1e40af;
+    color: var(--ui-brand);
     background: #f3f4f6;
     border-color: #c7d2fe;
 }
@@ -9574,7 +9574,7 @@ html.pmc-onboard #search-hints-container {
 /* 精準搜尋零結果提示（合併框下方） */
 .exact-search-empty-hint {
     margin: 0;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     line-height: 1.5;
     color: #b45309;
 }
@@ -9773,13 +9773,13 @@ html.pmc-onboard #search-hints-container {
 .mc-related {
     padding: 11px calc(var(--page-gutter) + 30px);   /* 底色滿版、內容對齊 */
     background: #f3f4f6;
-    border-top: 1px solid #e5e7eb;
-    border-bottom: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
+    border-bottom: 1px solid var(--ui-line);
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
     gap: 6px 14px;
-    font-size: 13px;
+    font-size: var(--ui-text-13);
     line-height: 1.7;
 }
 
@@ -9826,7 +9826,7 @@ html.pmc-onboard #search-hints-container {
 }
 
 .mc-related-meta {
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 
 .mc-related-go {
@@ -10426,7 +10426,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     /* 16px → 14px */
     input[type="text"], input[type="search"], input[type="number"],
     .cashback-amount {
-        font-size: 14px;
+        font-size: var(--ui-text-14);
     }
 
     /* 0.95rem → 0.84rem */
@@ -10440,7 +10440,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     .app-layout main input[type="text"], .app-layout main input[type="search"], .app-layout main input[type="number"],
     .home-view-switch > button,
     .cashback-rate {
-        font-size: 13px;
+        font-size: var(--ui-text-13);
     }
 
     /* 0.9rem → 0.79rem */
@@ -11219,7 +11219,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
    displayUnmetSpendResults／updateResultsNav；設計紀錄見 docs/project/ui-display.md 第 1k 節）
    ============================================================ */
 .threshold-results-section {
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
     padding-top: 20px;
     margin-top: 30px;
 }
@@ -11233,8 +11233,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 }
 .threshold-results-desc {
     margin-bottom: 16px;
-    color: #6b7280;
-    font-size: 14px;
+    color: var(--ui-ink-3);
+    font-size: var(--ui-text-14);
     line-height: 1.6;
 }
 /* 未達門檻的結果卡：淺灰底＋虛線框表示「參考用」。不用 .upcoming-activity 那種整張半透明——
@@ -11245,7 +11245,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     border-color: #d1d5db;
 }
 .card-result.unmet-spend-activity .cashback-amount {
-    color: #6b7280;
+    color: var(--ui-ink-3);
 }
 .unmet-spend-badge {
     padding: 3px 10px;
@@ -11254,14 +11254,14 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 }
 .unmet-threshold-note {
     margin-top: 6px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 700;
     color: #b45309;
 }
 /* 進行中的結果卡上「↑ 單筆滿 X 可享 Y%」提示 */
 .spend-upgrade-note {
     margin-top: 6px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     font-weight: 600;
     color: #b45309;
 }
@@ -11281,7 +11281,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     padding: 8px 0;
     margin: 0 0 4px;
     background: #fff;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--ui-line);
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
@@ -11296,10 +11296,10 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
     gap: 6px;
     padding: 5px 12px;
     border: 1px solid #d1d5db;
-    border-radius: 999px;
+    border-radius: var(--ui-radius-pill);
     background: #fff;
-    color: #374151;
-    font-size: 13px;
+    color: var(--ui-ink-2);
+    font-size: var(--ui-text-13);
     font-weight: 600;
     line-height: 1.4;
     white-space: nowrap;
@@ -11316,8 +11316,8 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .results-nav-count {
     min-width: 18px;
     padding: 0 5px;
-    border-radius: 999px;
-    background: #f3f4f6;
+    border-radius: var(--ui-radius-pill);
+    background: var(--ui-fill);
     color: #4b5563;
     font-size: 11px;
     font-weight: 700;
@@ -11348,7 +11348,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 .results-container > .results-group-heading,
 .results-container > .threshold-results-section {
     grid-column: 1 / -1;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--ui-line);
     padding-top: 20px;
     margin-top: 14px;
 }
@@ -11358,7 +11358,7 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 /* 排除區說明（2026-11-15）：整區只出現一次，語氣與原本卡上的小字一致 */
 .results-group-heading .results-group-note {
     margin-top: 4px;
-    font-size: 12px;
+    font-size: var(--ui-text-12);
     color: #9ca3af;
 }
 /* 前面沒有主結果（<h2> 收起來）時，第一個小標題／未達門檻區就是開頭，不要再畫線留白 */
