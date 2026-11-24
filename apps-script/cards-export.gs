@@ -394,20 +394,23 @@ function validateReferentialIntegrity_(cards, spotlights, newCardholderPromos, c
   return problems;
 }
 
-// 精選活動 order 檢查（2026-10-11）。只回傳「警告」字串陣列，呼叫端絕不可擋匯出：
-// 前端依 order 排序（js/home-ui.js renderSpotlights），重複時同號維持試算表列順序、
-// 0／空白會被當 999 排到最後——不會壞，只是順序不再由編輯者掌控，所以只提醒。
-// 只看 active 的列（inactive 前端不顯示，order 填 0 很正常）。純函數，空陣列＝沒問題。
+// 精選活動 order 檢查（2026-10-11；2026-11-24 改為「置頂＋隨機」規則）。只回傳「警告」字串陣列，
+// 呼叫端絕不可擋匯出。order 是選填的置頂：填 1–3 的照號碼排最前面，空白／0 是正常寫法
+// （前端每次開頁隨機排，js/home-ui.js orderSpotlights）。只提醒兩種狀況：填了 1–3 以外的值
+// （不會置頂）、置頂號碼重複（同號依試算表列順序排）。規則與 tools/check-spotlights.js 一致。
+// 只看 active 的列。純函數，空陣列＝沒問題。
 function validateSpotlightOrder_(spotlights) {
+  const PIN_MAX = 3;
   const warnings = [];
   const byOrder = {};
 
   (spotlights || []).forEach(function(s, i) {
     if (!s || s.active === false) return;
     const who = s.merchant || s.card_name || ('第 ' + (i + 1) + ' 列');
+    if (s.order === undefined || s.order === null || s.order === '' || Number(s.order) === 0) return;
     const n = Number(s.order);
-    if (!(n > 0) || Math.floor(n) !== n) {
-      warnings.push('精選活動（Highlights）「' + who + '」的 order「' + s.order + '」（0 或空白視同未填）不是正整數，會被排到最後');
+    if (!(n >= 1 && n <= PIN_MAX) || Math.floor(n) !== n) {
+      warnings.push('精選活動（Highlights）「' + who + '」的 order「' + s.order + '」不是 1–' + PIN_MAX + '，不會置頂、會跟著隨機排');
       return;
     }
     (byOrder[n] = byOrder[n] || []).push(who);
@@ -415,7 +418,7 @@ function validateSpotlightOrder_(spotlights) {
 
   Object.keys(byOrder).forEach(function(n) {
     if (byOrder[n].length > 1) {
-      warnings.push('精選活動（Highlights）order ' + n + ' 重複：' + byOrder[n].join('、') + '（同號會依試算表列順序排）');
+      warnings.push('精選活動（Highlights）置頂 order ' + n + ' 重複：' + byOrder[n].join('、') + '（同號會依試算表列順序排）');
     }
   });
 
@@ -1158,7 +1161,7 @@ if (faqSheet) {
   const orderWarnings = validateSpotlightOrder_(spotlights);
   if (orderWarnings.length > 0) {
     ui.alert(
-      '⚠️ 精選活動排序提醒（不影響匯出）',
+      '⚠️ 精選活動置頂提醒（不影響匯出）',
       orderWarnings.slice(0, 10).join('\n') +
         (orderWarnings.length > 10 ? '\n…（其餘 ' + (orderWarnings.length - 10) + ' 個略）' : ''),
       ui.ButtonSet.OK

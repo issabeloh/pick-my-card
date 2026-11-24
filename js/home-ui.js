@@ -19,7 +19,7 @@
  *  - 搜尋提示                    → "checkAndShowSearchHint" / "handleMerchantInput"
  * ============================================================ */
 // ============ 本週亮點活動 (Spotlight) ============
-// Editorial highlights from cardsData.spotlights. Shows 3 per page in a
+// Editorial highlights from cardsData.spotlights（排序：order 1–3 置頂、其餘隨機，見 orderSpotlights）. Shows 3 per page in a
 // manual carousel (arrows / dots / swipe, no auto-rotate); 2026-08-16 起不再
 // 截斷筆數（原 SPOTLIGHT_MAX = 12），資料端有幾則 active 就顯示幾則，
 // 頁數／圓點跟著長度自動增加。
@@ -96,6 +96,37 @@ function resolveSpotlightDeadline(item) {
     return ends.sort()[0].replace(/-/g, '/');
 }
 
+// ============ 排序：置頂＋隨機（2026-11-24 站長要求）============
+// Highlights 的 order 是選填的「置頂」：填 1–3 的照號碼排最前面（同號依試算表列順序），
+// 其餘（空白、0、其他數字）每次開頁隨機排，讓常回來的用戶每次看到不同的活動。
+// 都不填＝全部隨機。規則與 tools/check-spotlights.js、cards-export.gs 的
+// validateSpotlightOrder_ 一致，改一邊記得改另一邊。
+const SPOTLIGHT_PIN_MAX = 3;
+
+// 每則活動的隨機排序鍵整個頁面只抽一次：showToolSections()（登入／登出時）會再呼叫
+// renderSpotlights()，每次重洗的話，用戶正在看的輪播會突然整個換掉。
+const spotlightShuffleKeys = new Map();
+
+function spotlightPinRank(item) {
+    const n = Number(item.order);
+    return (Number.isInteger(n) && n >= 1 && n <= SPOTLIGHT_PIN_MAX) ? n : 0;
+}
+
+function spotlightShuffleKey(item) {
+    const id = `${item.card_id}|${item.merchant}|${item.rate}`;
+    if (!spotlightShuffleKeys.has(id)) spotlightShuffleKeys.set(id, Math.random());
+    return spotlightShuffleKeys.get(id);
+}
+
+// 依隨機鍵排序＝均勻洗牌；Array.prototype.sort 是穩定排序，置頂同號維持試算表列順序
+function orderSpotlights(items) {
+    const pinned = items.filter(s => spotlightPinRank(s) > 0)
+        .sort((a, b) => spotlightPinRank(a) - spotlightPinRank(b));
+    const rest = items.filter(s => spotlightPinRank(s) === 0)
+        .sort((a, b) => spotlightShuffleKey(a) - spotlightShuffleKey(b));
+    return pinned.concat(rest);
+}
+
 function renderSpotlights() {
     const section = document.getElementById('spotlight-section');
     const track = document.getElementById('spotlight-track');
@@ -103,8 +134,8 @@ function renderSpotlights() {
 
     const all = (cardsData && Array.isArray(cardsData.spotlights)) ? cardsData.spotlights : [];
     spotlightItems = all
-        .filter(s => s && s.active !== false && s.active !== 'FALSE')
-        .sort((a, b) => (Number(a.order) || 999) - (Number(b.order) || 999));
+        .filter(s => s && s.active !== false && s.active !== 'FALSE');
+    spotlightItems = orderSpotlights(spotlightItems);
 
     // 期限、選中的活動在建清單時算一次就好（卡片版式與 modal 共用，翻頁重繪不必重算）
     spotlightItems.forEach(item => {

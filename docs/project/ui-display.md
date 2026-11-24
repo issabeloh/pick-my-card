@@ -510,9 +510,9 @@ Grep `titleParts`）：
 
 **位置（重要）**：`#spotlight-section` 不在 `<main>` 內，是 `.container` 直系子節點、緊接 `.app-layout` 之後——跨 sidebar+main 兩欄的全寬橫帶，位於所有搜尋結果之下。**例外（2026-11-16，桌機空狀態）**：≥1025px 且畫面上沒有任何搜尋結果時，`placeSpotlightSection()`（`js/home-ui.js`）把同一個節點搬進 `<main>` 的 `#spotlight-empty-slot`（搜尋框正下方，加 class `in-main`）；按下計算的當下同步搬回原位（`beginSpotlightCalc()`，由 `calculateCashback()` 呼叫——不能等結果出現才搬，會讓 `displayResults()` 的捲動捲過頭），結果收起時由 MutationObserver 搬回主欄。新增結果區塊時放在 `#view-search` 底下當直系 `<section>` 並用 inline `display` 開關，這套判斷才認得到。`box-sizing: border-box; width: 100%; padding: 24px 30px 30px`（2026-09-03 拿掉 `border-top`：站長認為 main 與推薦活動之間不需要分隔線）。
 
-**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, order(數字), active(布林), featured(布林，2026-09-03 新增；**前端不讀**——主打卡程式 2026-10-02 已移除，見下方「版位與分頁」)。
+**資料**：Google Sheets `Highlights` 工作表 → `cardsData.spotlights`。欄位：merchant, rate(數字), description, card_name, card_id, order(選填，1–3＝置頂), active(布林), featured(布林，2026-09-03 新增；**前端不讀**——主打卡程式 2026-10-02 已移除，見下方「版位與分頁」)。
 
-**order 防呆（2026-10-11，只警告不擋）**：前端依 `order` 排序（`js/home-ui.js renderSpotlights`），重複時同號依試算表列順序、0／空白被當 999 排最後。匯出前（`validateSpotlightOrder_`，`cards-export.gs`）與 `tools/check-spotlights.js`（preflight 4c）都只對 active 的列提醒，規則兩邊一致；前端不改排序。
+**排序：置頂＋隨機（2026-11-24 站長要求，取代原本的純 order 排序）**：`order` 是**選填的置頂**。填 1–3 的照號碼排最前面（同號依試算表列順序）；空白、0、其他值每次開頁隨機排（`orderSpotlights()`，`js/home-ui.js`）。都不填＝全部隨機。隨機鍵每則活動整個頁面只抽一次（`spotlightShuffleKeys`）：`showToolSections()` 在登入／登出時會再呼叫 `renderSpotlights()`，每次重洗的話正在看的輪播會整個換掉。防呆只警告不擋：匯出前（`validateSpotlightOrder_`，`cards-export.gs`）與 `tools/check-spotlights.js`（preflight 4c）只對 active 的列提醒「填了 1–3 以外的值」與「置頂號碼重複」，規則三處一致。
 
 **Highlights 只存「編輯決定」（2026-09-30 起）**：`cap`／`deadline`／`category` 三欄已從工作表刪除——它們與卡片真實資料重複，實測 20 則有 2 則上限、3 則期限對不上。現在：
 - **`rate` 是選擇器**：`resolveSpotlightPick(item, card)` 把「活動 × 級別」逐一試算，取回饋率等於 rate 的組合（多個相等取上限最大）。它同時表達站長選的級別（分級卡有時推中間、有時推最高）與活動（同通路多個活動時，例如夢時代 3%/7%/11%/7%）。**不能改成 level 欄**——level 表達不了「選哪個活動」。
@@ -538,7 +538,7 @@ Grep `titleParts`）：
 - 欄數與每頁張數：**手機（≤768px）2 欄 4 則、平板（769–1024px）3 欄 3 則、桌機（≥1025px）4 欄 4 則**。⚠️ `js/home-ui.js` 的 `spotlightLayout()` 與 `styles.css` 的 `.spotlight-track` **斷點（768 / 1024）必須一致**，否則會出現填不滿的半排。
 - 分頁不是用 index 除法算的：`buildSpotlightPages()` 先建出 `spotlightPages`（每頁一個 `spotlightItems` 切片），`renderSpotlightPage()` 只負責畫。跨斷點 resize 時 `setupSpotlightResizeReflow()` 會重建分頁並重畫圓點與箭頭。
 - **主打卡（`.is-feature` 大卡／`.is-mini` 小格）已移除**：2026-09-03 停用（主打卡用完之後的頁面沒有主打位，翻頁時卡片形狀不同、看起來很亂），2026-10-02 站長確認不再使用，程式與樣式全部刪除；每頁一律是同樣的直式卡。要考古看 commit「完全移除停用中的主打卡版位程式」。
-- **純手動換頁**（左右箭頭＋頁碼圓點＋手機左右滑動 `setupSpotlightSwipe`）——2026-07-27 移除自動輪播；依 order 升冪，**不限筆數**（2026-08-16 拿掉原本的 `SPOTLIGHT_MAX = 12`；筆數多寡改由 Sheets 端 `active` 控制，圓點列已 `flex-wrap` 防爆版）；`active===false` 不顯示；單頁時自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
+- **純手動換頁**（左右箭頭＋頁碼圓點＋手機左右滑動 `setupSpotlightSwipe`）——2026-07-27 移除自動輪播；order 1–3 置頂、其餘隨機（見上方「排序」），**不限筆數**（2026-08-16 拿掉原本的 `SPOTLIGHT_MAX = 12`；筆數多寡改由 Sheets 端 `active` 控制，圓點列已 `flex-wrap` 防爆版）；`active===false` 不顯示；單頁時自動隱藏按鈕與圓點；顯示時機跟著 `showToolSections()`/`hideToolSections()`。
 
 **modal 最下面的「新戶」連結**（2026-11-22，站長從多輪示意選定：Uber／Klook 式綠色小標籤、放在 Amazon 信用卡優惠列的位置；否決過色塊框、膠囊、小卡、票券等）：`buildSpotlightPromoLink(card)`（`js/home-ui.js`）在 modal 內文最後接一顆膠囊連結，連到 `/promos/<id>`（同分頁開啟）。**外觀比照詳情頁手機申辦膠囊 `.cd-fab`**（站長 2026-11-22 最後定案）：白底黃框、共用 `.cd-gift` 黃色禮物圓圈與 `.cd-apply-btn` 黃色按鈕「看活動」，第一行「{類型} **{金額／回饋率／N 選 1}**」、第二行灰字「（共 N 檔）新戶活動・至 M/D」；不浮動。只在這張卡有進行中的新戶活動、id 合法（同 `pmcCardPagePath_` 規則＝單卡頁存在）、使用者沒持有這張卡時出現。文字規則同詳情頁申辦膠囊。樣式 `styles.css` 的 `.spotlight-promo-*`。⚠️ 這條連結只在打開 modal 後才存在，對 Google 爬取沒有幫助，用途是讓使用者發現單卡頁。站長 2026-11-22：商家頁**不要**加新戶活動連結。GA4：`button_click`，`button_type = spotlight_promo`（2026-11-23 起，帶 card_id／card_name／merchant）。
 
