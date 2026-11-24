@@ -498,7 +498,7 @@ async function renderCardPersonalSettings(card, opts = {}) {
         }
 
         const levelSelectorHTML =
-            '<div class="cd-set-sec"><span class="cd-set-sec-s">搜尋結果將依照以下條件顯示</span></div>' +   // 2026-11-23 站長：拿掉「計算條件」小標，只留一句說明
+            '<div class="cd-set-sec"><span class="cd-set-sec-s">首頁的查詢結果將依照以下條件顯示</span></div>' +   // 2026-11-23 站長：拿掉「計算條件」小標，只留一句說明；2026-11-24 改文案（詳情頁回饋卡另有級別列說明）
             `<div class="cd-set-box">${rows.join('')}</div>`;
 
         cubeLevelSection.innerHTML = levelSelectorHTML;
