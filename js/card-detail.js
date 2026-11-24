@@ -7,7 +7,7 @@
  *  - onclick 轉義               → "escapeForOnclick"
  *  - 詳情頁回饋卡（同方案一張卡，2026-11-17）→ "planCardsHtml" / "renderPlanCard" / "formatRateCardCap"
  *  - 適用通路三行／條件一行（量寬度後才收）→ "cdFitChannel" / "setupCardDetailFit"
- *  - 計算條件列（分級卡）        → "updateCardCalcConditions"
+ *  - 級別列（分級卡）          → "updateCardCalcConditions"
  *  - 商家清單展開收合（含 window 賦值）→ "toggleMerchants"
  *  - 詳情頁項目過濾            → "filterCashbackItems" / "condenseMerchantList"
  *  - 個人設定儲存狀態列（2026-11-17 第三輪）→ "cdTrackSave" / "cdSaveStatusRender" / "cdSettingRowHtml" / "cdFlushNotes"
@@ -362,7 +362,7 @@ function summarizeAnnualFee(text) {
 // （cdMountPersonalSection）；這支負責把「這張卡」的值填進去並接上自動儲存。
 // 存檔一律走各欄既有的 save 函數，沒有第二套存檔邏輯。
 // opts.context：'detail'（預設，詳情頁）／'owned'（我的信用卡單卡面板）——
-//   差別只在「改了設定之後要不要重畫詳情頁的回饋卡／計算條件列」，單卡面板沒有那些東西。
+//   差別只在「改了設定之後要不要重畫詳情頁的回饋卡／級別列」，單卡面板沒有那些東西。
 // 🔒 鐵則 1：saveCardLevel 的呼叫點仍只有級別下拉的 onchange（用戶親自改）
 async function renderCardPersonalSettings(card, opts = {}) {
     const inDetail = opts.context !== 'owned';
@@ -545,7 +545,6 @@ async function renderCardPersonalSettings(card, opts = {}) {
         if (childrenCheckbox) {
             childrenCheckbox.onchange = async function() {
                 await cdTrackSave('children', saveChildrenEligible(this.checked));
-                if (inDetail) updateCardCalcConditions(card);   // 「計算條件」列的「童樂匯」標籤
             };
         }
 
@@ -554,7 +553,6 @@ async function renderCardPersonalSettings(card, opts = {}) {
         if (cubeIssuerSelect) {
             cubeIssuerSelect.onchange = async function() {
                 await cdTrackSave('issuer', saveCubeIssuer(this.value));
-                if (inDetail) updateCardCalcConditions(card);   // 「計算條件」列的發卡組織標籤
             };
         }
     } else {
@@ -1046,7 +1044,7 @@ async function showCardDetail(cardId) {
     // 摘要三格（最高回饋／一般消費）：取自上面畫回饋卡時用的同一份顯示回饋率
     updateCardDetailFacts();
 
-    // 「計算條件」列（分級卡才有）：讀剛畫好的個人設定欄位
+    // 級別列（分級卡才有）：讀剛畫好的個人設定欄位
     updateCardCalcConditions(card);
 
     // 先畫完整內容、modal 顯示後才量：適用通路收成最多三行、條件一行省略（超出才長「展開」）。
@@ -1280,7 +1278,7 @@ async function updateCubeSpecialCashback(card) {
     delete window._currentCard;
     // 先畫完整內容、再量（通路收三行、條件一行省略）
     cdFitAllContainers();
-    // 計算條件列、摘要的「最高回饋」與頁籤筆數跟著級別走（讀剛畫好的回饋卡）
+    // 級別列、摘要的「最高回饋」與頁籤筆數跟著級別走（讀剛畫好的回饋卡）
     updateCardCalcConditions(card);
     updateCardDetailFacts();
     if (typeof refreshCardDetailTabs === 'function') refreshCardDetailTabs();
@@ -1689,51 +1687,37 @@ function cdGoToPersonalSettings() {
     }
 }
 
-// 「計算條件」列（分級卡，「指定通路回饋」標題下方）：灰字「計算條件」＋各值灰底小標籤（級別；CUBE 另有
-// 發卡組織、勾了童樂匯時「童樂匯」）＋「變更 ›」小膠囊。值直接讀個人設定欄位（選單／勾選框的目前值），
-// 設定改變時由各欄位的 onchange 與 updateCubeSpecialCashback 重呼叫。非分級卡不顯示；搜尋中隱藏。
+// 級別列（分級卡；「回饋」頁籤最上面、搜尋框上方，2026-11-24 站長選定）：一整列是一個按鈕
+// 「以下回饋依〔級別〕計算　變更 ›」，點了到個人設定（cdGoToPersonalSettings，委派在 setupCardDetailFit）。
+// 只放級別：發卡組織目前沒有對應的專屬活動，不帶入（站長 2026-11-24）；「童樂匯」也不顯示（2026-11-20）。
+// 值直接讀個人設定的級別下拉，切級別時由 updateCubeSpecialCashback／showCardDetail 重呼叫。非分級卡不顯示。
+// 搜尋中不隱藏：它在搜尋框上方，打字時藏起來會讓搜尋框往上跳；句子對搜尋結果一樣成立。
 // 全程 createElement＋textContent（值來自選單選項，鐵則 3）
 function updateCardCalcConditions(card) {
     const bar = document.getElementById('card-calc-cond');
     if (!bar) return;
     bar.textContent = '';
-    bar._cdHas = false;
-    if (!card || !card.hasLevels) { bar.hidden = true; return; }
-
-    const vals = [];
     const lvSel = document.getElementById('card-level-select');
-    if (lvSel && lvSel.value) vals.push(lvSel.value);
-    if (card.id === 'cathay-cube') {
-        const issuer = document.getElementById('cube-issuer-select');
-        if (issuer && issuer.value) vals.push(issuer.value);
-        // 「童樂匯」不顯示在這裡（站長 2026-11-20）：開關照舊在個人設定
-    }
-    if (vals.length === 0) { bar.hidden = true; return; }
+    const level = (card && card.hasLevels && lvSel && lvSel.value) ? lvSel.value : '';
+    if (!level) { bar.hidden = true; return; }
 
-    const lb = document.createElement('span');
-    lb.className = 'cd-cc-lb';
-    lb.textContent = '計算條件';
-    bar.appendChild(lb);
-    vals.forEach(v => {
-        const s = document.createElement('span');
-        s.className = 'cd-cc-v';
-        s.textContent = v;
-        bar.appendChild(s);
-    });
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'cd-pill cd-cc-chg';
-    btn.setAttribute('aria-label', '變更計算條件（到個人設定）');
+    btn.className = 'cd-cc-btn cd-cc-chg';
+    btn.setAttribute('aria-label', `以下回饋依「${level}」計算，變更級別`);
     const t = document.createElement('span');
-    t.className = 'cd-pill-t';
-    t.textContent = '變更';
-    btn.appendChild(t);
-    btn.insertAdjacentHTML('beforeend', CD_CHEV_SVG);   // 靜態 SVG 常數
+    t.className = 'cd-cc-t';
+    const v = document.createElement('span');
+    v.className = 'cd-cc-v';
+    v.textContent = level;
+    t.append('以下回饋依 ', v, ' 計算');
+    const go = document.createElement('span');
+    go.className = 'cd-cc-go';
+    go.textContent = '變更';
+    go.insertAdjacentHTML('beforeend', CD_CHEV_SVG);   // 靜態 SVG 常數
+    btn.append(t, go);
     bar.appendChild(btn);
-
-    bar._cdHas = true;
-    const searchInput = document.getElementById('cashback-search-input');
-    bar.hidden = !!(searchInput && searchInput.value.trim());
+    bar.hidden = false;
 }
 
 // 一次性的綁定：委派點擊（回饋卡是 innerHTML 重畫的，節點會換）＋寬度／字型變動時重收。
@@ -2108,9 +2092,6 @@ function filterCashbackItems(searchTerm) {
     const terms = term ? expandExclusionGroupTerms([term]) : [];
     const emptyMsg = document.getElementById('cashback-search-empty');
     const hint = document.getElementById('cashback-search-hint');
-    // 搜尋中隱藏「計算條件」列（它描述的是整張卡的計算前提，搜尋結果只留命中的列）
-    const calcBar = document.getElementById('card-calc-cond');
-    if (calcBar) calcBar.hidden = !calcBar._cdHas || !!term;
     let total = 0;
     let ratesTotal = 0;    // 「回饋」頁籤（指定通路／即將開始／一般回饋）的命中數
     let couponTotal = 0;   // 「領券・停車」頁籤（領券區）的命中數

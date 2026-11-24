@@ -1243,6 +1243,10 @@
                                     <ul class="card-changelog-list" id="card-changelog-content" hidden></ul>
                                 </div>
 
+                                <!-- 級別列（分級卡才有，updateCardCalcConditions 填）：「以下回饋依〔級別〕計算　變更 ›」，
+                                     整列一個按鈕、點了到個人設定。放在搜尋框上方，因為級別同時影響指定通路與一般回饋（2026-11-24 站長） -->
+                                <div class="cd-cc" id="card-calc-cond" hidden></div>
+
                                 <!-- 詳情頁搜尋：一次過濾指定通路／即將開始／一般回饋／領券四區，
                                      沒命中的區整區收起（filterCashbackItems）。這一區唯一的框 -->
                                 <div class="cashback-search-bar" id="cashback-search-bar">
@@ -1260,9 +1264,6 @@
 
                             <div class="card-info-section" id="card-special-section">
                                 <h4>指定通路回饋</h4>
-                                <!-- 計算條件（分級卡才有，updateCardCalcConditions 填）：級別、CUBE 的發卡組織與「童樂匯」標籤，
-                                     加「變更 ›」切到個人設定。搜尋中隱藏 -->
-                                <div class="cd-cc" id="card-calc-cond" hidden></div>
                                 <div id="card-special-cashback"></div>
                             </div>
 
