@@ -97,7 +97,8 @@ if (require.main === module) (async () => {
       getComputedStyle(document.querySelector('label[for="statement-date"]')).fontSize].join(' / ');
   });
   const panelStyle = await ctlStyle();
-  check('面板裡的控制項是自訂外觀（開關 appearance:none、下拉 132px 寬）', /^[^|]+\|132px\|/.test(panelStyle) && /none\|40px\|24px/.test(panelStyle), panelStyle);
+  // 2026-11-24 起是「設定清單」：下拉無框、寬度＝最長選項（不寫死），輸入框 120px，開關 36×20
+  check('面板裡的控制項是自訂外觀（開關 appearance:none 36×20、額度輸入框 120px）', /none\|36px\|20px/.test(panelStyle) && /\|120px\|rgb\(55, 65, 81\)\|right/.test(panelStyle), panelStyle);
   check('面板裡保留「個人設定」標題列（儲存狀態住在那裡），不顯示「到首頁點我的信用卡」提示', await p.evaluate(() => document.querySelector('#card-personal-section .cd-set-hd').offsetParent !== null && getComputedStyle(document.querySelector('#card-personal-section .cd-set-foot')).display === 'none'));
   check('結帳日／繳款截止日：未設定＋每月 1–31 日', await p.evaluate(() => ['statement-date', 'billing-date'].every(id => { const o = [...document.getElementById(id).options]; return o.length === 32 && o[0].textContent === '未設定' && o[0].value === '' && o[31].textContent === '每月 31 日'; })));
   await p.selectOption('#statement-date', '5'); await p.waitForTimeout(500);

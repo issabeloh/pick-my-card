@@ -503,6 +503,8 @@ async function renderCardPersonalSettings(card, opts = {}) {
 
         cubeLevelSection.innerHTML = levelSelectorHTML;
         cubeLevelSection.style.display = 'block';
+        // 級別組與「我的紀錄」接成同一張清單（樣式見 styles.css「設定清單」）
+        cubeLevelSection.parentElement.classList.add('cd-has-lv');
         setupLevelHelpPopover();
 
         // Add change listener
@@ -561,6 +563,7 @@ async function renderCardPersonalSettings(card, opts = {}) {
         // 在 DOM 上讀起來是錯的
         cubeLevelSection.innerHTML = '';
         cubeLevelSection.style.display = 'none';
+        cubeLevelSection.parentElement.classList.remove('cd-has-lv');
     }
 
     // Load and setup user notes（2026-11-17 起自動儲存：停止輸入約 1 秒存、離開輸入框存、關閉詳情頁存；
@@ -1712,7 +1715,7 @@ function updateCardCalcConditions(card) {
     v.textContent = level;
     t.append('以下回饋依 ', v, ' 計算');
     const go = document.createElement('span');
-    go.className = 'cd-cc-go';
+    go.className = 'cd-cc-go cd-pill';
     go.textContent = '變更';
     go.insertAdjacentHTML('beforeend', CD_CHEV_SVG);   // 靜態 SVG 常數
     btn.append(t, go);
@@ -1939,7 +1942,10 @@ function renderCardDetailChangelog(card) {
     const countOut = document.getElementById('card-changelog-count');
     if (dateOut) dateOut.textContent = short ? `${short[1]}/${short[2]}` : latest.date;
     if (textOut) textOut.textContent = latest.summary;
-    if (countOut) countOut.textContent = `共 ${shown.length} 則`;
+    if (countOut) {
+        countOut.textContent = `共 ${shown.length} 則`;
+        countOut.insertAdjacentHTML('beforeend', CD_CHEV_SVG);   // 靜態 SVG 常數；展開時轉 180°（styles.css .cd-news-more）
+    }
     if (toggle) {
         toggle.onclick = () => setCardDetailChangelogOpen(list.hidden);
     }
