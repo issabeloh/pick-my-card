@@ -544,6 +544,10 @@ Grep `titleParts`）：
 
 **modal header 的「立即申辦」已移除**（2026-11-23，站長看 `GA4_按鈕點擊` 決定）：原本 ⓘ 旁邊有一顆 `.spotlight-apply-cta-btn`（`spotlight_apply`），06/07～11/21 共 168 天只有 15 次點擊、10 月起佔全站申辦點擊 2%。現在 header 只剩 ⓘ；申辦入口＝上面的新戶膠囊（只在有新戶活動、未持卡時出現）與 ⓘ 卡片詳情頁的申辦鈕。要加回來之前先看 `spotlight_promo` 的量。
 
+**header 的卡片詳情入口改成文字連結「看完整回饋與權益」**（2026-11-24 站長）：`a.spotlight-carddetail-btn`，href＝深連結 `/?start&card=<id>`（新分頁開、複製連結都正確），站內一般點擊在 `openSpotlightModal` 攔下來直接 `showCardDetail()`，**不跳轉網址、不重新載入**；Ctrl／Cmd／Shift／中鍵照瀏覽器原本行為。原本的 ⓘ（`.card-detail-peek-btn`）已拿掉，所以全站 `.card-detail-peek-btn` 委派不會碰到它。
+
+**持卡人不顯示新戶膠囊／申辦鈕，只對已登入帳號生效**（2026-11-24 站長）：`hidesNewCustomerPromoFor(cardId)`（`js/core-utils.js`）＝已登入且 `myOwnedCards` 有這張卡。訪客在「我的信用卡」勾的卡只影響查詢結果（`js/results-display.js` 搜尋結果的新戶活動區仍排除持有卡），不藏推薦活動 modal 的新戶膠囊（`buildSpotlightPromoLink`）與詳情頁申辦鈕（`refreshCardDetailApply`）。站長回報「台新 Richart 推薦活動沒有新戶按鈕」就是這條：資料（保險新戶回饋加碼到 12/31）沒問題，是持卡清單有勾 Richart
+
 **兩個動作**：
 - **「帶入查詢」**（`compareSpotlightMerchant(merchant, { fillOnly: true })`）：**只把商家帶進搜尋框、補上預設金額、捲回搜尋框，不自動計算**（2026-09-03 改；原本叫「比較這個通路 →」且點了就算完並捲到結果，站長依 GA4 使用情況判斷「直接跳到結果很不直觀，會迷失」）。merchant 完全等於某快捷搜尋 displayName（如 `所有加油站`）→ 走 `handleQuickSearch`（多關鍵詞；協助輸入型如 LinePay 在裡面會轉成打字，見第 7 節）；否則當一般單一商家搜尋。⚠️ merchant 一律是單一搜尋詞，不支援多商家字串。
   - 不 focus 輸入框——手機上會彈出鍵盤蓋住「計算回饋」；改成讓計算鈕閃兩下藍光暈（`.calc-nudge`，尊重 `prefers-reduced-motion`）指出下一步。

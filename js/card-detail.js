@@ -144,14 +144,14 @@ function setupCardDetailApply(card) {
     refreshCardDetailApply();
 }
 
-// 持卡人（myOwnedCards 含這張卡）不顯示申辦；沒有連結的卡一律不顯示。
+// 已登入的持卡人（myOwnedCards 含這張卡）不顯示申辦，訪客的勾選不算（2026-11-24）；沒有連結的卡一律不顯示。
 // 詳情頁開著時，loadMyOwnedCards 完成後（js/auth-user-data.js 兩處呼叫端）與
 // 「我的信用卡」增刪卡後（pmc:mappings-data-changed 事件）都要重新判斷。
 // 「新戶活動」頁籤本身不受影響（它是資訊，不是申辦鈕）。
 function refreshCardDetailApply() {
     const headerBtn = document.getElementById('card-detail-apply-header-btn');
     const fab = document.getElementById('card-detail-apply-bar');
-    const owned = !!(_cdApply && typeof myOwnedCards !== 'undefined' && myOwnedCards && myOwnedCards.has(_cdApply.cardId));
+    const owned = !!_cdApply && hidesNewCustomerPromoFor(_cdApply.cardId);   // 只有登入的持卡人才藏（2026-11-24）
     const show = !!_cdApply && !owned;
     if (headerBtn) headerBtn.hidden = !show;
     if (fab) fab.hidden = !show;

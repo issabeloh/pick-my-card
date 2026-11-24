@@ -547,21 +547,23 @@ function formatSpotlightCap(cap) {
 // 2026-11-23 拿掉原本並排的「立即申辦」（GA4 spotlight_apply）：06/07～11/21 共 168 天只有 15 次點擊，
 // 10 月起佔全站申辦點擊 2%（89 次裡 2 次），而打開 modal 的「詳情」同期有 158 次。
 // 申辦入口改由 modal 最下面的新戶膠囊（→ /promos/<id>）與 ⓘ 卡片詳情頁的兩顆申辦鈕承接。
+// 2026-11-24 站長：ⓘ「卡片詳情」改成文字連結「看完整回饋與權益」。href 是可分享的深連結 /?start&card=<id>
+// （新分頁開、複製連結都對），站內一般點擊攔下來直接 showCardDetail，不重新載入（openSpotlightModal 綁）
 function buildSpotlightModalActions(item, card) {
     return card
-        ? `<button type="button" class="card-detail-peek-btn spotlight-carddetail-btn" data-card-id="${escapeHtml(card.id)}" aria-label="卡片詳情" title="卡片詳情">ⓘ</button>`
+        ? `<a class="spotlight-carddetail-btn" href="/?start&amp;card=${encodeURIComponent(card.id)}" data-card-id="${escapeHtml(card.id)}">看完整回饋與權益</a>`
         : '';
 }
 
 // 推薦活動 modal 最下面一行「新戶」連到這張卡的新戶活動單卡頁 /promos/<id>（2026-11-22 站長選 R4 樣式、R1 位置）。
 // 只在：這張卡有進行中的新戶活動（過期的載入時已濾掉）、id 合法（＝單卡頁存在，規則同 cards-export.gs 的
-// pmcCardPagePath_）、使用者沒有持有這張卡（持卡人不是新戶，同詳情頁申辦膠囊的規則）時出現。
+// pmcCardPagePath_）、不是「已登入且持有這張卡」（持卡人不是新戶；訪客的勾選不算，2026-11-24）時出現。
 // 文字規則同詳情頁申辦膠囊（setupCardDetailApply）：「{類型} NT$金額／回饋率」，首刷禮多選一加「N 選 1」。
 // GA4：click 落入 js/quick-options-misc.js 的 button_click delegation，button_type = spotlight_promo
 // （2026-11-23 起；data-card-name／data-merchant 跟其他按鈕帶同一組參數，GA4_各卡點擊 才分得出卡與通路）。
 function buildSpotlightPromoLink(card, item) {
     if (!card || !/^[a-z0-9][a-z0-9-]*$/.test(card.id || '')) return '';
-    if (typeof myOwnedCards !== 'undefined' && myOwnedCards && myOwnedCards.has(card.id)) return '';
+    if (hidesNewCustomerPromoFor(card.id)) return '';   // 只有登入的持卡人才藏（訪客的勾選不算，見 js/core-utils.js）
     const promos = getActiveCardholderPromos(card.id).filter(p => Array.isArray(p.promo_types) && p.promo_types[0]);
     if (!promos.length) return '';
     const promo = promos[0];
@@ -708,10 +710,15 @@ function openSpotlightModal(index) {
 
     bodyEl.innerHTML = buildSpotlightModalBody(item, card) + buildSpotlightPromoLink(card, item);
 
-    // ⓘ「卡片詳情」按鈕 → 開啟卡片詳情頁（疊在本 modal 之上）；卡名本身不再可點
+    // 「看完整回饋與權益」→ 開啟卡片詳情頁（疊在本 modal 之上），不跳轉網址；
+    // Ctrl／Cmd／Shift／中鍵點擊照瀏覽器原本的行為（新分頁開深連結）
     const cardDetailBtn = (actionsEl || bodyEl).querySelector('.spotlight-carddetail-btn');
     if (cardDetailBtn) {
-        cardDetailBtn.addEventListener('click', () => showCardDetail(cardDetailBtn.dataset.cardId));
+        cardDetailBtn.addEventListener('click', (e) => {
+            if (e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+            e.preventDefault();
+            showCardDetail(cardDetailBtn.dataset.cardId);
+        });
     }
 
     modal.style.display = 'flex';
