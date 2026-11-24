@@ -441,6 +441,8 @@ Grep `titleParts`）：
 **自動化**：`card-detail-test.js` 的 390px 不變式多驗「有組成的回饋率是帶虛線的按鈕（aria、沒有圖示）、沒組成的是純文字、字重 800」；`card-settings-promo-test.js` 多了標題列／新文字檢查與 D 段桌機版面（1440×900、1100×800 取像素驗白欄、框線、右欄灰底、捲動右欄左欄不動、頁籤對齊）。基準（`baseline.json`／`card-detail-baseline.json`）**沒有重拍**：兩支測試抓的是文字欄位，計算機鈕與回饋率按鈕的差別不在文字裡，13 組＋33 張卡 × 2 日期逐字一致就是「回饋率、金額、上限、通路、條件文字完全沒變」的證據。
 
 - **桌機個人設定是一個區塊**（2026-11-23 站長：只用細線分段看起來零散）：`.cd-side #card-personal-section` 是淺灰底（#f9fafb）圓角面板，兩組設定是面板裡的白色小盒子；控制項 32px 高、120px 寬、字 14px。推翻 1q 節原本「左欄內不要白框、只用細線分段」那條。手機不變
+- **字級主次（2026-11-24 站長：輸入框的字特別大）**：≥769px 下拉／輸入框／筆記與提示字一律 13px，比 14px 粗體標籤小一階（桌機側欄的 13px 寫在 `.cd-side` 那條，因為它特異性較高）。手機輸入框被防 iOS 放大規則鎖 16px 不能縮，改成標籤也 16px，主次靠字重（標籤 600、值 400 深灰）。**不採用** viewport `maximum-scale=1`：雖然能讓輸入框縮小，但 Android 會因此無法雙指放大
+- **白欄漸層用 `background-attachment: local`（2026-11-24）**：原本 `scroll` 時，Chrome 把漸層的 100% 算成含捲軸的寬度，`.cd-layout` 置中卻用不含捲軸的寬度；視窗比 `--page-w` 寬、又有實體捲軸（Windows）時，白欄多出半條捲軸寬（約 8px）蓋進右欄灰底，左欄捲軸＋框線緊貼右欄內容（站長：「左邊空間好細」，縮到約 1200px 以下 gutter 為 0 時才正常）。headless Chromium 預設浮動捲軸重現不出來，驗證要 `chromium.launch({ignoreDefaultArgs:['--hide-scrollbars']})`＋視窗夠矮讓頁面能捲
 
 - **卡片用途 `#card-use-case` 是引言**（2026-11-23 站長從設計 4／4-A／4-B 選 4-B）：拿掉左側色條與半透明框（色條＋圓角框是範本樣式），中文引號「」用 CSS `::before/::after` 加上，下一行靠右小字署名 `#card-use-case-cite`「— 大師點評」。兩個節點由 `showCardDetail()` 一起設 `hidden`。手機白字在藍色頁首裡；桌機深灰字、引號品牌藍。/promos 單卡頁的卡片特色 2026-11-22 跟著改成同款引言（見 promos.md 第 7 節）；清單頁 modal 的 `.promo-feat-usage` 仍是舊的色條樣式
 
