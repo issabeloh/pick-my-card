@@ -4325,17 +4325,35 @@ input[type="number"]:focus {
 }
 #card-personal-section input[type="text"].cd-st-inp { width: 120px; cursor: text; }
 #card-personal-section input.cd-st-inp::placeholder { color: #9ca3af; font-weight: 400; }
-#card-personal-section .cd-st-sel:hover,
-#card-personal-section input[type="text"].cd-st-inp:hover { background-color: var(--ui-bg); }
-#card-personal-section .cd-st-sel:focus-visible,
-#card-personal-section input[type="text"].cd-st-inp:focus,
+/* 點下去之後也要像「設定清單」（2026-11-24 站長：舊的藍色外框＋光暈還在，點了又變回有框的輸入框，很怪）：
+   - 回饋單位是「整列」：滑過、點下、鍵盤聚焦都是整列淡灰底（:has），控制項自己不畫框、不畫光暈。
+     outline 要 !important 才蓋得過全站 :focus-visible 的藍框（文字輸入框聚焦一定算 focus-visible）
+   - 額度輸入框聚焦時拿掉箭頭（箭頭代表「點了會跳去哪裡」，正在打字時不需要），文字變深色
+   - 點整列任何地方都等於點控制項：下拉會直接打開選單、輸入框會出現游標（js/card-detail.js「整列可點」） */
+#card-personal-section .cd-st-sel:focus,
+#card-personal-section input[type="text"].cd-st-inp:focus {
+    outline: none !important;
+    box-shadow: none;
+    background-color: transparent;
+}
+#card-personal-section input[type="text"].cd-st-inp:focus { background-image: none; padding-right: 6px; color: var(--ui-ink-1); }
 #card-personal-section .cd-st-ta:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.18);
 }
-#card-personal-section .cd-st-sel:focus-visible,
-#card-personal-section input[type="text"].cd-st-inp:focus { background-color: var(--ui-bg); }
+#card-personal-section .cd-st-r:has(.cd-st-sel:not(:disabled), input.cd-st-inp) { cursor: pointer; transition: background-color 0.12s; }
+#card-personal-section .cd-st-r:has(.cd-st-sel:not(:disabled), input.cd-st-inp):hover,
+#card-personal-section .cd-st-r:has(.cd-st-sel:focus, input.cd-st-inp:focus) { background-color: var(--ui-bg); }
+/* 鍵盤操作時整列多一條左側藍線，看得出焦點在哪一列（滑鼠點的不顯示） */
+#card-personal-section .cd-st-r:has(.cd-st-sel:focus-visible, input.cd-st-inp:focus-visible) { box-shadow: inset 2px 0 0 #2563eb; }
+@media (prefers-reduced-motion: reduce) { #card-personal-section .cd-st-r { transition: none !important; } }
+/* 整列底色不要超出盒子的圓角（盒子不能 overflow:hidden：級別說明窗在舊瀏覽器是絕對定位、會被切） */
+.cd-set-box > .cd-st-r:first-child { border-radius: calc(var(--ui-radius-md) - 1px) calc(var(--ui-radius-md) - 1px) 0 0; }
+.cd-set-box > .cd-st-r:last-child { border-radius: 0 0 calc(var(--ui-radius-md) - 1px) calc(var(--ui-radius-md) - 1px); }
+.cd-set-box > .cd-st-r:only-child { border-radius: calc(var(--ui-radius-md) - 1px); }
+#card-personal-section.cd-has-lv #cube-level-section .cd-st-r:last-child { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+#card-personal-section.cd-has-lv > .cd-set-box > .cd-st-r:first-child { border-top-left-radius: 0; border-top-right-radius: 0; }
 #card-personal-section .cd-st-sel:disabled { background-color: transparent; background-image: none; padding-right: 6px; color: #9ca3af; cursor: not-allowed; }
 
 /* 筆記：整列寬的 textarea（標題在上） */

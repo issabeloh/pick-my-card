@@ -364,8 +364,34 @@ function summarizeAnnualFee(text) {
 // opts.context：'detail'（預設，詳情頁）／'owned'（我的信用卡單卡面板）——
 //   差別只在「改了設定之後要不要重畫詳情頁的回饋卡／級別列」，單卡面板沒有那些東西。
 // 🔒 鐵則 1：saveCardLevel 的呼叫點仍只有級別下拉的 onchange（用戶親自改）
+// 「設定清單」整列可點（2026-11-24）：點列上任何地方＝點那一列的控制項。下拉直接打開選單（showPicker，
+// 不支援的瀏覽器退回只聚焦）、輸入框出現游標。點在控制項、按鈕（「i」說明）、開關、筆記上照原生行為。
+// 點下拉的標籤時，原生只會聚焦、不會打開選單，所以也攔下來。這一區是唯一一份 DOM（詳情頁與單卡面板搬來搬去），綁一次就好
+let _cdRowTapReady = false;
+function setupCardSettingRowTap() {
+    if (_cdRowTapReady) return;
+    const sec = document.getElementById('card-personal-section');
+    if (!sec) return;
+    _cdRowTapReady = true;
+    sec.addEventListener('click', (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        const row = t.closest('.cd-st-r');
+        if (!row || t.closest('select, input, textarea, button, a')) return;
+        const ctl = row.querySelector('select.cd-st-sel:not(:disabled), input.cd-st-inp');
+        if (!ctl) return;
+        if (t.closest('label') && ctl.tagName !== 'SELECT') return;   // 輸入框的標籤：原生就會聚焦
+        e.preventDefault();
+        ctl.focus();
+        if (ctl.tagName === 'SELECT' && typeof ctl.showPicker === 'function') {
+            try { ctl.showPicker(); } catch (err) { /* 不支援或被擋：已經聚焦，鍵盤可操作 */ }
+        }
+    });
+}
+
 async function renderCardPersonalSettings(card, opts = {}) {
     const inDetail = opts.context !== 'owned';
+    setupCardSettingRowTap();
 
     document.getElementById('card-fee-waiver').textContent = card.feeWaiver || '';
 
