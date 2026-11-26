@@ -11,7 +11,8 @@
  *    訪客存 billingDates_local_<id>、登入者存 users/<uid>.billingDates；失敗照實顯示紅字；卡片格多一行
  *  - 🔒 鐵則 1：開面板不呼叫 saveCardLevel；存的級別找不到只顯示預設、不寫回；用戶改級別才存一次，且不打開詳情頁
  *  - 打完筆記立刻按「‹ 所有卡片」或關閉 → 筆記照樣存
- *  - 選卡 modal（管理我的信用卡／管理加入比較的卡片／管理我的行動支付）的儲存列：有改動才出現、固定在底部；管理視窗跟「我的信用卡」同寬
+ *  - 選卡 modal（管理我的信用卡／管理加入比較的卡片／管理我的行動支付，2026-11-26 改版）：「儲存」在固定的標題列、有改動才可按；
+ *    單欄清單列（整列可點、沒有詳情鈕）、已勾選排前面、「已選 N」篩選；手機 390px 版面；管理視窗跟「我的信用卡」同寬
  * 沿用 run-regression.js 的凍結資料與時鐘、card-settings-promo-test.js 的 Firebase 替身。
  */
 'use strict';
@@ -159,58 +160,106 @@ if (require.main === module) (async () => {
   check('詳情頁也有結帳日／繳款日，值是剛剛在面板存的', await p.evaluate(() => document.getElementById('statement-date').value === '5' && document.getElementById('billing-date').value === '20'));
   await p.context().close();
 
-  console.log('A3. 選卡 modal 的儲存列（2026-11-22：有改動才出現、固定在底部）');
+  console.log('A3. 選卡 modal（2026-11-26 改版：儲存在固定的標題列、有改動才可按；單欄清單列；沒有詳情鈕）');
   p = await open(true, 1280);
   await p.evaluate(() => openMyOwnedCardsModal()); await p.waitForTimeout(400);
   await p.click('#manage-owned-cards-btn'); await p.waitForTimeout(400);
-  const foot = (p, id) => p.evaluate(id => { const f = document.getElementById(id).closest('.modal').querySelector('.sel-footer'); return { shown: !f.hidden && f.offsetParent !== null, text: f.querySelector('.sel-dirty').textContent }; }, id);
+  const canSave = (p, id) => p.evaluate(id => !document.getElementById(id).closest('.modal').querySelector('.sel-save').disabled, id);
+  const isOpen = (p, id) => p.evaluate(id => document.getElementById(id).style.display !== 'none', id);
+  check('三個視窗都沒有底部儲存列、取消鈕、「已變更」說明、說明文字', await p.evaluate(() => ['manage-owned-cards-modal', 'manage-cards-modal', 'manage-payments-modal'].every(id => {
+    const m = document.getElementById(id);
+    return !m.querySelector('.sel-footer, .sel-dirty, .cancel-btn, .modal-description') && m.querySelectorAll('.sel-top .sel-save').length === 1; })));
   check('上方的儲存鈕拿掉了', await p.evaluate(() => !document.getElementById('save-owned-cards-btn-top') && !document.getElementById('save-cards-btn-quick')));
   check('桌機：「管理我的信用卡」跟後面的「我的信用卡」同寬（蓋得住）', await p.evaluate(() => {
     const a = document.querySelector('#my-owned-cards-modal .modal-content').getBoundingClientRect(); const b = document.querySelector('#manage-owned-cards-modal .modal-content').getBoundingClientRect();
     return Math.abs(a.width - b.width) < 1 && b.left <= a.left + 1 && b.right >= a.right - 1; }));
-  check('沒改動 → 沒有儲存列', !(await foot(p, 'owned-cards-selection')).shown);
-  const firstOff = await p.evaluate(() => [...document.querySelectorAll('#owned-cards-selection input')].find(c => !c.checked).id);
-  await p.click('#' + firstOff); await p.waitForTimeout(100);
-  let f = await foot(p, 'owned-cards-selection');
-  check('勾一張 → 出現「已變更 1 張」儲存列', f.shown && f.text === '已變更 1 張', f.text);
-  check('儲存列固定在視窗底部（捲到最上面也看得到）', await p.evaluate(() => {
-    const m = document.querySelector('#manage-owned-cards-modal .modal-content'); m.scrollTop = 0;
-    const fr = m.querySelector('.sel-footer').getBoundingClientRect(); const mr = m.getBoundingClientRect();
-    return m.scrollHeight > m.clientHeight && Math.abs(fr.bottom - mr.bottom) < 2; }));
-  await p.click('#' + firstOff); await p.waitForTimeout(100);
-  check('勾回原樣 → 儲存列消失', !(await foot(p, 'owned-cards-selection')).shown);
-  await p.click('#toggle-all-owned-cards'); await p.waitForTimeout(100);
-  f = await foot(p, 'owned-cards-selection');
-  check('「全選」也會更新（已變更 N 張）', f.shown && /^已變更 \d+ 張$/.test(f.text), f.text);
+  check('每張卡一列：卡面＋卡名＋勾選，沒有詳情鈕；沒有「全選」', await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#owned-cards-selection .sel-row')];
+    return rows.length === cardsData.cards.length && rows.every(r => r.tagName === 'LABEL' && r.querySelector('.sel-face img') && r.querySelector('.card-checkbox-label') && r.querySelector('input.sel-check')) &&
+      !document.querySelector('#manage-owned-cards-modal .card-detail-peek-btn') && !document.getElementById('toggle-all-owned-cards'); }));
+  check('打開時已持有的卡排最前面', await p.evaluate(() => {
+    const ids = [...document.querySelectorAll('#owned-cards-selection input')].map(c => c.value);
+    return ids.slice(0, myOwnedCards.size).every(id => myOwnedCards.has(id)); }));
+  check('沒改動 → 「儲存」不能按；「已選 N」＝持有張數', !(await canSave(p, 'owned-cards-selection')) &&
+    await p.evaluate(() => document.getElementById('owned-only-selected').textContent === `已選 ${myOwnedCards.size}`));
+  const firstOff = await p.evaluate(() => [...document.querySelectorAll('#owned-cards-selection input')].find(c => !c.checked).value);
+  await p.click(`#owned-cards-selection label[for="owned-cards-selection-${firstOff}"] .card-checkbox-label`); await p.waitForTimeout(100);
+  check('點卡名（整列都能點）→ 勾起來、「儲存」可按、「已選」＋1', await canSave(p, 'owned-cards-selection') &&
+    await p.evaluate(id => document.getElementById('owned-cards-selection-' + id).checked && document.getElementById('owned-only-selected').textContent === `已選 ${myOwnedCards.size + 1}`, firstOff));
+  check('標題列（含儲存）固定在頂端（捲到最下面也看得到）', await p.evaluate(() => {
+    const m = document.querySelector('#manage-owned-cards-modal .modal-content'); m.scrollTop = m.scrollHeight;
+    const hr = m.querySelector('.sel-top').getBoundingClientRect(); const mr = m.getBoundingClientRect();
+    const ok = m.scrollHeight > m.clientHeight && Math.abs(hr.top - mr.top) < 2; m.scrollTop = 0; return ok; }));
+  await p.click(`#owned-cards-selection label[for="owned-cards-selection-${firstOff}"] .sel-face`); await p.waitForTimeout(100);
+  check('點卡面勾回原樣 → 「儲存」又不能按', !(await canSave(p, 'owned-cards-selection')));
+  await p.click(`#owned-cards-selection label[for="owned-cards-selection-${firstOff}"]`); await p.waitForTimeout(100);
+  await p.click('#owned-only-selected'); await p.waitForTimeout(100);
+  check('「已選 N」→ 只看勾起來的卡', await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#owned-cards-selection .sel-row')];
+    const shown = rows.filter(r => r.offsetParent !== null);
+    return shown.length === myOwnedCards.size + 1 && shown.every(r => r.querySelector('input').checked) && document.getElementById('owned-only-selected').getAttribute('aria-pressed') === 'true'; }));
+  await p.click('#owned-only-selected'); await p.waitForTimeout(100);
+  check('再點一次 → 看全部', await p.evaluate(() => [...document.querySelectorAll('#owned-cards-selection .sel-row')].every(r => r.offsetParent !== null)));
+  await p.fill('#search-owned-cards-input', 'CUBE'); await p.waitForTimeout(100);
+  check('搜尋卡名', await p.evaluate(() => { const shown = [...document.querySelectorAll('#owned-cards-selection .sel-row')].filter(r => r.offsetParent !== null); return shown.length >= 1 && shown.every(r => /CUBE/i.test(r.textContent)); }));
   await p.click('#save-owned-cards-btn'); await p.waitForTimeout(500);
-  check('儲存 → 關掉管理、持有卡＝全部', await p.evaluate(() => document.getElementById('manage-owned-cards-modal').style.display === 'none' && myOwnedCards.size === cardsData.cards.length));
+  check('儲存 → 關掉管理、持有卡多了剛勾的那張', await p.evaluate(id => document.getElementById('manage-owned-cards-modal').style.display === 'none' && myOwnedCards.has(id) && myOwnedCards.size === 4, firstOff));
   await p.click('#manage-owned-cards-btn'); await p.waitForTimeout(400);
-  check('再打開 → 以新的勾選為基準，沒有儲存列', !(await foot(p, 'owned-cards-selection')).shown);
+  check('再打開 → 以新的勾選為基準（「儲存」不能按）、搜尋清空、新勾的卡排在前面', !(await canSave(p, 'owned-cards-selection')) && await p.evaluate(id => {
+    const ids = [...document.querySelectorAll('#owned-cards-selection input')].map(c => c.value);
+    return document.getElementById('search-owned-cards-input').value === '' && ids.indexOf(id) < 4 && [...document.querySelectorAll('#owned-cards-selection .sel-row')].every(r => r.offsetParent !== null); }, firstOff));
   await p.evaluate(() => { document.getElementById('close-manage-owned-modal').click(); document.getElementById('close-owned-modal').click(); });
   // 管理加入比較的卡片：同一套
   await p.evaluate(() => openManageCardsModal()); await p.waitForTimeout(400);
-  check('加入比較：沒改動 → 沒有儲存列', !(await foot(p, 'cards-selection')).shown);
-  await p.evaluate(() => { const c = document.querySelector('#cards-selection .card-checkbox-image'); c.click(); });
-  f = await foot(p, 'cards-selection');
-  check('加入比較：點卡圖切換 → 「已變更 1 張」', f.shown && f.text === '已變更 1 張', f.text);
-  await p.click('#cancel-cards-btn'); await p.waitForTimeout(200);
-  check('取消 → 關閉、沒有存', await p.evaluate(() => document.getElementById('manage-cards-modal').style.display === 'none'));
-  // 管理我的行動支付：同一套，單位「個」
+  check('加入比較：沒改動 → 「儲存」不能按；工具列有「套用我的信用卡」「全選／全不選」和篩選標籤', !(await canSave(p, 'cards-selection')) && await p.evaluate(() => {
+    const t = document.getElementById('tag-filter-chips');
+    return t.contains(document.getElementById('apply-owned-cards-btn')) && t.contains(document.getElementById('toggle-all-cards')) && t.querySelectorAll('.tag-filter-chip').length > 0 && !document.querySelector('#manage-cards-modal .card-detail-peek-btn'); }));
+  const before = await p.evaluate(() => [...cardsInComparison].sort().join());
+  await p.click('#cards-selection .sel-row:first-child .card-checkbox-label'); await p.waitForTimeout(100);
+  check('加入比較：點一列切換 → 「儲存」可按', await canSave(p, 'cards-selection'));
+  await p.evaluate(() => document.querySelector('#tag-filter-chips .tag-filter-chip').click()); await p.waitForTimeout(100);
+  check('加入比較：點篩選標籤 → 只剩有這個標籤的卡', await p.evaluate(() => {
+    const tag = document.querySelector('#tag-filter-chips .tag-filter-chip.active').dataset.tag;
+    const shown = [...document.querySelectorAll('#cards-selection .sel-row')].filter(r => r.offsetParent !== null);
+    return shown.length > 0 && shown.length < cardsData.cards.length && shown.every(r => (cardsData.cards.find(c => c.id === r.querySelector('input').value).tags || []).includes(tag)); }));
+  await p.click('#close-modal'); await p.waitForTimeout(200);
+  check('加入比較：× → 關閉、沒有存', !(await isOpen(p, 'manage-cards-modal')) && await p.evaluate(b => [...cardsInComparison].sort().join() === b, before));
+  await p.evaluate(() => openManageCardsModal()); await p.waitForTimeout(300);
+  check('加入比較：再打開 → 篩選標籤清掉、全部顯示', await p.evaluate(() => !document.querySelector('#tag-filter-chips .tag-filter-chip.active') && [...document.querySelectorAll('#cards-selection .sel-row')].every(r => r.offsetParent !== null)));
+  await p.evaluate(() => document.getElementById('close-modal').click());
+  // 管理我的行動支付：同一套
   await p.evaluate(() => openManagePaymentsModal()); await p.waitForTimeout(300);
-  check('行動支付：沒改動 → 沒有儲存列；舊的儲存／取消鈕仍在儲存列裡', !(await foot(p, 'payments-selection')).shown && await p.evaluate(() => !!document.querySelector('#manage-payments-modal .sel-footer #save-payments-btn')));
+  check('行動支付：沒改動 → 「儲存」不能按；一列一個、沒有卡面', !(await canSave(p, 'payments-selection')) && await p.evaluate(() => {
+    const rows = [...document.querySelectorAll('#payments-selection .sel-row')];
+    return rows.length === paymentsData.payments.length && rows.every(r => r.tagName === 'LABEL' && !r.querySelector('img')); }));
   const pay = await p.evaluate(() => document.querySelector('#payments-selection input').id);
   await p.click('#' + pay); await p.waitForTimeout(100);
-  f = await foot(p, 'payments-selection');
-  check('行動支付：勾一個 → 「已變更 1 個」', f.shown && f.text === '已變更 1 個', f.text);
+  check('行動支付：勾一個 → 「儲存」可按', await canSave(p, 'payments-selection'));
   await p.click('#toggle-all-payments'); await p.waitForTimeout(100);
-  f = await foot(p, 'payments-selection');
-  check('行動支付：「全選」也會更新', f.shown && /^已變更 \d+ 個$/.test(f.text), f.text);
+  check('行動支付：「全選」也會更新', await canSave(p, 'payments-selection'));
   const want = await p.evaluate(() => [...document.querySelectorAll('#payments-selection input:checked')].map(c => c.value).sort().join());
   await p.click('#save-payments-btn'); await p.waitForTimeout(400);
   check('行動支付：儲存 → 關閉並存進 userSelectedPayments', await p.evaluate(w => document.getElementById('manage-payments-modal').style.display === 'none' && [...userSelectedPayments].sort().join() === w, want));
   await p.evaluate(() => openManagePaymentsModal()); await p.waitForTimeout(300);
-  check('行動支付：再打開以新勾選為基準、沒有儲存列', !(await foot(p, 'payments-selection')).shown);
+  check('行動支付：再打開以新勾選為基準、「儲存」不能按', !(await canSave(p, 'payments-selection')));
   await p.evaluate(() => document.getElementById('close-payments-modal').click());
+  await p.context().close();
+
+  console.log('A4. 選卡 modal 手機版面（390px）');
+  p = await open(true, 390);
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.evaluate(() => openMyOwnedCardsModal()); await p.waitForTimeout(300);
+  await p.click('#manage-owned-cards-btn'); await p.waitForTimeout(400);
+  const lay = await p.evaluate(() => {
+    const m = document.querySelector('#manage-owned-cards-modal .modal-content'); const mr = m.getBoundingClientRect();
+    const rows = [...m.querySelectorAll('.sel-row')];
+    const full = rows.filter(r => { const q = r.getBoundingClientRect(); return q.top >= mr.top && q.bottom <= mr.bottom + 0.5; }).length;
+    const tools = m.querySelector('.sel-tools'); const ts = getComputedStyle(tools);
+    return { ratio: mr.height / innerHeight, full, rowH: Math.round(rows[0].getBoundingClientRect().height), oneLine: ts.flexWrap === 'nowrap' && tools.getBoundingClientRect().height < 50,
+      noHScroll: document.documentElement.scrollWidth <= innerWidth && m.scrollWidth <= m.clientWidth, sticky: getComputedStyle(m.querySelector('.sel-top')).position === 'sticky' && getComputedStyle(tools).position !== 'sticky' };
+  });
+  check('手機：視窗高約 90%、第一個畫面看得到 ≥8 張卡、每列 ≤60px', lay.ratio > 0.85 && lay.ratio <= 0.91 && lay.full >= 8 && lay.rowH <= 60, JSON.stringify(lay));
+  check('手機：篩選標籤一行橫向滑動、不固定；標題列固定；沒有橫向捲軸', lay.oneLine && lay.sticky && lay.noHScroll, JSON.stringify(lay));
   await p.context().close();
 
   console.log('B. 已登入');

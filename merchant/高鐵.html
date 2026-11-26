@@ -265,7 +265,7 @@
 .mc-body ul,.mc-body ol{margin:0 0 10px;padding-left:1.4em;}
 .mc-body a{color:#1d4ed8;}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"高鐵訂票刷哪張信用卡回饋最高？2026 比較 - Pick My Card","description":"高鐵訂票、T-EX 行動購票刷哪張信用卡回饋最高？即時試算你的信用卡中，在高鐵消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。","url":"https://pickmycard.app/merchant/%E9%AB%98%E9%90%B5","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"高鐵 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"玉山 UniCard"},{"@type":"ListItem","position":2,"name":"台新街口卡(豬富卡)"},{"@type":"ListItem","position":3,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":4,"name":"台新 Richart 卡"},{"@type":"ListItem","position":5,"name":"玉山 Ubear 卡"}]},"dateModified":"2026-11-22"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"CollectionPage","name":"高鐵訂票刷哪張信用卡回饋最高？2026 比較 - Pick My Card","description":"高鐵訂票、T-EX 行動購票刷哪張信用卡回饋最高？即時試算你的信用卡中，在高鐵消費的回饋率、消費上限、達成條件與活動期間，資料持續更新。","url":"https://pickmycard.app/merchant/%E9%AB%98%E9%90%B5","inLanguage":"zh-TW","isPartOf":{"@id":"https://pickmycard.app/#website"},"mainEntity":{"@type":"ItemList","name":"高鐵 信用卡回饋比較","itemListElement":[{"@type":"ListItem","position":1,"name":"玉山 UniCard"},{"@type":"ListItem","position":2,"name":"台新街口卡(豬富卡)"},{"@type":"ListItem","position":3,"name":"國泰 CUBE 卡"},{"@type":"ListItem","position":4,"name":"台新 Richart 卡"},{"@type":"ListItem","position":5,"name":"玉山 Ubear 卡"}]},"dateModified":"2026-11-24"}</script>
 </head>
 <body>
     <div class="container">
@@ -879,38 +879,27 @@
 
         <!-- Manage Cards Modal -->
         <div id="manage-cards-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>管理加入比較的卡片</h3>
-                    <button class="close-modal" id="close-modal">&times;</button>
+            <div class="modal-content sel-modal">
+                <!-- 標題列＋搜尋固定在頂端；「儲存」有改動才可按（updateSelectionDirtyState），× 不存直接關（2026-11-26） -->
+                <div class="sel-top">
+                    <div class="modal-header">
+                        <h3>管理加入比較的卡片</h3>
+                        <button type="button" id="save-cards-btn" class="sel-save" disabled>儲存</button>
+                        <button class="close-modal" id="close-modal" aria-label="關閉（不儲存）">&times;</button>
+                    </div>
+                    <div class="sel-search">
+                        <input type="text" id="search-cards-input" class="search-modal-input" placeholder="搜尋卡片…" aria-label="搜尋卡片">
+                    </div>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-description">選擇要加入比較的信用卡，只有選中的卡片會出現在比較結果中。</p>
-                    <div class="modal-controls">
-                        <input type="text" id="search-cards-input" class="search-modal-input" placeholder="搜尋卡片...">
+                    <!-- 工具列：動作鈕＋篩選標籤，單行橫向滑動、不固定（會跟著捲走） -->
+                    <div class="sel-tools tag-filter-chips" id="tag-filter-chips">
+                        <button type="button" id="apply-owned-cards-btn" class="sel-chip sel-act" title="一鍵套用「我的信用卡」">套用我的信用卡</button>
+                        <button type="button" id="toggle-all-cards" class="sel-chip sel-act">全選</button>
                     </div>
-                    <div class="tag-filter-section" id="manage-tag-filter-section">
-                        <button type="button" class="tag-filter-toggle" aria-expanded="true" aria-controls="tag-filter-chips">
-                            <span class="tag-filter-label">篩選標籤</span>
-                            <span class="tag-filter-toggle-icon" aria-hidden="true">▾</span>
-                        </button>
-                        <div class="tag-filter-chips" id="tag-filter-chips">
-                            <!-- Tag filter chips will be populated by JavaScript -->
-                        </div>
+                    <div class="cards-selection sel-list" id="cards-selection">
+                        <!-- Card rows will be populated by JavaScript -->
                     </div>
-                    <div class="modal-action-buttons">
-                        <button id="apply-owned-cards-btn" class="toggle-all-btn" title="一鍵套用「我的信用卡」">套用我的信用卡選項</button>
-                        <button id="toggle-all-cards" class="toggle-all-btn">全選</button>
-                    </div>
-                    <div class="cards-selection" id="cards-selection">
-                        <!-- Card checkboxes will be populated by JavaScript -->
-                    </div>
-                </div>
-                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState） -->
-                <div class="modal-footer sel-footer" hidden>
-                    <span class="sel-dirty" aria-live="polite"></span>
-                    <button id="cancel-cards-btn" class="cancel-btn">取消</button>
-                    <button id="save-cards-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>
@@ -953,63 +942,50 @@
 
         <!-- Manage My Owned Cards Modal -->
         <div id="manage-owned-cards-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>管理我的信用卡</h3>
-                    <button class="close-modal" id="close-manage-owned-modal">&times;</button>
+            <div class="modal-content sel-modal">
+                <!-- 標題列＋搜尋固定在頂端；「儲存」有改動才可按（updateSelectionDirtyState），× 不存直接關（2026-11-26） -->
+                <div class="sel-top">
+                    <div class="modal-header">
+                        <h3>管理我的信用卡</h3>
+                        <button type="button" id="save-owned-cards-btn" class="sel-save" disabled>儲存</button>
+                        <button class="close-modal" id="close-manage-owned-modal" aria-label="關閉（不儲存）">&times;</button>
+                    </div>
+                    <div class="sel-search">
+                        <input type="text" id="search-owned-cards-input" class="search-modal-input" placeholder="搜尋卡片…" aria-label="搜尋卡片">
+                    </div>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-description">選擇你實際持有的信用卡，方便快速加入比較與隱藏新戶活動。</p>
-                    <div class="modal-controls">
-                        <input type="text" id="search-owned-cards-input" class="search-modal-input" placeholder="搜尋卡片...">
+                    <div class="sel-tools tag-filter-chips" id="owned-tag-filter-chips">
+                        <button type="button" id="owned-only-selected" class="sel-chip sel-count" aria-pressed="false">已選 0</button>
                     </div>
-                    <div class="tag-filter-section" id="owned-tag-filter-section">
-                        <button type="button" class="tag-filter-toggle" aria-expanded="true" aria-controls="owned-tag-filter-chips">
-                            <span class="tag-filter-label">篩選標籤</span>
-                            <span class="tag-filter-toggle-icon" aria-hidden="true">▾</span>
-                        </button>
-                        <div class="tag-filter-chips" id="owned-tag-filter-chips">
-                            <!-- Tag filter chips will be populated by JavaScript -->
-                        </div>
+                    <div class="cards-selection sel-list" id="owned-cards-selection">
+                        <!-- Card rows will be populated by JavaScript -->
                     </div>
-                    <div class="modal-action-buttons">
-                        <button id="toggle-all-owned-cards" class="toggle-all-btn">全選</button>
-                    </div>
-                    <div class="cards-selection" id="owned-cards-selection">
-                        <!-- Card checkboxes will be populated by JavaScript -->
-                    </div>
-                </div>
-                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState） -->
-                <div class="modal-footer sel-footer" hidden>
-                    <span class="sel-dirty" aria-live="polite"></span>
-                    <button id="cancel-owned-cards-btn" class="cancel-btn">取消</button>
-                    <button id="save-owned-cards-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>
 
         <!-- Manage Payments Modal -->
         <div id="manage-payments-modal" class="modal" style="display: none;">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>管理我的行動支付</h3>
-                    <button class="close-modal" id="close-payments-modal">&times;</button>
+            <div class="modal-content sel-modal">
+                <!-- 標題列＋搜尋固定在頂端；「儲存」有改動才可按（updateSelectionDirtyState），× 不存直接關（2026-11-26） -->
+                <div class="sel-top">
+                    <div class="modal-header">
+                        <h3>管理我的行動支付</h3>
+                        <button type="button" id="save-payments-btn" class="sel-save" disabled>儲存</button>
+                        <button class="close-modal" id="close-payments-modal" aria-label="關閉（不儲存）">&times;</button>
+                    </div>
+                    <div class="sel-search">
+                        <input type="text" id="search-payments-input" class="search-modal-input" placeholder="搜尋行動支付…" aria-label="搜尋行動支付">
+                    </div>
                 </div>
                 <div class="modal-body">
-                    <p class="modal-description">選擇你會使用的行動支付，方便一鍵比較</p>
-                    <div class="modal-controls">
-                        <input type="text" id="search-payments-input" class="search-modal-input" placeholder="搜尋行動支付...">
-                        <button id="toggle-all-payments" class="toggle-all-btn">全選</button>
+                    <div class="sel-tools">
+                        <button type="button" id="toggle-all-payments" class="sel-chip sel-act">全選</button>
                     </div>
-                    <div class="payments-selection" id="payments-selection">
-                        <!-- Payment checkboxes will be populated by JavaScript -->
+                    <div class="payments-selection sel-list" id="payments-selection">
+                        <!-- Payment rows will be populated by JavaScript -->
                     </div>
-                </div>
-                <!-- 儲存列（2026-11-22）：勾選跟打開時不同才出現、固定在視窗底部（updateSelectionDirtyState；單位「個」） -->
-                <div class="modal-footer sel-footer" data-unit="個" hidden>
-                    <span class="sel-dirty" aria-live="polite"></span>
-                    <button id="cancel-payments-btn" class="cancel-btn">取消</button>
-                    <button id="save-payments-btn" class="save-btn">儲存設定</button>
                 </div>
             </div>
         </div>
@@ -1415,7 +1391,7 @@
          用 .data-update-cards 的 display:none 藏起來即可，⚠️ 不要刪元素。 -->
     <div class="data-update-footer">
         <span class="data-update-cards">收錄 <span class="card-count loading">...</span> 張台灣主流信用卡</span>
-        <span id="last-update-date">最後資料更新：<time datetime="2026-11-22">2026/11/22</time></span>
+        <span id="last-update-date">最後資料更新：<time datetime="2026-11-24">2026/11/24</time></span>
     </div>
     </footer>
 

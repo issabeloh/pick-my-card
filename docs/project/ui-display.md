@@ -336,7 +336,7 @@ Grep `titleParts`）：
   - **2026-11-22 站長三項調整**：①手機膠囊在「個人設定」頁籤隱藏（`selectCardDetailTab` 切 `.is-off-tab`；不用 `hidden`，`hidden` 歸 `refreshCardDetailApply` 管）。②膠囊左側文字是按鈕 `#card-detail-apply-bar-info`，金色虛線底線，點了在下一行展開信任文字，再點收回；捲動縮成右下角時自動收回。③桌機新戶活動頁籤上方的 `.card-apply-cta` 從淡黃框＋箭頭＋糖衣按鈕改成比照手機膠囊的白底膠囊（`.cd-gift`＋`applyCta.text`＋`.cd-apply-btn`），信任文字固定顯示在膠囊下方。文字刻意用 `applyCta.text`，不用手機的「首刷禮 NT$500」，因為正下方票券已寫了金額。按鈕仍掛 `card-apply-cta-btn`（GA4 `card_apply`）
   - **去向文字依連結網域決定，寫法與 /promos 一致**（`cdApplyTrustText`，`js/card-detail.js`，邏輯照抄 `apps-script/cards-export.gs` 的 `pmcApplyDest_()`，**改一邊要兩邊同步**）：合作平台網域 →「經 Money101 合作連結前往銀行官網」；與該卡 `website` 同品牌網域 →「直達銀行官網・ctbcbank.com」；其餘 →「前往 <完整網域>」。2026-11 只有約三分之一的卡走 Money101，**不要寫死成一句**
   - 桌機膠囊文字太長時換行（`overflow-wrap: anywhere`、圓角 28px，兩行時不變橄欖形），不截成「…」。實測 769px 最窄桌機版，最長的 16 字文字仍是一行
-- **返回鍵**：開啟時 `pushState`（網址不變）、`popstate` 關閉、按返回箭頭關閉時若這次 push 過就 `history.back()`（`_cdPushed`／`_cdExpectPop`，寫法照 `js/mappings-page.js`）。**embed 模式不 push**。關閉的兩條路徑共用 `showCardDetail` 內的 `closeModal`（embed 的 `pmc-detail-closed` 掛在那裡）。疊在選卡 modal／配卡組合頁上開啟時，網址沒變，返回只關詳情頁。`popstate` 監聽掛在 `DOMContentLoaded` 裡，因為 `tools/lib/merchant-cards.js` 的 vm 沙箱 `window` 沒有 `addEventListener`
+- **返回鍵**：開啟時 `pushState`（網址不變）、`popstate` 關閉、按返回箭頭關閉時若這次 push 過就 `history.back()`（`_cdPushed`／`_cdExpectPop`，寫法照 `js/mappings-page.js`）。**embed 模式不 push**。關閉的兩條路徑共用 `showCardDetail` 內的 `closeModal`（embed 的 `pmc-detail-closed` 掛在那裡）。疊在「我的信用卡」／配卡組合頁上開啟時，網址沒變，返回只關詳情頁。`popstate` 監聽掛在 `DOMContentLoaded` 裡，因為 `tools/lib/merchant-cards.js` 的 vm 沙箱 `window` 沒有 `addEventListener`
 - **近期異動**：「回饋」頁籤最上面一行通知（最新一筆日期＋文字＋「共 N 則」），點了展開完整清單；仍用 `textContent`。顯示用 `style.display = ''`（不是 `'block'`），桌機 CSS 對它設了 `display:contents`
 - **搜尋**：`filterCashbackItems` 仍過濾四區；「回饋」頁籤（指定通路／即將開始／一般）沒命中、領券區有命中時，顯示 `#cashback-search-hint` 一行可點的提示切到「領券・停車」。注意 `filterDetailCards` 會自動展開被截斷的通路清單，所以「Expedia」這種字可能同時命中回饋頁籤（CUBE 秋日遊的完整通路清單裡有它），不會出提示
 - **重繪同一張卡**（非 CUBE 切級別會重呼叫 `showCardDetail`）：`keepView` 保留目前頁籤與捲動位置；開新卡／換卡回到「回饋」頁籤最上面
@@ -488,19 +488,26 @@ Grep `titleParts`）：
 - SEO：首頁 JSON-LD 有 `WebSite`（站名「信用卡回饋大師」）＋`Organization.logo`＝`assets/images/icon-pickmycard.png`（512 透明底主要版本），faq 的 publisher 同一張——**這個檔名／網址別改**，Google 是照網址抓品牌標誌；所有頁的 og:image 帶 `og:image:width/height/alt`；header／landing 的標誌 `<img>` 帶 width/height 屬性（只為寬高比，防版面跳動，實際大小仍由 CSS 高度決定）
 - 禁止：改傾角、拿掉間隙、換色、拉伸、加陰影、放在低對比底上（規範第 08 節）
 
-## 3. 選卡 modals（我的信用卡／管理加入比較的卡片）
+## 3. 選卡 modals（管理我的信用卡／管理加入比較的卡片／管理我的行動支付）
 
-- 共用渲染 `_renderCardSelectionModal(config)`——一份程式碼餵兩個 modal（不同 selectionId、tagFilterChipsId）
-- `.card-checkbox` 是 column flex：上排 checkbox+卡名+ⓘ，下排卡圖（左對齊卡名）
-- 卡名粗體只限 `#cards-selection`/`#owned-cards-selection` 的 `.card-checkbox-label`（不影響行動支付 modals 共用的同 class）
-- Grid：`repeat(auto-fit, minmax(200px, 1fr))`
+**2026-11-26 改版**（站長：手機直立空間要善用、比照最新 UI；從選項頁四種排法選 A「單欄清單列」）。舊版是兩欄大格＋卡名旁「ⓘ 詳情」鈕＋底部「已變更 N 張　取消　儲存設定」儲存列，第一張卡在手機視窗第 509px 才出現；改版後 390×844 第一個畫面完整看得到 10 張。
+
+- 共用渲染 `_renderCardSelectionModal(config)`——一份程式碼餵兩個選卡 modal（不同 selectionId、tagFilterChipsId）；行動支付是 `openManagePaymentsModal`（`js/levels-payments.js`）自己畫，但 DOM 與 class 相同。三個 `.modal-content` 都掛 `.sel-modal`，樣式在 `styles.css` 檔尾「選卡 modal」區塊
+- **仍是浮動視窗，不改全螢幕**（站長否決全螢幕：上一層「我的信用卡」是 modal，設定變全螢幕很怪）。手機（≤768px）高度從全站的 75dvh 放寬到 90dvh
+- **頂端固定 `.sel-top`**＝標題列（標題＋「儲存」`.sel-save`＋×）＋搜尋框，`position: sticky` 在 `.modal-content` 捲動容器頂端。**× 就是取消**：不存直接關（三個 modal 的「取消」鈕與 `#cancel-*-btn` 都拿掉了）
+- **「儲存」有改動才可按**：`updateSelectionDirtyState(selectionId)` 數「跟打開當下不同的勾選」，0 → `.sel-save` disabled（灰），≥1 → 藍色可按；有「已選 N」（`.sel-count`）時順便更新數字。比較基準在 `_renderCardSelectionModal` 存成 `cardsSelection._initialSelection`（只算現有資料裡的卡）、行動支付由 `openManagePaymentsModal` 設在 `#payments-selection`。勾選框的 change 會自動更新；**用程式改勾選的地方要自己呼叫它**（兩個「全選」、「套用我的信用卡」），新增這類按鈕時別漏。「已變更 N 張」說明已拿掉（站長 2026-11-26），別加回來；更早的上方儲存鈕（`#save-owned-cards-btn-top`、`#save-cards-btn-quick`）也別加回來。⚠️ 舊的 `#save-cards-btn`／`#save-payments-btn` id 藍底規則已刪，id 保留給 JS
+- **工具列 `.sel-tools`（不固定，會跟著捲走——站長要求篩選不要固定）**：前面是動作鈕 `.sel-chip`，後面是篩選標籤 `.tag-filter-chip`（`<button>`，`aria-pressed`），手機單行橫向滑動（不顯示捲軸），≥769px 換行（滑鼠不好橫向捲）。篩選標籤不再有收合鈕。工具列的動作鈕寫死在 HTML，`_renderCardSelectionModal` 每次只換掉 `.tag-filter-chip`
+  - 管理我的信用卡：**沒有「全選」**（沒有人持有全部的卡），改成「已選 N」`#owned-only-selected`，點了只看勾起來的卡（`aria-pressed`；每次打開回到看全部）
+  - 管理加入比較的卡片：「套用我的信用卡」`#apply-owned-cards-btn`（沒持有卡時 disabled）＋「全選／全不選」`#toggle-all-cards`
+  - 管理我的行動支付：只有「全選／取消全選」`#toggle-all-payments`，沒有篩選標籤
+- **清單列 `.sel-row`**：整列是 `<label class="card-checkbox sel-row">`，點哪裡都能勾＝小卡面 `.sel-face`（64px，8:5，`object-fit: contain`；缺圖 `.is-missing` 留空框、直式卡圖 `.is-portrait` 轉橫式）＋卡名 `.card-checkbox-label`（14.5px 粗體）＋圓形勾選 `input.sel-check`（`appearance: none`，勾了是藍底白勾）。input 是 label 的直接子層，`全選`／`套用` 的 `checkbox.parentElement.classList` 靠這個找到列。行動支付列沒有卡面。全站 `label { margin-bottom: 14px }` 要在 `.sel-row` 歸零。鍵盤：Tab 到勾選框、空白鍵切換，列有 `:has(.sel-check:focus-visible)` 外框
+- **沒有「ⓘ 詳情」鈕**（站長 2026-11-26 移除）：選卡 modal 裡開詳情頁的入口已不存在，要看詳情從搜尋結果或「我的信用卡」單卡面板進
+- **打開時已勾選的排最前面**（各自再照卡名排；行動支付照資料順序）。只在打開時排，勾選中不跳位
+- 清單 `grid-template-columns: repeat(auto-fill, minmax(280px, 1fr))`：660px 寬的「管理我的信用卡」桌機自動兩欄，500px 的另兩個與手機一欄
 - **Body scroll lock 是 refcount**（`bodyScrollLockDepth`）：疊層 modal 關掉上層不會誤放開捲動鎖。改 modal 開關邏輯時必須維持 disableBodyScroll/enableBodyScroll 成對呼叫
 
-- **「ⓘ 詳情」鈕全站只有一組樣式**（2026-11-16 站長要求一致化）：`.card-detail-peek-btn` 白底灰框膠囊、26px 高（桌機 ≥1025px 是 23px，縮小值在 styles.css 檔尾「結果卡次行按鈕」）。搜尋結果卡、領券卡、兩個選卡 modal、推薦活動 modal 的「卡片詳情」都吃同一條基底規則，**不要再依所在位置另開顏色或尺寸覆寫**（之前選卡 modal 是淺藍 22px、結果卡是白底 26px，同一顆鈕兩種長相）。推薦活動卡上的方形 ⓘ（`.spotlight-info-btn`，開的是活動詳情）站長裁定先維持現狀，不在此列
-- **手機版卡片勾選列**（2026-10-14）：≤768px 時「詳情」鈕換到卡名下一行（`.card-checkbox-row` flex-wrap，鈕縮排 22px 對齊卡名）——擠在旁邊會把卡名壓成一字一行
-- **儲存列：有改動才出現、固定在底部**（2026-11-22 站長要求，兩個選卡 modal 與「管理我的行動支付」都是；行動支付的儲存列 `data-unit="個"` →「已變更 N 個」，比較基準由 `openManagePaymentsModal` 設在 `#payments-selection`）：`.modal-footer.sel-footer`（「已變更 N 張　取消　儲存設定」）預設 `hidden`，`updateSelectionDirtyState(selectionId)` 數「跟打開當下不同的勾選」有幾張，0 就藏、≥1 就顯示；`position: sticky; bottom: 0` 黏在 `.modal-content` 捲動容器底部，不用上下捲去找。比較基準在 `_renderCardSelectionModal` 存成 `cardsSelection._initialSelection`（只算現有資料裡的卡）。勾選框的 change 會自動更新；**用程式改勾選的地方要自己呼叫它**（點卡圖、兩個「全選」、「套用我的信用卡選項」），新增這類按鈕時別漏。原本「全選」旁的上方儲存鈕（`#save-owned-cards-btn-top`、`#save-cards-btn-quick`）已拿掉，別加回來
+- **「ⓘ 詳情」鈕全站只有一組樣式**（2026-11-16 站長要求一致化）：`.card-detail-peek-btn` 白底灰框膠囊、26px 高（桌機 ≥1025px 是 23px，縮小值在 styles.css 檔尾「結果卡次行按鈕」）。搜尋結果卡、領券卡、推薦活動 modal 的「卡片詳情」都吃同一條基底規則，**不要再依所在位置另開顏色或尺寸覆寫**。推薦活動卡上的方形 ⓘ（`.spotlight-info-btn`，開的是活動詳情）站長裁定先維持現狀，不在此列
 - **「管理我的信用卡」與「我的信用卡」同寬 660px**（2026-11-22）：前者疊在後者上面，寬度不同時桌機會從左右露出後面那層
-- **「全選／全不選」鈕**（`.toggle-all-btn`）任何寬度都一行（nowrap＋不縮），由搜尋框縮（`.modal-controls` 子層 min-width:0）
 - **詳情頁卡片標籤**（`.card-tags-container`）2026-10-14 起先用 CSS 藏起來（`#card-detail-modal .card-tags-container`），`renderCardTags` 程式保留
 - **所有 modal 每次打開都從最上方**（2026-10-14，`setupModalScrollReset`，`js/core-utils.js`）：MutationObserver 看 `.modal` 由關變開的那一刻，把 modal 與裡面捲過的區塊歸零；新 modal 只要掛 `.modal` class 就自動適用。開啟後才捲到指定區塊的功能（`openCardDetailAtChangelog` 等）都在下一幀才捲，不受影響。測試在 `merchant-suggest-test.js`
 
@@ -602,7 +609,7 @@ Grep `titleParts`）：
 - 直式卡圖自動偵測（naturalHeight > naturalWidth）旋轉為橫式（`.ow-portrait`）；缺圖顯示卡名（`.ow-noimg`）。單卡面板的卡面同樣處理
 - 已否決、勿回退：錢包堆疊與堆疊動畫、不顯示卡名的一覽、皮革框／毛玻璃／漸層背景、藍膠囊卡數、標題旁只有圖示的齒輪鈕、「這頁唯讀／點卡片開詳情頁」（2026-11-22 推翻）
 
-**驗證**：`node tools/regression/owned-cards-panel-test.js`（47 項，含第 3 節的選卡／行動支付儲存列：面板開關與搬動、詳情頁不被彈出、樣式一致、日期存取與欄位對應、雲端失敗紅字、鐵則 1、筆記離開即存、桌機寬度）。
+**驗證**：`node tools/regression/owned-cards-panel-test.js`（56 項，含第 3 節三個選卡 modal 的標題列儲存、清單列、已選 N、篩選與 390px 版面：面板開關與搬動、詳情頁不被彈出、樣式一致、日期存取與欄位對應、雲端失敗紅字、鐵則 1、筆記離開即存、桌機寬度）。
 
 ## 6. 我的額度（creditLimit，2026-07-07 新增）
 

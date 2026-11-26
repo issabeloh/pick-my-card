@@ -125,13 +125,17 @@ function setupSidebarDrawer() {
 }
 
 // Shared renderer for card-selection modals (used by both Manage Cards and My Owned Cards).
-// Populates tag filter chips, the card list with checkboxes, search filter, and updates
+// Populates tag filter chips, the card rows, search filter, and updates
 // toggle-all button state. Caller is responsible for showing the modal afterwards.
+// 版面（2026-11-26 站長從選項頁選 A「單欄清單列」）：每張卡一列＝小卡面＋卡名＋圓形勾選，整列是 <label> 所以點哪裡都能勾；
+// 沒有「詳情」鈕。打開當下已勾選的排最前面（只在打開時排，勾選中不跳位）。
+// 篩選標籤跟動作鈕（全選／套用我的信用卡／已選 N）放在同一條單行橫向滑動的工具列（config.tagFilterChipsId）
 function _renderCardSelectionModal(config) {
     const cardsSelection = document.getElementById(config.selectionId);
     const tagFilterChips = document.getElementById(config.tagFilterChipsId);
     const searchInput = document.getElementById(config.searchInputId);
-    const toggleAllBtn = document.getElementById(config.toggleAllBtnId);
+    const toggleAllBtn = config.toggleAllBtnId ? document.getElementById(config.toggleAllBtnId) : null;
+    const onlySelectedBtn = config.onlySelectedBtnId ? document.getElementById(config.onlySelectedBtnId) : null;
     const saveBtn = document.getElementById(config.saveBtnId);
 
     const currentSelection = config.currentSelection;
@@ -146,32 +150,24 @@ function _renderCardSelectionModal(config) {
         }
     });
 
-    // Wire up the collapsible tag-filter-section toggle (idempotent).
-    const tagFilterSection = tagFilterChips ? tagFilterChips.closest('.tag-filter-section') : null;
-    const tagFilterToggle = tagFilterSection ? tagFilterSection.querySelector('.tag-filter-toggle') : null;
-    if (tagFilterToggle && !tagFilterToggle.dataset.bound) {
-        tagFilterToggle.dataset.bound = '1';
-        tagFilterToggle.addEventListener('click', () => {
-            const collapsed = tagFilterSection.classList.toggle('collapsed');
-            tagFilterToggle.setAttribute('aria-expanded', String(!collapsed));
-            tagFilterChips.hidden = collapsed;
-        });
-    }
-
-    // Render tag filter chips
+    // Render tag filter chips（工具列前面的動作鈕是 HTML 寫死的，只換掉標籤）
     const selectedTags = new Set();
-    if (allTags.size > 0) {
-        tagFilterChips.innerHTML = '';
+    if (tagFilterChips) {
+        tagFilterChips.querySelectorAll('.tag-filter-chip').forEach(chip => chip.remove());
+        tagFilterChips.scrollLeft = 0;
         const sortedTags = CARD_TAG_DEFS.map(def => def.name)
             .filter(tag => allTags.has(tag));
         sortedTags.forEach(tag => {
-            const chip = document.createElement('div');
+            const chip = document.createElement('button');
+            chip.type = 'button';
             chip.className = `tag-filter-chip card-tag ${getTagClass(tag)}`;
             chip.textContent = tag;
             chip.dataset.tag = tag;
+            chip.setAttribute('aria-pressed', 'false');
             chip.addEventListener('click', () => {
-                chip.classList.toggle('active');
-                if (chip.classList.contains('active')) selectedTags.add(tag);
+                const on = chip.classList.toggle('active');
+                chip.setAttribute('aria-pressed', String(on));
+                if (on) selectedTags.add(tag);
                 else selectedTags.delete(tag);
                 applyFilters();
             });
@@ -190,91 +186,84 @@ function _renderCardSelectionModal(config) {
             border: 1px solid #f59e0b;
             color: #92400e;
             padding: 12px 16px;
-            margin-bottom: 16px;
+            margin: 0 16px 12px;
             border-radius: 8px;
             text-align: center;
             font-weight: 500;
             grid-column: 1 / -1;
-            width: 100%;
         `;
         loginPrompt.textContent = config.guestPromptText;
         cardsSelection.appendChild(loginPrompt);
     }
 
-    const sortedCards = [...cardsData.cards].sort((a, b) => a.name.localeCompare(b.name));
+    // 已勾選的排前面，各自再照卡名排
+    const sortedCards = [...cardsData.cards].sort((a, b) =>
+        (currentSelection.has(b.id) - currentSelection.has(a.id)) || a.name.localeCompare(b.name));
     sortedCards.forEach(card => {
         const isSelected = currentSelection.has(card.id);
-        const cardDiv = document.createElement('div');
-        cardDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
         const checkboxId = `${config.selectionId}-${card.id}`;
-        cardDiv.innerHTML = `
-            <div class="card-checkbox-row">
-                <input type="checkbox" id="${checkboxId}" value="${card.id}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
-                <label for="${checkboxId}" class="card-checkbox-label">${card.name}</label>
-                <button type="button" class="card-detail-peek-btn" aria-label="查看卡片詳情" title="查看卡片詳情">ⓘ</button>
-            </div>
-            <img class="card-checkbox-image" alt="" src="assets/images/cards/${card.id}.png" onerror="this.style.display='none'">
+        const row = document.createElement('label');
+        row.className = `card-checkbox sel-row ${isSelected ? 'selected' : ''}`;
+        row.htmlFor = checkboxId;
+        row.innerHTML = `
+            <span class="sel-face"><img class="card-checkbox-image" alt="" src="assets/images/cards/${escapeHtml(card.id)}.png"></span>
+            <span class="card-checkbox-label">${escapeHtml(card.name)}</span>
+            <input type="checkbox" class="sel-check" id="${escapeHtml(checkboxId)}" value="${escapeHtml(card.id)}" ${isSelected ? 'checked' : ''} ${!canEdit ? 'disabled' : ''}>
         `;
-        const checkbox = cardDiv.querySelector('input');
+        const img = row.querySelector('.card-checkbox-image');
+        // 缺圖留空白框（卡名才對得齊）；直式卡圖轉成橫式
+        img.addEventListener('error', () => row.querySelector('.sel-face').classList.add('is-missing'));
+        img.addEventListener('load', () => {
+            if (img.naturalHeight > img.naturalWidth) row.querySelector('.sel-face').classList.add('is-portrait');
+        });
+        const checkbox = row.querySelector('input');
         if (canEdit) {
             checkbox.addEventListener('change', () => {
-                cardDiv.classList.toggle('selected', checkbox.checked);
+                row.classList.toggle('selected', checkbox.checked);
                 updateSelectionDirtyState(config.selectionId);
             });
         }
-        const peekBtn = cardDiv.querySelector('.card-detail-peek-btn');
-        peekBtn.addEventListener('click', (e) => {
-            // Don't toggle the checkbox or close the host modal
-            e.preventDefault();
-            e.stopPropagation();
-            showCardDetail(card.id);
-        });
-        const img = cardDiv.querySelector('.card-checkbox-image');
-        if (img && canEdit) {
-            img.addEventListener('click', (e) => {
-                e.stopPropagation();
-                checkbox.checked = !checkbox.checked;
-                cardDiv.classList.toggle('selected', checkbox.checked);
-                updateSelectionDirtyState(config.selectionId);
-            });
-        }
-        cardsSelection.appendChild(cardDiv);
+        cardsSelection.appendChild(row);
     });
 
-    // 打開當下的勾選＝比較基準：之後跟它不同才出現儲存列（只算現有資料裡的卡，下架卡不算改動）
+    // 打開當下的勾選＝比較基準：之後跟它不同「儲存」才可按（只算現有資料裡的卡，下架卡不算改動）
     cardsSelection._initialSelection = new Set(sortedCards.filter(c => currentSelection.has(c.id)).map(c => c.id));
-    updateSelectionDirtyState(config.selectionId);
 
-    // Enable/disable footer buttons based on edit permission
-    if (!canEdit) {
-        saveBtn.disabled = true;
-        saveBtn.style.opacity = '0.5';
-        saveBtn.style.cursor = 'not-allowed';
-        toggleAllBtn.disabled = true;
-        toggleAllBtn.style.opacity = '0.5';
-        toggleAllBtn.style.cursor = 'not-allowed';
-    } else {
-        saveBtn.disabled = false;
-        saveBtn.style.opacity = '1';
-        saveBtn.style.cursor = 'pointer';
-        toggleAllBtn.disabled = false;
-        toggleAllBtn.style.opacity = '1';
-        toggleAllBtn.style.cursor = 'pointer';
-        const allSelected = sortedCards.every(card => currentSelection.has(card.id));
-        toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
+    // Enable/disable toggle-all based on edit permission
+    if (toggleAllBtn) {
+        toggleAllBtn.disabled = !canEdit;
+        if (canEdit) {
+            const allSelected = sortedCards.every(card => currentSelection.has(card.id));
+            toggleAllBtn.textContent = allSelected ? '全不選' : '全選';
+        }
     }
 
-    // Search filter (combined with tag filter)
+    // 「已選 N」：點了只看勾起來的卡（每次打開都回到看全部）
+    let onlySelected = false;
+    if (onlySelectedBtn) {
+        onlySelectedBtn.setAttribute('aria-pressed', 'false');
+        onlySelectedBtn.classList.remove('active');
+        onlySelectedBtn.onclick = () => {
+            onlySelected = !onlySelected;
+            onlySelectedBtn.classList.toggle('active', onlySelected);
+            onlySelectedBtn.setAttribute('aria-pressed', String(onlySelected));
+            applyFilters();
+        };
+    }
+
+    updateSelectionDirtyState(config.selectionId);
+
+    // Search filter (combined with tag filter and「已選 N」)
     searchInput.value = '';
     function applyFilters() {
         const searchTerm = searchInput.value.toLowerCase().trim();
-        cardsSelection.querySelectorAll('.card-checkbox').forEach(cardDiv => {
-            const checkbox = cardDiv.querySelector('input[type="checkbox"]');
+        cardsSelection.querySelectorAll('.card-checkbox').forEach(row => {
+            const checkbox = row.querySelector('input[type="checkbox"]');
             if (!checkbox) return;
             const cardId = checkbox.value;
             const card = cardsData.cards.find(c => c.id === cardId);
             if (!card) return;
-            const label = cardDiv.querySelector('.card-checkbox-label');
+            const label = row.querySelector('.card-checkbox-label');
             if (!label) return;
             const matchesSearch = searchTerm === '' || label.textContent.toLowerCase().includes(searchTerm);
             let matchesTags = true;
@@ -282,7 +271,8 @@ function _renderCardSelectionModal(config) {
                 const cardTags = card.tags || [];
                 matchesTags = [...selectedTags].every(t => cardTags.includes(t));
             }
-            cardDiv.style.display = matchesSearch && matchesTags ? 'flex' : 'none';
+            const matchesSelected = !onlySelected || checkbox.checked;
+            row.style.display = matchesSearch && matchesTags && matchesSelected ? '' : 'none';
         });
     }
     // Detach previous listener (each open call) to avoid duplicates
@@ -291,26 +281,29 @@ function _renderCardSelectionModal(config) {
     }
     searchInput._cardSelectionListener = applyFilters;
     searchInput.addEventListener('input', applyFilters);
+    // 清空搜尋後補送 input：清除鈕（✕）跟著藏起來，列也全部顯示（監聽已換成這次的）
+    searchInput.dispatchEvent(new Event('input'));
 }
 
-// 儲存列（2026-11-22，站長：儲存鈕有改動才出現、固定在下方，不用上下捲去找）。
+// 「儲存」鈕狀態（2026-11-26 改版：儲存鈕搬到固定在頂端的標題列，拿掉底部儲存列與「已變更 N 張」）。
 // 「管理我的信用卡」「管理加入比較的卡片」「管理我的行動支付」共用：數一數跟打開當下不同的勾選有幾個，
-// 0 → 藏起儲存列（沒改就用右上角 × 關）；≥1 → 顯示「已變更 N 張　取消　儲存設定」（單位取儲存列的 data-unit，預設「張」）。
+// 0 → 「儲存」灰色不能按（沒改就用 × 關）；≥1 → 可按。順便更新工具列的「已選 N」（有的話）。
 // 比較基準放在勾選容器的 _initialSelection（Set），由打開 modal 的那支設定。
-// 勾選框的 change 會觸發；用程式改勾選的地方（點卡圖、全選、套用我的信用卡）要自己呼叫這支
+// 勾選框的 change 會觸發；用程式改勾選的地方（全選、套用我的信用卡）要自己呼叫這支
 function updateSelectionDirtyState(selectionId) {
     const box = document.getElementById(selectionId);
     const modal = box && box.closest('.modal');
-    const footer = modal && modal.querySelector('.sel-footer');
-    if (!box || !footer) return 0;
+    const saveBtn = modal && modal.querySelector('.sel-save');
+    if (!box || !saveBtn) return 0;
     const initial = box._initialSelection || new Set();
-    let changed = 0;
+    let changed = 0, checked = 0;
     box.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        if (cb.checked) checked++;
         if (cb.checked !== initial.has(cb.value)) changed++;
     });
-    footer.hidden = changed === 0;
-    const label = footer.querySelector('.sel-dirty');
-    if (label) label.textContent = changed ? `已變更 ${changed} ${footer.dataset.unit || '張'}` : '';
+    saveBtn.disabled = changed === 0;
+    const count = modal.querySelector('.sel-count');
+    if (count) count.textContent = `已選 ${checked}`;
     return changed;
 }
 
@@ -327,16 +320,6 @@ function openManageCardsModal() {
     });
 
     updateApplyOwnedButtonState();
-
-    // 篩選標籤每次開 modal 都預設收合（不記憶上次展開狀態）
-    const tagSection = document.getElementById('manage-tag-filter-section');
-    if (tagSection && !tagSection.classList.contains('collapsed')) {
-        tagSection.classList.add('collapsed');
-        const toggle = tagSection.querySelector('.tag-filter-toggle');
-        if (toggle) toggle.setAttribute('aria-expanded', 'false');
-        const chips = document.getElementById('tag-filter-chips');
-        if (chips) chips.hidden = true;
-    }
 
     const modal = document.getElementById('manage-cards-modal');
     modal.style.display = 'flex';
@@ -595,7 +578,7 @@ function openManageOwnedCardsModal() {
         selectionId: 'owned-cards-selection',
         tagFilterChipsId: 'owned-tag-filter-chips',
         searchInputId: 'search-owned-cards-input',
-        toggleAllBtnId: 'toggle-all-owned-cards',
+        onlySelectedBtnId: 'owned-only-selected',
         saveBtnId: 'save-owned-cards-btn',
         currentSelection: myOwnedCards,
         allowGuestEdit: true
@@ -608,34 +591,16 @@ function openManageOwnedCardsModal() {
     // Always open at the top — don't keep the previous session's scroll.
     const modalContent = modal.querySelector('.modal-content');
     if (modalContent) modalContent.scrollTop = 0;
-
-    // 篩選標籤預設收合（需要時再點開）
-    const tagSection = document.getElementById('owned-tag-filter-section');
-    if (tagSection && !tagSection.classList.contains('collapsed')) {
-        tagSection.classList.add('collapsed');
-        const toggle = tagSection.querySelector('.tag-filter-toggle');
-        if (toggle) toggle.setAttribute('aria-expanded', 'false');
-        const chips = document.getElementById('owned-tag-filter-chips');
-        if (chips) chips.hidden = true;
-    }
 }
 
-// Update the "套用我的信用卡選項" button state.
+// Update the "套用我的信用卡" button state.
 // Disabled only when no owned cards set (works for guests via localStorage too).
 function updateApplyOwnedButtonState() {
     const btn = document.getElementById('apply-owned-cards-btn');
     if (!btn) return;
-    if (myOwnedCards.size === 0) {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
-        btn.style.cursor = 'not-allowed';
-        btn.title = '先去頭像下拉選單設定「我的信用卡」';
-    } else {
-        btn.disabled = false;
-        btn.style.opacity = '1';
-        btn.style.cursor = 'pointer';
-        btn.title = '一鍵套用「我的信用卡」';
-    }
+    // 停用的樣子由 CSS 的 .sel-chip:disabled 負責
+    btn.disabled = myOwnedCards.size === 0;
+    btn.title = btn.disabled ? '先去頭像下拉選單設定「我的信用卡」' : '一鍵套用「我的信用卡」';
 }
 
 // Setup the "我的信用卡" overview modal + the stacked "管理我的信用卡" modal.
@@ -678,9 +643,7 @@ function setupMyOwnedCardsModal() {
 
     // --- Manage modal (layer 2, stacked on top of overview) ---
     const closeManageBtn = document.getElementById('close-manage-owned-modal');
-    const cancelBtn = document.getElementById('cancel-owned-cards-btn');
     const saveBtn = document.getElementById('save-owned-cards-btn');
-    const toggleAllBtn = document.getElementById('toggle-all-owned-cards');
 
     // Closes the manage modal only — overview underneath stays open.
     const closeManage = () => {
@@ -688,8 +651,8 @@ function setupMyOwnedCardsModal() {
         enableBodyScroll();
     };
 
+    // × 就是取消：不存直接關（2026-11-26 拿掉底部儲存列的「取消」）
     closeManageBtn.addEventListener('click', closeManage);
-    cancelBtn.addEventListener('click', closeManage);
     manageModal.addEventListener('click', (e) => { if (e.target === manageModal) closeManage(); });
 
     saveBtn.addEventListener('click', async () => {
@@ -702,19 +665,7 @@ function setupMyOwnedCardsModal() {
         // Refresh the overview underneath so it reflects the new selection
         renderOwnedCardsOverview();
     });
-
-    toggleAllBtn.addEventListener('click', () => {
-        const checkboxes = document.querySelectorAll('#owned-cards-selection input[type="checkbox"]');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        if (allChecked) {
-            checkboxes.forEach(cb => { cb.checked = false; cb.parentElement.classList.remove('selected'); });
-            toggleAllBtn.textContent = '全選';
-        } else {
-            checkboxes.forEach(cb => { cb.checked = true; cb.parentElement.classList.add('selected'); });
-            toggleAllBtn.textContent = '全不選';
-        }
-        updateSelectionDirtyState('owned-cards-selection');
-    });
+    // 這個視窗沒有「全選」（2026-11-26：沒有人持有全部的卡），改成工具列的「已選 N」只看勾起來的卡
 }
 
 // ===== 卡片標籤總表（顯示順序＋CSS class，唯一正本）=====

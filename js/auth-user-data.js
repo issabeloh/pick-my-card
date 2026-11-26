@@ -1042,7 +1042,6 @@ function setupManageCardsModal() {
     const manageBtn = document.getElementById('manage-cards-btn');
     const modal = document.getElementById('manage-cards-modal');
     const closeBtn = document.getElementById('close-modal');
-    const cancelBtn = document.getElementById('cancel-cards-btn');
     const saveBtn = document.getElementById('save-cards-btn');
     
     // Open modal
@@ -1056,15 +1055,14 @@ function setupManageCardsModal() {
         enableBodyScroll();
     };
     
-    closeBtn.addEventListener('click', closeModal);
-    cancelBtn.addEventListener('click', closeModal);
+    closeBtn.addEventListener('click', closeModal);   // × 就是取消：不存直接關
     
     // Close on backdrop click
     modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal();
     });
     
-    // Save cards（儲存列只有一顆鈕；2026-11-22 拿掉「全選」旁的快速儲存鈕）
+    // Save cards（2026-11-26 起「儲存」在頂端標題列，有改動才可按）
     const doSaveCards = async () => {
         const checkboxes = document.querySelectorAll('#cards-selection input[type="checkbox"]');
         const newSelection = new Set();
