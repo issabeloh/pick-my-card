@@ -290,15 +290,19 @@ function openManagePaymentsModal() {
 
     paymentsSelection.innerHTML = '';
 
-    paymentsData.payments.forEach(payment => {
+    // 一列一個（2026-11-26，同選卡 modal 的清單列）：整列是 <label>，打開當下已勾選的排前面
+    const sortedPayments = [...paymentsData.payments].sort((a, b) =>
+        userSelectedPayments.has(b.id) - userSelectedPayments.has(a.id));
+    sortedPayments.forEach(payment => {
         const isSelected = userSelectedPayments.has(payment.id);
 
-        const paymentDiv = document.createElement('div');
-        paymentDiv.className = `card-checkbox ${isSelected ? 'selected' : ''}`;
+        const paymentDiv = document.createElement('label');
+        paymentDiv.className = `card-checkbox sel-row ${isSelected ? 'selected' : ''}`;
+        paymentDiv.htmlFor = `payment-${payment.id}`;
 
         paymentDiv.innerHTML = `
-            <input type="checkbox" id="payment-${payment.id}" value="${payment.id}" ${isSelected ? 'checked' : ''}>
-            <label for="payment-${payment.id}" class="card-checkbox-label">${payment.name}</label>
+            <span class="card-checkbox-label">${escapeHtml(payment.name)}</span>
+            <input type="checkbox" class="sel-check" id="payment-${escapeHtml(payment.id)}" value="${escapeHtml(payment.id)}" ${isSelected ? 'checked' : ''}>
         `;
 
         const checkbox = paymentDiv.querySelector('input');
@@ -310,15 +314,9 @@ function openManagePaymentsModal() {
         paymentsSelection.appendChild(paymentDiv);
     });
 
-    // 儲存列（2026-11-22，同選卡 modal）：打開當下的勾選＝比較基準，有改動才出現「已變更 N 個　取消　儲存設定」
+    // 打開當下的勾選＝比較基準：有改動「儲存」才可按（同選卡 modal，updateSelectionDirtyState）
     paymentsSelection._initialSelection = new Set(paymentsData.payments.filter(p => userSelectedPayments.has(p.id)).map(p => p.id));
     updateSelectionDirtyState('payments-selection');
-
-    saveBtn.disabled = false;
-    saveBtn.style.opacity = '1';
-    saveBtn.style.cursor = 'pointer';
-    toggleAllBtn.disabled = false;
-    toggleAllBtn.style.opacity = '1';
 
     // Toggle all payments
     let allSelected = userSelectedPayments.size === paymentsData.payments.length;
@@ -336,15 +334,13 @@ function openManagePaymentsModal() {
 
     // Setup modal controls
     const closeBtn = document.getElementById('close-payments-modal');
-    const cancelBtn = document.getElementById('cancel-payments-btn');
 
     const closeModal = () => {
         modal.style.display = 'none';
         enableBodyScroll();
     };
 
-    closeBtn.onclick = closeModal;
-    cancelBtn.onclick = closeModal;
+    closeBtn.onclick = closeModal;   // × 就是取消：不存直接關
     modal.onclick = (e) => {
         if (e.target === modal) closeModal();
     };
@@ -375,13 +371,14 @@ function openManagePaymentsModal() {
             if (label) {
                 const paymentName = label.textContent.toLowerCase();
                 if (paymentName.includes(searchTerm)) {
-                    paymentDiv.style.display = 'flex';
+                    paymentDiv.style.display = '';
                 } else {
                     paymentDiv.style.display = 'none';
                 }
             }
         });
     };
+    searchInput.dispatchEvent(new Event('input'));   // 清除鈕（✕）跟著藏起來
 
     modal.style.display = 'flex';
     disableBodyScroll();

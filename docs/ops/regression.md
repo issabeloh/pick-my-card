@@ -188,11 +188,11 @@ node tools/regression/card-settings-promo-test.js   # 有 ❌ → exit 1
 ## 「我的信用卡」單卡面板（獨立一支，2026-11-22 新增）
 
 ```bash
-node tools/regression/owned-cards-panel-test.js   # 47 項，有 ❌ → exit 1
+node tools/regression/owned-cards-panel-test.js   # 56 項，有 ❌ → exit 1
 ```
 
-點卡片 → 同一個視窗直接編輯：唯一一份 `#card-personal-section` 搬進面板／搬回詳情頁、詳情頁不被彈出、樣式兩邊一致、結帳日／繳款截止日的欄位對應（`statementDate`＝結帳日、`billingDate`＝繳款日）與存取、雲端失敗紅字、鐵則 1（開面板不寫級別、改了才存一次）、筆記離開面板即存、桌機寬度；兩個選卡 modal 與管理行動支付的儲存列（有改動才出現、固定底部、全選／點卡圖／取消）與管理視窗同寬。Firebase 替身借 `card-settings-promo-test.js` 的 `stub`（該檔 `module.exports`，require 時不跑測試）。
-**改 `js/cards-modals.js` 的單卡面板（`openOwnedCardPanel`／`ownedPanelExit`）、`renderCardPersonalSettings`／`cdMountPersonalSection`、或結帳日存取後必跑**；改個人設定欄位時跟 `card-settings-promo-test.js` 一起跑。
+點卡片 → 同一個視窗直接編輯：唯一一份 `#card-personal-section` 搬進面板／搬回詳情頁、詳情頁不被彈出、樣式兩邊一致、結帳日／繳款截止日的欄位對應（`statementDate`＝結帳日、`billingDate`＝繳款日）與存取、雲端失敗紅字、鐵則 1（開面板不寫級別、改了才存一次）、筆記離開面板即存、桌機寬度；三個選卡 modal（2026-11-26 改版）：標題列的「儲存」有改動才可按、標題列固定、單欄清單列整列可點、沒有詳情鈕、已勾選排前面、「已選 N」、篩選標籤、× 不存、390px 版面（高 90%、第一個畫面 ≥8 張），與管理視窗同寬。Firebase 替身借 `card-settings-promo-test.js` 的 `stub`（該檔 `module.exports`，require 時不跑測試）。
+**改 `js/cards-modals.js` 的單卡面板（`openOwnedCardPanel`／`ownedPanelExit`）、選卡 modal（`_renderCardSelectionModal`／`updateSelectionDirtyState`、`openManagePaymentsModal`）、`renderCardPersonalSettings`／`cdMountPersonalSection`、或結帳日存取後必跑**；改個人設定欄位時跟 `card-settings-promo-test.js` 一起跑。
 
 ## 一般消費排除項目（獨立一支，2026-09-30 新增）
 

@@ -3113,7 +3113,7 @@ input[type="number"]:focus {
     color: var(--ui-ink-2);
 }
 /* 結果卡（含領券卡）的「詳情」鈕框線跟小抄鈕一樣用 --ui-line（2026-11-23 站長看對照圖同意，原本 #d1d5db）。
-   同一顆 .card-detail-peek-btn 也出現在選卡 modal 與推薦活動，那兩區還沒換，輪到時再一起看 */
+   同一顆 .card-detail-peek-btn 也出現在推薦活動，那區還沒換，輪到時再一起看（選卡 modal 2026-11-26 起沒有詳情鈕） */
 .card-result .card-detail-peek-btn,
 .coupon-item .card-detail-peek-btn {
     border-color: var(--ui-line);
@@ -3377,15 +3377,6 @@ input[type="number"]:focus {
         text-overflow: clip;
     }
 
-    .cards-selection {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-    }
-
-    .card-checkbox {
-        padding: 8px;
-        font-size: var(--ui-text-12);
-    }
 }
 
 /* Modal Styles */
@@ -3486,155 +3477,6 @@ input[type="number"]:focus {
     padding: 20px;
 }
 
-.modal-controls {
-    margin-bottom: 16px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-}
-/* 搜尋框（或包著它的清除鈕 wrapper）可以縮，按鈕才保得住一行 */
-.modal-controls > .search-modal-input,
-.modal-controls > .input-clear-wrap {
-    min-width: 0;
-}
-
-.search-modal-input[type="text"] {
-    flex: 1;
-    padding: 8px 8px 8px 30px; /* 左 30px 讓開放大鏡背景圖示 */
-    border: 2px solid var(--ui-line);
-    border-radius: var(--ui-radius-md);
-    font-size: var(--ui-text-13);
-    line-height: 1.3;
-    transition: border-color 0.2s ease;
-    /* 單色放大鏡 SVG（同 promos 搜尋框的 Bootstrap search icon，取代原本 placeholder
-       裡的彩色 🔍 emoji，全站搜尋框圖示統一，2026-07-22 站長回饋） */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: 9px center;
-    background-size: 14px 14px;
-}
-
-.search-modal-input:focus {
-    outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-}
-
-.search-modal-input::placeholder {
-    color: #9ca3af;
-    font-size: var(--ui-text-12);
-}
-
-.modal-action-buttons {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-    align-items: center;
-}
-
-.toggle-all-btn {
-    background: #e5e7eb;
-    color: var(--ui-ink-3);
-    border: 1px solid var(--ui-line);
-    padding: 6px 14px;
-    /* 任何寬度都只能一行（2026-10-14 站長：手機「全選」被擠成兩行）；讓搜尋框去縮 */
-    white-space: nowrap;
-    flex-shrink: 0;
-    border-radius: var(--ui-radius-sm);
-    font-size: var(--ui-text-12);
-    font-weight: 400;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.toggle-all-btn:hover {
-    background: #d1d5db;
-    color: var(--ui-ink-2);
-}
-
-.toggle-all-btn:active {
-    transform: none;
-}
-
-/* Tag Filter Section */
-.tag-filter-section {
-    margin-bottom: 16px;
-    padding: 12px;
-    background: var(--ui-bg);
-    border: 1px solid var(--ui-line);
-    border-radius: var(--ui-radius-md);
-}
-
-.tag-filter-toggle {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    background: transparent;
-    border: none;
-    padding: 0;
-    cursor: pointer;
-    color: var(--ui-ink-2);
-    font: inherit;
-}
-
-.tag-filter-section:not(.collapsed) .tag-filter-toggle {
-    margin-bottom: 8px;
-}
-
-.tag-filter-toggle-icon {
-    transition: transform 0.2s ease;
-    font-size: 20px;
-    line-height: 1;
-    color: var(--ui-ink-3);
-}
-
-.tag-filter-section:not(.collapsed) .tag-filter-toggle-icon {
-    transform: rotate(180deg);
-}
-
-.tag-filter-label {
-    font-size: var(--ui-text-13);
-    font-weight: 600;
-    color: var(--ui-ink-2);
-}
-
-.tag-filter-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.tag-filter-chips[hidden],
-.tag-filter-section.collapsed .tag-filter-chips {
-    display: none;
-}
-
-.tag-filter-chip {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: var(--ui-text-12);
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid transparent;
-    opacity: 0.5;
-}
-
-.tag-filter-chip:hover {
-    opacity: 0.75;
-    transform: translateY(-1px);
-}
-
-.tag-filter-chip.active {
-    opacity: 1;
-    border-color: currentColor;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
 .modal-description {
     margin-bottom: 20px;
     color: var(--ui-ink-3);
@@ -3642,81 +3484,8 @@ input[type="number"]:focus {
     line-height: 1.5;
 }
 
-.cards-selection {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-#payments-selection {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-}
-
-.card-checkbox {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 10px;
-    border: 1px solid var(--ui-line);
-    border-radius: var(--ui-radius-sm);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: var(--ui-text-14);
-}
-.card-checkbox-image {
-    border-radius: var(--ui-radius-sm);
-    height: 56px;
-    width: auto;
-    max-width: 110px;
-    object-fit: contain;
-    /* Indent to line up with the card name (checkbox width 14 + row gap 8) */
-    margin-left: 22px;
-    cursor: pointer;
-}
-.card-checkbox-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-}
-/* 手機：「詳情」鈕擠在卡名旁邊會把卡名壓成一字一行（2026-10-14 站長回報），
-   改成卡名獨佔一行、詳情鈕換到下一行（左邊對齊卡名，跟卡圖同一個縮排） */
-@media (max-width: 768px) {
-    .card-checkbox-row {
-        flex-wrap: wrap;
-        row-gap: 6px;
-    }
-    .card-checkbox-row .card-checkbox-label {
-        flex: 1 1 calc(100% - 22px);
-        min-width: 0;
-    }
-    .card-checkbox-row .card-detail-peek-btn {
-        margin-left: 22px;
-    }
-}
-
-.card-checkbox:hover {
-    border-color: #6bb6ff;
-    background: #f8fafc;
-}
-
-.card-checkbox.selected {
-    border-color: #6bb6ff;
-    background: #f0f9ff;
-}
-
-.card-checkbox input[type="checkbox"] {
-    width: 14px;
-    height: 14px;
-    accent-color: #6bb6ff;
-    flex-shrink: 0;
-}
-
 /* 卡片詳情鈕（ⓘ 詳情）：全站只有這一組樣式——白底灰框膠囊、26px 高（2026-11-16 站長要求一致化）。
-   搜尋結果卡、領券卡、選卡 modal（管理我的信用卡／管理加入比較的卡片）、推薦活動 modal 都吃這裡，
+   搜尋結果卡、領券卡、推薦活動 modal 都吃這裡（選卡 modal 2026-11-26 起拿掉了詳情鈕），
    **不要再依所在位置另開顏色或尺寸的覆寫**；桌機密度的縮小值在檔尾「結果卡次行按鈕」。
    沿革：最早是淡灰 ⓘ 純字符（用戶反映找不到）→ 淺藍膠囊 → 結果卡先改白底灰框 → 全站跟進。 */
 .card-detail-peek-btn {
@@ -3874,20 +3643,6 @@ input[type="number"]:focus {
 .breakdown-table .bd-total .bd-amt { color: var(--ui-ink-2); }
 .breakdown-table .bd-total .bd-cash { color: #059669; }
 
-.card-checkbox-label {
-    flex-grow: 1;
-    font-weight: 400;
-    color: var(--ui-ink-2);
-    font-size: var(--ui-text-13);
-    line-height: 1.2;
-}
-/* Bold card names in card-selection modals (not payments) */
-#cards-selection .card-checkbox-label,
-#owned-cards-selection .card-checkbox-label {
-    font-weight: 700;
-    color: var(--ui-ink-1);
-}
-
 /* --- My Owned Cards overview (layer 1) --- */
 .manage-owned-btn {
     display: inline-flex;
@@ -3947,20 +3702,6 @@ input[type="number"]:focus {
     /* 「管理我的信用卡」疊在「我的信用卡」上面：同寬才蓋得住（2026-11-22，桌機原本左右露出後面那層） */
     max-width: 660px;
 }
-
-/* 選卡 modal 的儲存列（2026-11-22）：勾選有改動才出現（hidden 由 updateSelectionDirtyState 切），
-   固定在 .modal-content 捲動容器的底部 */
-.sel-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 2;
-    align-items: center;
-    padding: 12px 20px;
-    background: #fff;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06);
-}
-.sel-footer[hidden] { display: none; }
-.sel-dirty { margin-right: auto; font-size: 13.5px; font-weight: 600; color: var(--ui-ink-2); }
 
 .ow-count-badge {
     color: var(--ui-ink-3);
@@ -4738,14 +4479,10 @@ input[type="number"]:focus {
     transform: translateY(-1px);
 }
 
-#save-cards-btn,
-#save-payments-btn,
 #submit-feedback-btn {
     background: #3b82f6;
 }
 
-#save-cards-btn:hover,
-#save-payments-btn:hover,
 #submit-feedback-btn:hover {
     background: var(--ui-brand-bright);
 }
@@ -5553,7 +5290,7 @@ input[type="text"].cashback-search-input {
 
 /* ── 搜尋框框內清除鈕（✕）────────────────────────────────────────────────
    由 setupSearchClearButtons() 動態把輸入框包進 .input-clear-wrap 並加上 ✕，
-   有輸入時才顯示。wrapper 需能在 flex 容器（如 .modal-controls）中撐開。 */
+   有輸入時才顯示。wrapper 需能在 flex 容器中撐開。 */
 .input-clear-wrap {
     position: relative;
     display: block;
@@ -11932,4 +11669,246 @@ header:has(.home-view-switch) { box-shadow: none; }   /* 頁首陰影會在選�
 }
 .has-results-nav .results-group-heading {
     scroll-margin-top: 56px;
+}
+
+/* ============================================
+   選卡 modal（管理我的信用卡／管理加入比較的卡片／管理我的行動支付，2026-11-26 改版）
+   站長從選項頁選 A「單欄清單列」。三個視窗共用 .sel-modal：
+   - .sel-top（標題＋儲存＋×、搜尋框）固定在 .modal-content 捲動容器頂端；「儲存」有改動才可按
+   - .sel-tools 工具列（動作鈕＋篩選標籤）不固定、手機單行橫向滑動，≥769px 換行
+   - .sel-row 每列＝小卡面＋卡名＋圓形勾選，整列是 <label>
+   見 docs/project/ui-display.md 第 3 節
+   ============================================ */
+.sel-top {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #fff;
+    border-bottom: 1px solid var(--ui-line);
+}
+.sel-modal .modal-header {
+    gap: 8px;
+    padding: 10px 8px 10px 16px;
+    border-bottom: 0;
+}
+.sel-modal .modal-header h3 {
+    flex: 1;
+    min-width: 0;
+    font-size: 17px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sel-save {
+    flex: none;
+    padding: 6px 16px;
+    border: 0;
+    border-radius: var(--ui-radius-pill);
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: #fff;
+    font: inherit;
+    font-size: var(--ui-text-14);
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+.sel-save:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--ui-brand-bright) 0%, var(--ui-brand) 100%);
+}
+.sel-save:disabled {
+    background: var(--ui-fill);
+    color: #a3aab5;
+    cursor: default;
+}
+.sel-save:focus-visible,
+.sel-chip:focus-visible,
+.sel-tools .tag-filter-chip:focus-visible {
+    outline: 2px solid var(--ui-brand-bright);
+    outline-offset: 2px;
+}
+.sel-modal .close-modal {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    font-size: 24px;
+    border-radius: var(--ui-radius-md);
+}
+.sel-modal .close-modal:hover {
+    background: var(--ui-fill);
+}
+.sel-search {
+    padding: 0 16px 10px;
+}
+.sel-search .search-modal-input {
+    display: block;
+    width: 100%;
+    height: 38px;
+    margin: 0;
+    padding: 0 30px 0 34px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-md);
+    font-size: 15px;
+    color: var(--ui-ink-1);
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%239ca3af'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E") no-repeat 12px center / 14px 14px;
+}
+.sel-search .search-modal-input:focus {
+    outline: none;
+    border-color: var(--ui-brand-bright);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+.sel-search .search-modal-input::placeholder {
+    color: #9ca3af;
+}
+.sel-modal .modal-body {
+    padding: 10px 0 14px;
+}
+
+/* 工具列：動作鈕（白底膠囊）＋篩選標籤（彩色膠囊，顏色來自 .card-tag.tag-xxx） */
+.sel-tools {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0 16px 10px;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+}
+.sel-tools::-webkit-scrollbar { display: none; }
+.sel-chip,
+.sel-tools .tag-filter-chip {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 11px;
+    border: 1px solid transparent;
+    border-radius: var(--ui-radius-pill);
+    font: inherit;
+    font-size: 12.5px;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.sel-chip {
+    background: #fff;
+    border-color: var(--ui-line);
+    color: var(--ui-brand-bright);
+    font-weight: 700;
+}
+.sel-chip:disabled {
+    color: #a3aab5;
+    cursor: default;
+}
+.sel-chip.sel-count { color: var(--ui-ink-2); }
+.sel-chip.sel-count.active {
+    background: var(--ui-ink-1);
+    border-color: var(--ui-ink-1);
+    color: #fff;
+}
+.sel-tools .tag-filter-chip {
+    font-weight: 500;
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+}
+.sel-tools .tag-filter-chip.active {
+    opacity: 1;
+    border-color: currentColor;
+}
+@media (hover: hover) {
+    .sel-tools .tag-filter-chip:hover { opacity: 1; }
+}
+@media (min-width: 769px) {
+    /* 桌機用滑鼠不好橫向捲，改成換行 */
+    .sel-tools { flex-wrap: wrap; overflow-x: visible; }
+}
+
+/* 清單：660px 寬的「管理我的信用卡」自動變兩欄，其餘一欄 */
+.sel-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+.sel-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 56px;
+    margin: 0;               /* 全站 label 有 margin-bottom: 14px */
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f1f3;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+#payments-selection .sel-row { min-height: 48px; }
+.sel-row.selected { background: #eff6ff; }
+@media (hover: hover) {
+    .sel-row:hover { background: var(--ui-bg); }
+    .sel-row.selected:hover { background: #e4effd; }
+}
+.sel-row:has(.sel-check:focus-visible) {
+    outline: 2px solid var(--ui-brand-bright);
+    outline-offset: -2px;
+}
+.sel-face {
+    flex: none;
+    position: relative;
+    width: 64px;
+    aspect-ratio: 8 / 5;
+    border-radius: var(--ui-radius-sm);
+    overflow: hidden;
+    background: var(--ui-fill);
+}
+.sel-face img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+}
+.sel-face.is-missing img { visibility: hidden; }
+/* 直式卡圖轉成橫式（同「我的信用卡」卡片格的 .ow-portrait） */
+.sel-face.is-portrait img {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 62.5%;
+    height: 160%;
+    transform: translate(-50%, -50%) rotate(-90deg);
+}
+.sel-row .card-checkbox-label {
+    flex: 1;
+    min-width: 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--ui-ink-1);
+}
+.sel-check {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: none;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    border: 2px solid #c5cbd5;
+    border-radius: 50%;
+    background: #fff no-repeat center / 12px 12px;
+    cursor: pointer;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+.sel-check:checked {
+    border-color: var(--ui-brand-bright);
+    background-color: var(--ui-brand-bright);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.2 5 8.6l4.6-5'/%3E%3C/svg%3E");
+}
+.sel-check:focus-visible { outline: none; }
+.sel-check:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 手機：視窗高度 75% → 90%（站長 2026-11-26：維持浮動視窗、不改全螢幕） */
+@media (max-width: 768px) {
+    .modal-content.sel-modal {
+        max-height: 90vh;
+        max-height: 90dvh;
+    }
 }
